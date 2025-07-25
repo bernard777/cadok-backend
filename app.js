@@ -26,6 +26,16 @@ if (fs.existsSync(objectsRoutePath)) {
   console.warn("Warning: './routes/objects.js' not found. '/api/objects' route not registered.");
 }
 
+// Ajout de la route des échanges
+const tradesRoutePath = path.join(__dirname, 'routes', 'trades.js');
+
+if (fs.existsSync(tradesRoutePath)) {
+  const tradeRoutes = require('./routes/trades');
+  app.use('/api/trades', tradeRoutes);
+} else {
+  console.warn("Warning: './routes/trades.js' not found. '/api/trades' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l’API Cadok');
