@@ -14,6 +14,18 @@ app.use(express.json());
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+// Ajout de la route des objets
+const fs = require('fs');
+const path = require('path');
+const objectsRoutePath = path.join(__dirname, 'routes', 'objects.js');
+
+if (fs.existsSync(objectsRoutePath)) {
+  const objectRoutes = require('./routes/objects');
+  app.use('/api/objects', objectRoutes);
+} else {
+  console.warn("Warning: './routes/objects.js' not found. '/api/objects' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l’API Cadok');
