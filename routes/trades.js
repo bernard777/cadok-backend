@@ -9,42 +9,33 @@ const mongoose = require('mongoose');
 const TRADE_STATUS = {
   PENDING: 'pending',
   ACCEPTED: 'accepted',
-  REFUSED: 'refused'
+  REFUSED: 'refused',
+  PROPOSED: 'proposed'
 };
 const OBJECT_STATUS = {
   AVAILABLE: 'available',
   TRADED: 'traded',
-  PENDING: 'pending'
+  PENDING: 'pending',
+  RESERVED: 'reserved'
 };
 
 // ========== PROPOSER UN ÉCHANGE ==========
 router.post('/', auth, async (req, res) => {
-  const { offeredObject, requestedObject } = req.body;
+  const { requestedObject } = req.body;
   try {
-    const offered = await ObjectModel.findById(offeredObject);
     const requested = await ObjectModel.findById(requestedObject);
+    if (!requested)
+      return res.status(404).json({ message: 'Object not found.' });
 
-    // Vérif 1 : Objets existants
-    if (!offered || !requested)
-      return res.status(404).json({ message: 'Object(s) not found.' });
-
-    // Vérif 2 : Ownership
-    if (offered.owner.toString() !== req.user.id)
-      return res.status(403).json({ message: 'You can only propose your own object.' });
-
-    // Vérif 3 : Pas avec soi-même
-    if (offered.owner.toString() === requested.owner.toString())
+    if (requested.owner.toString() === req.user.id)
       return res.status(400).json({ message: 'Cannot trade with yourself.' });
 
-    // Vérif 4 : Statuts des objets
-    if (offered.status !== OBJECT_STATUS.AVAILABLE || requested.status !== OBJECT_STATUS.AVAILABLE)
-      return res.status(400).json({ message: 'One or both objects are not available for trade.' });
+    if (requested.status !== OBJECT_STATUS.AVAILABLE)
+      return res.status(400).json({ message: 'Object is not available for trade.' });
 
-    // Créer la proposition d’échange
     const newTrade = new Trade({
       fromUser: req.user.id,
       toUser: requested.owner,
-      offeredObject,
       requestedObject,
       status: TRADE_STATUS.PENDING
     });
@@ -87,10 +78,17 @@ router.put('/:id/accept', auth, async (req, res) => {
     if (trade.toUser.toString() !== req.user.id)
       return res.status(403).json({ message: 'You are not authorized to accept this trade.' });
 
-    if (trade.status !== TRADE_STATUS.PENDING)
-      return res.status(400).json({ message: 'Trade already processed.' });
+    if (trade.status !== TRADE_STATUS.PROPOSED)
+      return res.status(400).json({ message: 'Trade must be in proposed state to accept.' });
+
+    if (!trade.offeredObject)
+      return res.status(400).json({ message: 'No offered object to accept.' });
 
     // Vérif: objets toujours disponibles
+    const offered = await ObjectModel.findById(trade.offeredObject).session(session);
+    const requested = await ObjectModel.findById(trade.requestedObject).session(session);
+
+    if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
     const offered = await ObjectModel.findById(trade.offeredObject).session(session);
     const requested = await ObjectModel.findById(trade.requestedObject).session(session);
 
@@ -136,6 +134,140 @@ router.put('/:id/refuse', auth, async (req, res) => {
     await trade.save();
 
     res.json({ message: 'Trade refused.', trade });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== PROPOSER UN OBJET À L'ÉCHANGE ==========
+router.put('/:id/propose', auth, async (req, res) => {
+  const { offeredObject } = req.body;
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
+
+    if (trade.toUser.toString() !== req.user.id)
+      return res.status(403).json({ message: 'You are not authorized to propose an object for this trade.' });
+
+    if (trade.status !== TRADE_STATUS.PENDING)
+      return res.status(400).json({ message: 'You can only propose your own objects.' });
+
+    const offered = await ObjectModel.findById(offeredObject);
+    if (!offered) return res.status(404).json({ message: 'Offered object not found.' });
+
+    if (offered.owner.toString() !== trade.fromUser.toString())
+      return res.status(400).json({ message: 'You must select an object from the requester.' });
+
+    if (offered.status !== OBJECT_STATUS.AVAILABLE)
+      return res.status(400).json({ message: 'Offered object is not available.' });
+
+    trade.offeredObject = offeredObject;
+    trade.status = TRADE_STATUS.PROPOSED;
+    await trade.save();
+
+    res.json(trade);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== VALIDATION FINALE PAR L'INITIATEUR ==========
+router.put('/:id/confirm', auth, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const trade = await Trade.findById(req.params.id).session(session);
+
+    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
+
+    // Seul l'initiateur peut confirmer
+    if (trade.fromUser.toString() !== req.user.id)
+      return res.status(403).json({ message: 'You are not authorized to confirm this trade.' });
+
+    if (trade.status !== TRADE_STATUS.PROPOSED)
+      return res.status(400).json({ message: 'Trade is not in proposed state.' });
+
+    // Vérif: offeredObject doit être présent
+    if (!trade.offeredObject)
+      return res.status(400).json({ message: 'No offered object selected yet.' });
+
+    // Vérif objets toujours disponibles
+    const offered = await ObjectModel.findById(trade.offeredObject).session(session);
+    const requested = await ObjectModel.findById(trade.requestedObject).session(session);
+
+    if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
+
+    if (offered.status !== OBJECT_STATUS.AVAILABLE || requested.status !== OBJECT_STATUS.AVAILABLE)
+      return res.status(400).json({ message: 'One or both objects are no longer available.' });
+
+    // Valider le trade et MAJ objets
+    trade.status = TRADE_STATUS.ACCEPTED;
+    await trade.save({ session });
+
+    offered.status = OBJECT_STATUS.TRADED;
+    requested.status = OBJECT_STATUS.TRADED;
+    await offered.save({ session });
+    await requested.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({ message: 'Trade confirmed and accepted.', trade });
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== REFUS FINAL PAR L'INITIATEUR ==========
+router.put('/:id/cancel', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+
+    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
+
+    // Seul l'initiateur peut annuler/refuser
+    if (trade.fromUser.toString() !== req.user.id)
+      return res.status(403).json({ message: 'You are not authorized to cancel this trade.' });
+
+    if (trade.status !== TRADE_STATUS.PROPOSED)
+      return res.status(400).json({ message: 'Trade is not in proposed state.' });
+
+    trade.status = TRADE_STATUS.REFUSED;
+    await trade.save();
+
+    res.json({ message: 'Trade cancelled by initiator.', trade });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== REFUSER LA PROPOSITION MAIS RELANCER ==========
+router.put('/:id/retry', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+
+    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
+
+    // Seul l'initiateur peut demander une nouvelle proposition
+    if (trade.fromUser.toString() !== req.user.id)
+      return res.status(403).json({ message: 'You are not authorized to retry this trade.' });
+
+    if (trade.status !== TRADE_STATUS.PROPOSED)
+      return res.status(400).json({ message: 'Trade is not in proposed state.' });
+
+    // Remettre le trade à l'état initial
+    trade.status = TRADE_STATUS.PENDING;
+    trade.offeredObject = undefined;
+    await trade.save();
+
+    res.json({ message: 'Trade proposal refused, waiting for a new selection.', trade });
 
   } catch (err) {
     res.status(500).json({ error: err.message });

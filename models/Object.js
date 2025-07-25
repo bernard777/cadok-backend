@@ -8,8 +8,8 @@ const ObjectSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: {
     type: String,
-    enum: ['disponible', 'échangé', 'réservé'],
-    default: 'disponible'
+    enum: ['available', 'traded', 'reserved'],
+    default: 'available'
   }
 }, { timestamps: true });
 

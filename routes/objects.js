@@ -38,7 +38,7 @@ router.post('/', auth, async (req, res) => {
 
 
 // 👀 2. Récupérer tous les objets
-// GET /api/objects?status=disponible&category=Jeux
+// GET /api/objects?status=available&category=Games
 router.get('/', async (req, res) => {
   const { status, category } = req.query;
 
