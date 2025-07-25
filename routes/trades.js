@@ -89,10 +89,6 @@ router.put('/:id/accept', auth, async (req, res) => {
     const requested = await ObjectModel.findById(trade.requestedObject).session(session);
 
     if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
-    const offered = await ObjectModel.findById(trade.offeredObject).session(session);
-    const requested = await ObjectModel.findById(trade.requestedObject).session(session);
-
-    if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
 
     if (offered.status !== OBJECT_STATUS.AVAILABLE || requested.status !== OBJECT_STATUS.AVAILABLE)
       return res.status(400).json({ message: 'One or both objects are no longer available.' });
@@ -151,13 +147,13 @@ router.put('/:id/propose', auth, async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to propose an object for this trade.' });
 
     if (trade.status !== TRADE_STATUS.PENDING)
-      return res.status(400).json({ message: 'You can only propose your own objects.' });
+      return res.status(400).json({ message: 'Trade must be in pending state to propose an object.' });
 
     const offered = await ObjectModel.findById(offeredObject);
     if (!offered) return res.status(404).json({ message: 'Offered object not found.' });
 
     if (offered.owner.toString() !== trade.fromUser.toString())
-      return res.status(400).json({ message: 'You must select an object from the requester.' });
+      return res.status(400).json({ message: 'The offered object must belong to the trade initiator.' });
 
     if (offered.status !== OBJECT_STATUS.AVAILABLE)
       return res.status(400).json({ message: 'Offered object is not available.' });
