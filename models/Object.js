@@ -1,12 +1,16 @@
 const mongoose = require('mongoose');
 
-const objectSchema = new mongoose.Schema({
+const ObjectSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  description: { type: String },
-  category: { type: String },
+  description: { type: String, required: true },
+  category: { type: String, required: true },
   imageUrl: { type: String },
-  status: { type: String, enum: ['disponible', 'échangé'], default: 'disponible' }, // ou 'échangé'
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  status: {
+    type: String,
+    enum: ['disponible', 'échangé', 'réservé'],
+    default: 'disponible'
+  }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Object', objectSchema);
+module.exports = mongoose.model('Object', ObjectSchema);
