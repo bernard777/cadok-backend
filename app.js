@@ -40,6 +40,9 @@ if (fs.existsSync(tradesRoutePath)) {
 const usersRouter = require('./routes/users');
 app.use('/api/users', usersRouter);
 
+// Ajout de la route des catégories
+app.use('/api/categories', require('./routes/categories'));
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l’API Cadok');

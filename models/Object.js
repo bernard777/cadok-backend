@@ -5,6 +5,7 @@ const ObjectSchema = new mongoose.Schema({
   description: { type: String, required: true },
   category: { type: String, required: true },
   imageUrl: { type: String },
+  attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: {
     type: String,
