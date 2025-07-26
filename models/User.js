@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   pseudo: { type: String, required: true },
   avatar: { type: String, default: '' },
   city: { type: String, required: true },
+  favoriteCategories: [{ type: String }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

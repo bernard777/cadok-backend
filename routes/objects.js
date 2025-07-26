@@ -1,8 +1,12 @@
 const express = require('express');
 const ObjectModel = require('../models/Object');
+const User = require('../models/User');
 const auth = require('../middlewares/auth');
 
 const router = express.Router();
+
+// Nombre de catégories favorites attendu (doit être cohérent avec routes/users.js)
+const FAVORITE_CATEGORIES_COUNT = 4;
 
 
 // 🔼 1. Ajouter un objet
@@ -50,7 +54,7 @@ router.get('/', async (req, res) => {
     // Si un filtre ville est demandé, on récupère les utilisateurs de cette ville
     let ownerFilter = {};
     if (city) {
-      const usersInCity = await require('../models/User').find({ city }).select('_id');
+      const usersInCity = await User.find({ city }).select('_id');
       ownerFilter = { owner: { $in: usersInCity.map(u => u._id) } };
     }
 
@@ -62,6 +66,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+// 📰 2.1. Récupérer le fil d'actualités
+// GET /api/objects/feed
+router.get('/feed', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé." });
+    }
+    if (!user.favoriteCategories || user.favoriteCategories.length !== FAVORITE_CATEGORIES_COUNT) {
+      return res.status(400).json({ message: "Catégories favorites non définies." });
+    }
+    const objects = await ObjectModel.find({
+      category: { $in: user.favoriteCategories },
+      owner: { $ne: req.user.id }
+    })
+      .sort({ createdAt: -1 })
+      .populate('owner', 'pseudo city');
+    res.json(objects);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 // 🖊️ 3. Modifier un objet
