@@ -374,7 +374,7 @@ router.get('/:id/messages', auth, async (req, res) => {
     const trade = await Trade.findById(req.params.id);
     if (!trade || (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id))
       return res.status(403).json({ message: "Not allowed." });
-    const messages = await Message.find({ trade: trade._id }).populate('from', 'pseudo email').sort('createdAt');
+    const messages = await Message.find({ trade: trade._id }).populate('from', 'pseudo').sort('createdAt');
     res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
