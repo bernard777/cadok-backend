@@ -66,11 +66,8 @@ router.get('/', auth, async (req, res) => {
 
 // ========== ACCEPTER UNE PROPOSITION ==========
 router.put('/:id/accept', auth, async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const trade = await Trade.findById(req.params.id).session(session);
+    const trade = await Trade.findById(req.params.id);
 
     if (!trade) return res.status(404).json({ message: 'Trade not found.' });
 
@@ -85,8 +82,8 @@ router.put('/:id/accept', auth, async (req, res) => {
       return res.status(400).json({ message: 'No offered object to accept.' });
 
     // Vérif: objets toujours disponibles
-    const offered = await ObjectModel.findById(trade.offeredObject).session(session);
-    const requested = await ObjectModel.findById(trade.requestedObject).session(session);
+    const offered = await ObjectModel.findById(trade.offeredObject);
+    const requested = await ObjectModel.findById(trade.requestedObject);
 
     if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
 
@@ -95,21 +92,16 @@ router.put('/:id/accept', auth, async (req, res) => {
 
     // Valider le trade et MAJ objets
     trade.status = TRADE_STATUS.ACCEPTED;
-    await trade.save({ session });
+    await trade.save();
 
     offered.status = OBJECT_STATUS.TRADED;
     requested.status = OBJECT_STATUS.TRADED;
-    await offered.save({ session });
-    await requested.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
+    await offered.save();
+    await requested.save();
 
     res.json({ message: 'Trade accepted.', trade });
 
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
     return res.status(500).json({ error: err.message });
   }
 });
@@ -171,11 +163,8 @@ router.put('/:id/propose', auth, async (req, res) => {
 
 // ========== VALIDATION FINALE PAR L'INITIATEUR ==========
 router.put('/:id/confirm', auth, async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const trade = await Trade.findById(req.params.id).session(session);
+    const trade = await Trade.findById(req.params.id);
 
     if (!trade) return res.status(404).json({ message: 'Trade not found.' });
 
@@ -191,8 +180,8 @@ router.put('/:id/confirm', auth, async (req, res) => {
       return res.status(400).json({ message: 'No offered object selected yet.' });
 
     // Vérif objets toujours disponibles
-    const offered = await ObjectModel.findById(trade.offeredObject).session(session);
-    const requested = await ObjectModel.findById(trade.requestedObject).session(session);
+    const offered = await ObjectModel.findById(trade.offeredObject);
+    const requested = await ObjectModel.findById(trade.requestedObject);
 
     if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
 
@@ -201,21 +190,16 @@ router.put('/:id/confirm', auth, async (req, res) => {
 
     // Valider le trade et MAJ objets
     trade.status = TRADE_STATUS.ACCEPTED;
-    await trade.save({ session });
+    await trade.save();
 
     offered.status = OBJECT_STATUS.TRADED;
     requested.status = OBJECT_STATUS.TRADED;
-    await offered.save({ session });
-    await requested.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
+    await offered.save();
+    await requested.save();
 
     res.json({ message: 'Trade confirmed and accepted.', trade });
 
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
     res.status(500).json({ error: err.message });
   }
 });
