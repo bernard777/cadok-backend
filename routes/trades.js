@@ -5,6 +5,8 @@ const ObjectModel = require('../models/Object');
 const auth = require('../middlewares/auth');
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
+const Message = require('../models/Message');
+const sanitizeHtml = require('sanitize-html');
 
 // ENUMS
 const TRADE_STATUS = {
@@ -321,6 +323,54 @@ router.put('/:id/retry', auth, async (req, res) => {
 
     res.json({ message: 'Trade proposal refused, waiting for a new selection.', trade });
 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== ENVOYER UN MESSAGE DANS UN TROC ==========
+router.post('/:id/messages', auth, async (req, res) => {
+  try {
+    let { content } = req.body;
+
+    // Input validation
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ message: "Message content cannot be empty." });
+    }
+    content = content.trim();
+    if (content.length > 1000) {
+      return res.status(400).json({ message: "Message content is too long (max 1000 characters)." });
+    }
+
+    // Find trade and check authorization before sanitizing content
+    const trade = await Trade.findById(req.params.id);
+    if (!trade || (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id)) {
+      return res.status(403).json({ message: "Not allowed." });
+    }
+
+    // Sanitize input to prevent XSS
+    content = sanitizeHtml(content, {
+      allowedTags: [],
+      allowedAttributes: {}
+    });
+
+    const message = await Message.create({
+      trade: trade._id,
+      from: req.user.id,
+      content
+    });
+    res.status(201).json(message);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.get('/:id/messages', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade || (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id))
+      return res.status(403).json({ message: "Not allowed." });
+    const messages = await Message.find({ trade: trade._id }).populate('from', 'pseudo email').sort('createdAt');
+    res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
