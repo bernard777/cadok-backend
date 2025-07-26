@@ -83,7 +83,7 @@ router.get('/', auth, async (req, res) => {
       ]
     })
       .populate([
-        { path: 'offeredObject' },
+        { path: 'offeredObjects' },
         { path: 'requestedObjects' },
         { path: 'fromUser', select: 'pseudo city' },
         { path: 'toUser', select: 'pseudo city' }
