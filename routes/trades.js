@@ -4,6 +4,7 @@ const Trade = require('../models/Trade');
 const ObjectModel = require('../models/Object');
 const auth = require('../middlewares/auth');
 const mongoose = require('mongoose');
+const Notification = require('../models/Notification');
 
 // ENUMS
 const TRADE_STATUS = {
@@ -17,6 +18,13 @@ const OBJECT_STATUS = {
   TRADED: 'traded',
   PENDING: 'pending',
   RESERVED: 'reserved'
+};
+const NOTIFICATION_TYPE = {
+  TRADE_REQUEST: "trade_request",
+  TRADE_PROPOSED: "trade_proposed",
+  TRADE_ACCEPTED: "trade_accepted",
+  TRADE_REFUSED: "trade_refused",
+  TRADE_RETRY: "trade_retry"
 };
 
 // ========== PROPOSER UN ÉCHANGE ==========
@@ -41,6 +49,15 @@ router.post('/', auth, async (req, res) => {
     });
 
     const saved = await newTrade.save();
+
+    // Notification pour le propriétaire de l'objet demandé
+    await Notification.create({
+      user: requested.owner,
+      message: "Vous avez reçu une nouvelle demande de troc",
+      type: NOTIFICATION_TYPE.TRADE_REQUEST,
+      trade: saved._id
+    });
+
     res.status(201).json(saved);
 
   } catch (err) {
@@ -59,6 +76,16 @@ router.get('/', auth, async (req, res) => {
     })
       .populate('offeredObject requestedObject fromUser toUser');
     res.json(trades);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== LISTER SES NOTIFICATIONS ==========
+router.get('/notifications', auth, async (req, res) => {
+  try {
+    const notifications = await Notification.find({ user: req.user.id }).sort('-createdAt');
+    res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -99,6 +126,14 @@ router.put('/:id/accept', auth, async (req, res) => {
     await offered.save();
     await requested.save();
 
+    // Notification pour l'utilisateur 2 (propriétaire initial)
+    await Notification.create({
+      user: trade.toUser,
+      message: "Votre proposition de troc a été acceptée.",
+      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
+      trade: trade._id
+    });
+
     res.json({ message: 'Trade accepted.', trade });
 
   } catch (err) {
@@ -120,6 +155,13 @@ router.put('/:id/refuse', auth, async (req, res) => {
 
     trade.status = TRADE_STATUS.REFUSED;
     await trade.save();
+
+    await Notification.create({
+      user: trade.toUser,
+      message: "Votre proposition de troc a été refusée.",
+      type: NOTIFICATION_TYPE.TRADE_REFUSED,
+      trade: trade._id
+    });
 
     res.json({ message: 'Trade refused.', trade });
 
@@ -153,6 +195,14 @@ router.put('/:id/propose', auth, async (req, res) => {
     trade.offeredObject = offeredObject;
     trade.status = TRADE_STATUS.PROPOSED;
     await trade.save();
+
+    // Notification pour l'initiateur (fromUser)
+    await Notification.create({
+      user: trade.fromUser,
+      message: "Votre demande de troc a reçu une proposition d'échange.",
+      type: NOTIFICATION_TYPE.TRADE_PROPOSED,
+      trade: trade._id
+    });
 
     res.json(trade);
 
@@ -197,6 +247,14 @@ router.put('/:id/confirm', auth, async (req, res) => {
     await offered.save();
     await requested.save();
 
+    // Notification pour l'utilisateur 2 (propriétaire initial)
+    await Notification.create({
+      user: trade.toUser,
+      message: "Votre proposition de troc a été acceptée.",
+      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
+      trade: trade._id
+    });
+
     res.json({ message: 'Trade confirmed and accepted.', trade });
 
   } catch (err) {
@@ -220,6 +278,13 @@ router.put('/:id/cancel', auth, async (req, res) => {
 
     trade.status = TRADE_STATUS.REFUSED;
     await trade.save();
+
+    await Notification.create({
+      user: trade.toUser,
+      message: "Votre proposition de troc a été refusée.",
+      type: NOTIFICATION_TYPE.TRADE_REFUSED,
+      trade: trade._id
+    });
 
     res.json({ message: 'Trade cancelled by initiator.', trade });
 
@@ -246,6 +311,13 @@ router.put('/:id/retry', auth, async (req, res) => {
     trade.status = TRADE_STATUS.PENDING;
     trade.offeredObject = undefined;
     await trade.save();
+
+    await Notification.create({
+      user: trade.toUser,
+      message: "L'utilisateur a refusé votre proposition, veuillez choisir un autre objet.",
+      type: NOTIFICATION_TYPE.TRADE_RETRY,
+      trade: trade._id
+    });
 
     res.json({ message: 'Trade proposal refused, waiting for a new selection.', trade });
 
