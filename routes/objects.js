@@ -38,16 +38,24 @@ router.post('/', auth, async (req, res) => {
 
 
 // 👀 2. Récupérer tous les objets
-// GET /api/objects?status=available&category=Games
+// GET /api/objects?status=available&category=Games&city=Paris
 router.get('/', async (req, res) => {
-  const { status, category } = req.query;
+  const { status, category, city } = req.query;
 
   const filters = {};
   if (status) filters.status = status;
   if (category) filters.category = category;
 
   try {
-    const objects = await ObjectModel.find(filters).populate('owner', 'pseudo');
+    // Si un filtre ville est demandé, on récupère les utilisateurs de cette ville
+    let ownerFilter = {};
+    if (city) {
+      const usersInCity = await require('../models/User').find({ city }).select('_id');
+      ownerFilter = { owner: { $in: usersInCity.map(u => u._id) } };
+    }
+
+    const objects = await ObjectModel.find({ ...filters, ...ownerFilter })
+      .populate('owner', 'pseudo city');
     res.json(objects);
   } catch (err) {
     res.status(500).json({ error: 'Une erreur interne est survenue.' });

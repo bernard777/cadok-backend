@@ -76,7 +76,12 @@ router.get('/', auth, async (req, res) => {
         { toUser: req.user.id }
       ]
     })
-      .populate('offeredObject requestedObject fromUser toUser');
+      .populate([
+        { path: 'offeredObject' },
+        { path: 'requestedObject' },
+        { path: 'fromUser', select: 'pseudo city' },
+        { path: 'toUser', select: 'pseudo city' }
+      ]);
     res.json(trades);
   } catch (err) {
     res.status(500).json({ error: err.message });
