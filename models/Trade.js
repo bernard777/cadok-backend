@@ -10,8 +10,8 @@ const TRADE_STATUS = {
 const tradeSchema = new mongoose.Schema({
   fromUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // User who proposes the trade
   toUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },   // User who receives the trade offer
-  offeredObject: { type: mongoose.Schema.Types.ObjectId, ref: 'Object' },
-  requestedObject: { type: mongoose.Schema.Types.ObjectId, ref: 'Object', required: true },
+  offeredObjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Object' }],
+  requestedObjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Object', required: true }],
   status: {
     type: String,
     enum: Object.values(TRADE_STATUS),

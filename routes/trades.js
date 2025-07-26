@@ -31,39 +31,45 @@ const NOTIFICATION_TYPE = {
 
 // ========== PROPOSER UN ÉCHANGE ==========
 router.post('/', auth, async (req, res) => {
-  const { requestedObject } = req.body;
   try {
-    const requested = await ObjectModel.findById(requestedObject);
-    if (!requested)
-      return res.status(404).json({ message: 'Object not found.' });
+    const { requestedObjects } = req.body; // tableau d'IDs d'objets
+    if (!Array.isArray(requestedObjects) || requestedObjects.length === 0) {
+      return res.status(400).json({ message: 'Vous devez sélectionner au moins un objet.' });
+    }
 
-    if (requested.owner.toString() === req.user.id)
-      return res.status(400).json({ message: 'Cannot trade with yourself.' });
-
-    if (requested.status !== OBJECT_STATUS.AVAILABLE)
-      return res.status(400).json({ message: 'Object is not available for trade.' });
+    // Vérifie que tous les objets existent et appartiennent au même utilisateur (utilisateur 2)
+    const objects = await ObjectModel.find({ _id: { $in: requestedObjects } });
+    if (objects.length !== requestedObjects.length) {
+      return res.status(404).json({ message: 'Un ou plusieurs objets demandés sont introuvables.' });
+    }
+    const ownerId = objects[0].owner.toString();
+    if (!objects.every(obj => obj.owner.toString() === ownerId)) {
+      return res.status(400).json({ message: 'Tous les objets doivent appartenir au même utilisateur.' });
+    }
+    if (ownerId === req.user.id) {
+      return res.status(400).json({ message: 'Impossible de troquer avec soi-même.' });
+    }
 
     const newTrade = new Trade({
       fromUser: req.user.id,
-      toUser: requested.owner,
-      requestedObject,
+      toUser: ownerId,
+      requestedObjects,
       status: TRADE_STATUS.PENDING
     });
 
     const saved = await newTrade.save();
 
-    // Notification pour le propriétaire de l'objet demandé
+    // Notification pour l'utilisateur 2
     await Notification.create({
-      user: requested.owner,
-      message: "Vous avez reçu une nouvelle demande de troc",
+      user: ownerId,
+      message: "Vous avez reçu une nouvelle demande de troc sur plusieurs objets.",
       type: NOTIFICATION_TYPE.TRADE_REQUEST,
       trade: saved._id
     });
 
     res.status(201).json(saved);
-
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -78,7 +84,7 @@ router.get('/', auth, async (req, res) => {
     })
       .populate([
         { path: 'offeredObject' },
-        { path: 'requestedObject' },
+        { path: 'requestedObjects' },
         { path: 'fromUser', select: 'pseudo city' },
         { path: 'toUser', select: 'pseudo city' }
       ]);
@@ -113,25 +119,37 @@ router.put('/:id/accept', auth, async (req, res) => {
       return res.status(400).json({ message: 'Trade must be in proposed state to accept.' });
 
     if (!trade.offeredObject)
-      return res.status(400).json({ message: 'No offered object to accept.' });
+      return res.status(400).json({ message: 'No offered objects to accept.' });
 
     // Vérif: objets toujours disponibles
-    const offered = await ObjectModel.findById(trade.offeredObject);
-    const requested = await ObjectModel.findById(trade.requestedObject);
+    const offeredObjects = await ObjectModel.find({ _id: { $in: trade.offeredObjects } });
+    const requestedObjects = await ObjectModel.find({ _id: { $in: trade.requestedObjects } });
 
-    if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
-
-    if (offered.status !== OBJECT_STATUS.AVAILABLE || requested.status !== OBJECT_STATUS.AVAILABLE)
-      return res.status(400).json({ message: 'One or both objects are no longer available.' });
+    if (
+      offeredObjects.length !== (Array.isArray(trade.offeredObjects) ? trade.offeredObjects.length : 0) ||
+      requestedObjects.length !== (Array.isArray(trade.requestedObjects) ? trade.requestedObjects.length : 0)
+    ) {
+      return res.status(404).json({ message: 'One or more objects not found.' });
+    }
+    if (
+      !offeredObjects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE) ||
+      !requestedObjects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE)
+    ) {
+      return res.status(400).json({ message: 'One or more objects are no longer available.' });
+    }
 
     // Valider le trade et MAJ objets
     trade.status = TRADE_STATUS.ACCEPTED;
     await trade.save();
 
-    offered.status = OBJECT_STATUS.TRADED;
-    requested.status = OBJECT_STATUS.TRADED;
-    await offered.save();
-    await requested.save();
+    for (const obj of offeredObjects) {
+      obj.status = OBJECT_STATUS.TRADED;
+      await obj.save();
+    }
+    for (const obj of requestedObjects) {
+      obj.status = OBJECT_STATUS.TRADED;
+      await obj.save();
+    }
 
     // Notification pour l'utilisateur 2 (propriétaire initial)
     await Notification.create({
@@ -179,40 +197,40 @@ router.put('/:id/refuse', auth, async (req, res) => {
 
 // ========== PROPOSER UN OBJET À L'ÉCHANGE ==========
 router.put('/:id/propose', auth, async (req, res) => {
-  const { offeredObject } = req.body;
   try {
+    const { offeredObjects } = req.body;
     const trade = await Trade.findById(req.params.id);
-    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
+    if (!trade || trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not allowed." });
+    }
+    if (trade.status !== TRADE_STATUS.PENDING) {
+      return res.status(400).json({ message: "Ce troc n'est pas en attente de proposition." });
+    }
+    if (!Array.isArray(offeredObjects) || offeredObjects.length !== trade.requestedObjects.length) {
+      return res.status(400).json({ message: "Vous devez sélectionner exactement " + trade.requestedObjects.length + " objets à offrir en échange." });
+    }
 
-    if (trade.toUser.toString() !== req.user.id)
-      return res.status(403).json({ message: 'You are not authorized to propose an object for this trade.' });
+    const objects = await ObjectModel.find({ _id: { $in: offeredObjects }, owner: trade.fromUser });
+    if (objects.length !== offeredObjects.length) {
+      return res.status(400).json({ message: "Un ou plusieurs objets offerts sont invalides." });
+    }
+    if (!objects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE)) {
+      return res.status(400).json({ message: "Un ou plusieurs objets ne sont pas disponibles." });
+    }
 
-    if (trade.status !== TRADE_STATUS.PENDING)
-      return res.status(400).json({ message: 'Trade must be in pending state to propose an object.' });
-
-    const offered = await ObjectModel.findById(offeredObject);
-    if (!offered) return res.status(404).json({ message: 'Offered object not found.' });
-
-    if (offered.owner.toString() !== trade.fromUser.toString())
-      return res.status(400).json({ message: 'The offered object must belong to the trade initiator.' });
-
-    if (offered.status !== OBJECT_STATUS.AVAILABLE)
-      return res.status(400).json({ message: 'Offered object is not available.' });
-
-    trade.offeredObject = offeredObject;
+    trade.offeredObjects = offeredObjects;
     trade.status = TRADE_STATUS.PROPOSED;
     await trade.save();
 
-    // Notification pour l'initiateur (fromUser)
+    // Notification pour l'utilisateur 1
     await Notification.create({
       user: trade.fromUser,
-      message: "Votre demande de troc a reçu une proposition d'échange.",
+      message: "Une contre-proposition de troc a été faite.",
       type: NOTIFICATION_TYPE.TRADE_PROPOSED,
       trade: trade._id
     });
 
     res.json(trade);
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -229,32 +247,35 @@ router.put('/:id/confirm', auth, async (req, res) => {
     if (trade.fromUser.toString() !== req.user.id)
       return res.status(403).json({ message: 'You are not authorized to confirm this trade.' });
 
+    // Vérif: offeredObjects doit être présent
+    if (!trade.offeredObjects || !Array.isArray(trade.offeredObjects) || trade.offeredObjects.length === 0)
+      return res.status(400).json({ message: 'No offered objects selected yet.' });
+
+    // Vérif objets toujours disponibles
+    const offered = await ObjectModel.find({ _id: { $in: trade.offeredObjects } });
+    const requested = await ObjectModel.find({ _id: { $in: trade.requestedObjects } });
+
+    // Vérif: les longueurs des tableaux doivent correspondre
+    if (offered.length !== trade.offeredObjects.length || requested.length !== trade.requestedObjects.length)
+      return res.status(404).json({ message: 'Object(s) not found.' });
+
     if (trade.status !== TRADE_STATUS.PROPOSED)
       return res.status(400).json({ message: 'Trade is not in proposed state.' });
 
-    // Vérif: offeredObject doit être présent
-    if (!trade.offeredObject)
-      return res.status(400).json({ message: 'No offered object selected yet.' });
-
-    // Vérif objets toujours disponibles
-    const offered = await ObjectModel.findById(trade.offeredObject);
-    const requested = await ObjectModel.findById(trade.requestedObject);
-
-    if (!offered || !requested) return res.status(404).json({ message: 'Object(s) not found.' });
-
-    if (offered.status !== OBJECT_STATUS.AVAILABLE || requested.status !== OBJECT_STATUS.AVAILABLE)
-      return res.status(400).json({ message: 'One or both objects are no longer available.' });
+    if (
+      !offered.every(obj => obj.status === OBJECT_STATUS.AVAILABLE) ||
+      !requested.every(obj => obj.status === OBJECT_STATUS.AVAILABLE)
+    ) {
+      return res.status(400).json({ message: 'One or more objects are no longer available.' });
+    }
 
     // Valider le trade et MAJ objets
     trade.status = TRADE_STATUS.ACCEPTED;
+    offered.forEach(obj => obj.status = OBJECT_STATUS.TRADED);
+    requested.forEach(obj => obj.status = OBJECT_STATUS.TRADED);
+    await Promise.all([...offered, ...requested].map(obj => obj.save()));
     await trade.save();
 
-    offered.status = OBJECT_STATUS.TRADED;
-    requested.status = OBJECT_STATUS.TRADED;
-    await offered.save();
-    await requested.save();
-
-    // Notification pour l'utilisateur 2 (propriétaire initial)
     await Notification.create({
       user: trade.toUser,
       message: "Votre proposition de troc a été acceptée.",
@@ -316,7 +337,9 @@ router.put('/:id/retry', auth, async (req, res) => {
 
     // Remettre le trade à l'état initial
     trade.status = TRADE_STATUS.PENDING;
-    trade.offeredObject = undefined;
+    // Remettre le trade à l'état initial
+    trade.status = TRADE_STATUS.PENDING;
+    trade.offeredObjects = [];
     await trade.save();
 
     await Notification.create({
