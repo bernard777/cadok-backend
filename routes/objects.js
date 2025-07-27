@@ -89,6 +89,17 @@ router.get('/feed', auth, async (req, res) => {
   }
 });
 
+// 👁️ 2.2. Récupérer le détail d'un objet
+// GET /api/objects/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city');
+    if (!object) return res.status(404).json({ message: 'Objet introuvable' });
+    res.json(object);
+  } catch (err) {
+    res.status(500).json({ error: 'Une erreur interne est survenue.' });
+  }
+});
 
 // 🖊️ 3. Modifier un objet
 // PUT /api/objects/:id
