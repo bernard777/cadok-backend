@@ -152,11 +152,31 @@ router.get('/me', auth, async (req, res) => {
 });
 
 // Update user
-router.put('/update', auth, async (req, res) => {
+router.put(
+  '/update',
+  auth,
+  [
+    body('email').optional().isEmail().withMessage('Email invalide')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
   const { pseudo, email, city } = req.body;
   try {
     const updates = {};
     if (pseudo) updates.pseudo = pseudo;
+
+      const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+      if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+
+      res.json({ user });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
     if (email) updates.email = email;
     if (city) updates.city = city;
 
@@ -166,30 +186,34 @@ router.put('/update', auth, async (req, res) => {
       if (existing) return res.status(400).json({ message: 'Email déjà utilisé.' });
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
-    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-
-    res.json({ user });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Update avatar
 router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => {
   try {
     let avatarUrl = '';
-    if (req.file) {
+    // Support avatar removal via removeAvatar parameter
+    if (req.body.removeAvatar === 'true') {
+      avatarUrl = '';
+    } else if (req.file) {
+      avatarUrl = `/uploads/avatars/${req.file.filename}`;
+router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => {
+  try {
+    let avatarUrl = '';
+    // Support avatar removal via removeAvatar parameter
+    if (req.body.removeAvatar === 'true') {
+      avatarUrl = '';
+    } else if (req.file) {
       avatarUrl = `/uploads/avatars/${req.file.filename}`;
     } else {
-      return res.status(400).json({ message: 'Aucune image envoyée.' });
+      return res.status(400).json({ message: 'Aucune image envoyée ou paramètre de suppression absent.' });
     }
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { avatar: avatarUrl },
       { new: true }
     ).select('-password');
+
     if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+
     res.json({ user });
   } catch (err) {
     res.status(500).json({ error: err.message });
