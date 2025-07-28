@@ -151,4 +151,49 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// Update user
+router.put('/update', auth, async (req, res) => {
+  const { pseudo, email, city } = req.body;
+  try {
+    const updates = {};
+    if (pseudo) updates.pseudo = pseudo;
+    if (email) updates.email = email;
+    if (city) updates.city = city;
+
+    // Vérifie que l'email n'est pas déjà utilisé par un autre utilisateur
+    if (email) {
+      const existing = await User.findOne({ email, _id: { $ne: req.user.id } });
+      if (existing) return res.status(400).json({ message: 'Email déjà utilisé.' });
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update avatar
+router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => {
+  try {
+    let avatarUrl = '';
+    if (req.file) {
+      avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    } else {
+      return res.status(400).json({ message: 'Aucune image envoyée.' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatar: avatarUrl },
+      { new: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
