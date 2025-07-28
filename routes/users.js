@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middlewares/auth');
 const User = require('../models/User');
 const Category = require('../models/Category'); // Assurez-vous d'importer le modèle Category
+const bcrypt = require('bcryptjs');
 
 const REQUIRED_CATEGORY_COUNT = 4;
 
@@ -38,6 +39,36 @@ router.get('/me/favorites', auth, async (req, res) => {
     res.json({ favoriteCategories: user.favoriteCategories });
   } catch (err) {
     res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
+// Changement de mot de passe sécurisé
+router.post('/change-password', auth, async (req, res) => {
+  const { currentPassword, password } = req.body;
+
+  // Vérification que les champs requis sont présents
+  if (!currentPassword || !password) {
+    return res.status(400).json({ message: 'Les champs currentPassword et password sont requis.' });
+  }
+
+  // Vérification de la force du mot de passe (au moins 8 caractères, une lettre et un chiffre)
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) {
+    return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères, dont une lettre et un chiffre.' });
+  }
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+    const hashed = await bcrypt.hash(password, 12);
+    }
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Mot de passe actuel incorrect." });
+    }
+    const hashed = await bcrypt.hash(password, 10);
+    await User.findByIdAndUpdate(req.user.id, { password: hashed });
+    res.json({ message: 'Mot de passe changé avec succès.' });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur lors du changement de mot de passe." });
   }
 });
 
