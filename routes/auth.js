@@ -5,6 +5,9 @@ const User = require('../models/User');
 const auth = require('../middlewares/auth');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 
@@ -15,9 +18,48 @@ const loginLimiter = rateLimit({
   message: 'Trop de tentatives, réessayez plus tard.'
 });
 
+// Configure le stockage des fichiers
+const avatarDir = path.join(__dirname, '../uploads/avatars');
+
+// Vérifie que le dossier existe et est accessible en écriture
+if (!fs.existsSync(avatarDir)) {
+  try {
+    fs.mkdirSync(avatarDir, { recursive: true });
+  } catch (err) {
+    console.error(`Erreur lors de la création du dossier d'avatars:`, err);
+    throw err; // Arrête l'application si le dossier ne peut pas être créé
+  }
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarDir);
+  },
+  filename: (req, file, cb) => {
+    // Sanitize filename: remove spaces and special chars
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '');
+    cb(null, base + '-' + Date.now() + ext);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seuls les fichiers image (jpeg, jpg, png, gif) sont autorisés.'));
+    }
+  }
+});
+
 // Register
 router.post(
   '/register',
+  upload.single('avatar'),
   [
     body('email').isEmail().withMessage('Email invalide'),
     body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères'),
@@ -28,13 +70,20 @@ router.post(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    const { email, password, pseudo } = req.body;
+    const { email, password, pseudo, city } = req.body;
     try {
       const existing = await User.findOne({ email });
       if (existing) return res.status(400).json({ message: 'Email déjà utilisé' });
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const newUser = new User({ email, password: hashedPassword, pseudo });
+
+      // Ajoute l'avatar si présent
+      let avatarUrl = '';
+      if (req.file) {
+        avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      }
+
+      const newUser = new User({ email, password: hashedPassword, pseudo, city, avatar: avatarUrl });
       await newUser.save();
 
       const token = jwt.sign(

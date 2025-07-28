@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
 dotenv.config();
 
@@ -9,6 +10,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Ajout de la route d'authentification
 const authRoutes = require('./routes/auth');
@@ -16,7 +18,6 @@ app.use('/api/auth', authRoutes);
 
 // Ajout de la route des objets
 const fs = require('fs');
-const path = require('path');
 const objectsRoutePath = path.join(__dirname, 'routes', 'objects.js');
 
 if (fs.existsSync(objectsRoutePath)) {
