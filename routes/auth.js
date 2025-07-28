@@ -144,8 +144,7 @@ router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
-
-    res.json(user);
+    res.json({ user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -163,37 +162,30 @@ router.put(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-  const { pseudo, email, city } = req.body;
-  try {
-    const updates = {};
-    if (pseudo) updates.pseudo = pseudo;
+    const { pseudo, email, city } = req.body;
+    try {
+      const updates = {};
+      if (pseudo) updates.pseudo = pseudo;
+      if (email) updates.email = email;
+      if (city) updates.city = city;
+
+      // Vérifie que l'email n'est pas déjà utilisé par un autre utilisateur
+      if (email) {
+        const existing = await User.findOne({ email, _id: { $ne: req.user.id } });
+        if (existing) return res.status(400).json({ message: 'Email déjà utilisé.' });
+      }
 
       const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
       if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
 
       res.json({ user });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ message: 'Erreur serveur', error: err.message });
     }
   }
 );
-    if (email) updates.email = email;
-    if (city) updates.city = city;
 
-    // Vérifie que l'email n'est pas déjà utilisé par un autre utilisateur
-    if (email) {
-      const existing = await User.findOne({ email, _id: { $ne: req.user.id } });
-      if (existing) return res.status(400).json({ message: 'Email déjà utilisé.' });
-    }
-
-router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => {
-  try {
-    let avatarUrl = '';
-    // Support avatar removal via removeAvatar parameter
-    if (req.body.removeAvatar === 'true') {
-      avatarUrl = '';
-    } else if (req.file) {
-      avatarUrl = `/uploads/avatars/${req.file.filename}`;
+// Update avatar
 router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => {
   try {
     let avatarUrl = '';
@@ -216,7 +208,7 @@ router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => 
 
     res.json({ user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 });
 
