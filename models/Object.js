@@ -4,7 +4,12 @@ const ObjectSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   category: { type: String, required: true },
-  imageUrl: { type: String },
+  imageUrl: { type: String }, // Gardé pour compatibilité descendante
+  images: [{ 
+    url: { type: String, required: true },
+    caption: { type: String, default: '' },
+    isPrimary: { type: Boolean, default: false }
+  }],
   attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: {
