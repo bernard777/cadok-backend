@@ -8,11 +8,13 @@ const router = express.Router();
 // Nombre de catégories favorites attendu (doit être cohérent avec routes/users.js)
 const FAVORITE_CATEGORIES_COUNT = 4;
 
+console.log('objects.js chargé');
 
 // 🔼 1. Ajouter un objet
 // POST /api/objects
 router.post('/', auth, async (req, res) => {
-  const { title, description, category, imageUrl } = req.body;
+  const { title, description, category, imageUrl, attributes } = req.body;
+  console.log('POST /api/objects', req.body); // Ajoute ce log
 
   // Validate required fields
   if (
@@ -30,12 +32,12 @@ router.post('/', auth, async (req, res) => {
       category,
       imageUrl,
       owner: req.user.id,
+      attributes: attributes || {}
     });
-
     const saved = await newObject.save();
     res.status(201).json(saved);
   } catch (err) {
-    console.error(err);
+    console.error('Erreur POST /api/objects:', err); // Ajoute ce log
     res.status(500).json({ error: 'Une erreur interne est survenue.' });
   }
 });
@@ -86,6 +88,19 @@ router.get('/feed', auth, async (req, res) => {
     res.json(objects);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔽 Récupérer les objets de l'utilisateur connecté
+// GET /api/objects/me
+router.get('/me', auth, async (req, res) => {
+  try {
+    console.log('req.user:', req.user);
+    const objects = await ObjectModel.find({ owner: req.user.id }).populate('owner', 'pseudo city');
+    res.json({ objects });
+  } catch (err) {
+    console.error('Erreur /objects/me:', err);
+    res.status(500).json({ error: 'Impossible de charger vos objets.' });
   }
 });
 
@@ -150,5 +165,7 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 module.exports = router;

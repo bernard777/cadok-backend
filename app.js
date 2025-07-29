@@ -42,7 +42,8 @@ const usersRouter = require('./routes/users');
 app.use('/api/users', usersRouter);
 
 // Ajout de la route des catégories
-app.use('/api/categories', require('./routes/categories'));
+const categoryRoutes = require('./routes/categories');
+app.use('/api/categories', categoryRoutes);
 
 // Routes
 app.get('/', (req, res) => {
