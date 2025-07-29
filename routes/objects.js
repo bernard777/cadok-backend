@@ -152,7 +152,8 @@ router.get('/', async (req, res) => {
     const objects = await ObjectModel.find({ ...filters, ...ownerFilter })
       .skip(skip)
       .limit(limitNum)
-      .populate('owner', 'pseudo city');
+      .populate('owner', 'pseudo city')
+      .populate('category', 'name');
       
     const total = await ObjectModel.countDocuments({ ...filters, ...ownerFilter });
     
@@ -186,7 +187,8 @@ router.get('/feed', auth, async (req, res) => {
       owner: { $ne: req.user.id }
     })
       .sort({ createdAt: -1 })
-      .populate('owner', 'pseudo city');
+      .populate('owner', 'pseudo city')
+      .populate('category', 'name');
     res.json(objects);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -197,7 +199,7 @@ router.get('/feed', auth, async (req, res) => {
 // GET /api/objects/me
 router.get('/me', auth, async (req, res) => {
   try {
-    const objects = await ObjectModel.find({ owner: req.user.id }).populate('owner', 'pseudo city');
+    const objects = await ObjectModel.find({ owner: req.user.id }).populate('owner', 'pseudo city').populate('category', 'name');
     res.json({ objects });
   } catch (err) {
     console.error('Erreur /objects/me:', err);
@@ -214,7 +216,7 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'ID d\'objet invalide.' });
     }
 
-    const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city');
+    const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city').populate('category', 'name');
     if (!object) return res.status(404).json({ message: 'Objet introuvable' });
     res.json(object);
   } catch (err) {

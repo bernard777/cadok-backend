@@ -10,7 +10,7 @@ router.post('/', categoryController.createCategory);
 // Route GET pour récupérer toutes les catégories
 router.get('/', async (req, res) => {
   try {
-    const categories = await Category.find().select('name fields -_id');
+    const categories = await Category.find().select('name fields');
     res.json(categories);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch categories' });
