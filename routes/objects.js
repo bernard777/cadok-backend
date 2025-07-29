@@ -197,7 +197,6 @@ router.get('/feed', auth, async (req, res) => {
 // GET /api/objects/me
 router.get('/me', auth, async (req, res) => {
   try {
-    console.log('req.user:', req.user);
     const objects = await ObjectModel.find({ owner: req.user.id }).populate('owner', 'pseudo city');
     res.json({ objects });
   } catch (err) {
