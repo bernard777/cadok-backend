@@ -57,8 +57,6 @@ const validateAndProcessImages = (images) => {
   return { processedImages };
 };
 
-console.log('objects.js chargé');
-
 // Limiteur de taux pour la création d'objets
 const createObjectLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
