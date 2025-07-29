@@ -2,27 +2,53 @@ const express = require('express');
 const ObjectModel = require('../models/Object');
 const User = require('../models/User');
 const auth = require('../middlewares/auth');
+const mongoose = require('mongoose');
+const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
 
 // Nombre de catégories favorites attendu (doit être cohérent avec routes/users.js)
 const FAVORITE_CATEGORIES_COUNT = 4;
 
+// Statuts valides pour les objets
+const VALID_STATUSES = ['available', 'traded', 'reserved'];
+
 console.log('objects.js chargé');
+
+// Limiteur de taux pour la création d'objets
+const createObjectLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // max 5 objets par 15 min
+  message: 'Trop de créations d\'objets, réessayez plus tard.'
+});
 
 // 🔼 1. Ajouter un objet
 // POST /api/objects
-router.post('/', auth, async (req, res) => {
+router.post('/', createObjectLimiter, auth, async (req, res) => {
   const { title, description, category, imageUrl, attributes } = req.body;
   console.log('POST /api/objects', req.body); // Ajoute ce log
 
   // Validate required fields
   if (
-    !title || typeof title !== 'string' ||
-    !description || typeof description !== 'string' ||
-    !category || typeof category !== 'string'
+    !title || typeof title !== 'string' || title.trim().length === 0 ||
+    !description || typeof description !== 'string' || description.trim().length === 0 ||
+    !category || typeof category !== 'string' || category.trim().length === 0
   ) {
-    return res.status(400).json({ error: 'Les champs title, description et category sont requis et doivent être des chaînes de caractères.' });
+    return res.status(400).json({ error: 'Les champs title, description et category sont requis et ne peuvent pas être vides.' });
+  }
+
+  // Validate title and description length
+  if (title.trim().length > 100) {
+    return res.status(400).json({ error: 'Le titre ne peut pas dépasser 100 caractères.' });
+  }
+  
+  if (description.trim().length > 1000) {
+    return res.status(400).json({ error: 'La description ne peut pas dépasser 1000 caractères.' });
+  }
+
+  // Validate imageUrl format if provided
+  if (imageUrl && (typeof imageUrl !== 'string' || imageUrl.trim().length === 0)) {
+    return res.status(400).json({ error: 'L\'URL de l\'image doit être une chaîne de caractères non vide.' });
   }
 
   try {
@@ -46,10 +72,20 @@ router.post('/', auth, async (req, res) => {
 // 👀 2. Récupérer tous les objets
 // GET /api/objects?status=available&category=Games&city=Paris
 router.get('/', async (req, res) => {
-  const { status, category, city } = req.query;
-
+  const { status, category, city, page = 1, limit = 10 } = req.query;
+  
+  // Validate pagination parameters
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10)); // Limite max de 50
+  const skip = (pageNum - 1) * limitNum;
+  
   const filters = {};
-  if (status) filters.status = status;
+  if (status) {
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide. Valeurs autorisées : ' + VALID_STATUSES.join(', ') });
+    }
+    filters.status = status;
+  }
   if (category) filters.category = category;
 
   try {
@@ -61,8 +97,21 @@ router.get('/', async (req, res) => {
     }
 
     const objects = await ObjectModel.find({ ...filters, ...ownerFilter })
+      .skip(skip)
+      .limit(limitNum)
       .populate('owner', 'pseudo city');
-    res.json(objects);
+      
+    const total = await ObjectModel.countDocuments({ ...filters, ...ownerFilter });
+    
+    res.json({
+      objects,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Une erreur interne est survenue.' });
   }
@@ -108,6 +157,11 @@ router.get('/me', auth, async (req, res) => {
 // GET /api/objects/:id
 router.get('/:id', async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'ID d\'objet invalide.' });
+    }
+
     const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city');
     if (!object) return res.status(404).json({ message: 'Objet introuvable' });
     res.json(object);
@@ -120,6 +174,11 @@ router.get('/:id', async (req, res) => {
 // PUT /api/objects/:id
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'ID d\'objet invalide.' });
+    }
+
     const object = await ObjectModel.findById(req.params.id);
 
     if (!object) return res.status(404).json({ message: 'Objet introuvable' });
@@ -127,16 +186,36 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Non autorisé' });
 
     // Only allow specific fields to be updated and validate their types
-    const allowedUpdates = ['title', 'description', 'category', 'imageUrl'];
+    const allowedUpdates = ['title', 'description', 'category', 'imageUrl', 'status'];
     const updates = {};
+    
     for (const field of allowedUpdates) {
       if (req.body[field] !== undefined) {
         // Validate string fields
         if (['title', 'description', 'category'].includes(field)) {
-          if (typeof req.body[field] !== 'string') {
-            return res.status(400).json({ error: `Le champ ${field} doit être une chaîne de caractères.` });
+          if (typeof req.body[field] !== 'string' || req.body[field].trim().length === 0) {
+            return res.status(400).json({ error: `Le champ ${field} doit être une chaîne de caractères non vide.` });
+          }
+          
+          // Validate length constraints
+          if (field === 'title' && req.body[field].trim().length > 100) {
+            return res.status(400).json({ error: 'Le titre ne peut pas dépasser 100 caractères.' });
+          }
+          if (field === 'description' && req.body[field].trim().length > 1000) {
+            return res.status(400).json({ error: 'La description ne peut pas dépasser 1000 caractères.' });
           }
         }
+        
+        // Validate imageUrl field
+        if (field === 'imageUrl' && req.body[field] && (typeof req.body[field] !== 'string' || req.body[field].trim().length === 0)) {
+          return res.status(400).json({ error: 'L\'URL de l\'image doit être une chaîne de caractères non vide.' });
+        }
+        
+        // Validate status field
+        if (field === 'status' && !VALID_STATUSES.includes(req.body[field])) {
+          return res.status(400).json({ error: 'Statut invalide. Valeurs autorisées : ' + VALID_STATUSES.join(', ') });
+        }
+        
         updates[field] = req.body[field];
       }
     }
@@ -144,6 +223,7 @@ router.put('/:id', auth, async (req, res) => {
     const updated = await ObjectModel.findByIdAndUpdate(req.params.id, updates, { new: true });
     res.json(updated);
   } catch (err) {
+    console.error('Erreur PUT /api/objects/:id:', err);
     res.status(500).json({ error: 'Une erreur interne est survenue.' });
   }
 });
@@ -153,6 +233,11 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/objects/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'ID d\'objet invalide.' });
+    }
+
     const object = await ObjectModel.findById(req.params.id);
 
     if (!object) return res.status(404).json({ message: 'Objet introuvable' });
