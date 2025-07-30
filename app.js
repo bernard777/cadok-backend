@@ -45,6 +45,26 @@ app.use('/api/users', usersRouter);
 const categoryRoutes = require('./routes/categories');
 app.use('/api/categories', categoryRoutes);
 
+// Ajout de la route des notifications
+const notificationsRoutePath = path.join(__dirname, 'routes', 'notifications.js');
+
+if (fs.existsSync(notificationsRoutePath)) {
+  const notificationRoutes = require('./routes/notifications');
+  app.use('/api/notifications', notificationRoutes);
+} else {
+  console.warn("Warning: './routes/notifications.js' not found. '/api/notifications' route not registered.");
+}
+
+// Ajout de la route des conversations
+const conversationsRoutePath = path.join(__dirname, 'routes', 'conversations.js');
+
+if (fs.existsSync(conversationsRoutePath)) {
+  const conversationRoutes = require('./routes/conversations');
+  app.use('/api', conversationRoutes);
+} else {
+  console.warn("Warning: './routes/conversations.js' not found. '/api/conversations' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l’API Cadok');

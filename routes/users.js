@@ -72,4 +72,24 @@ router.post('/change-password', auth, async (req, res) => {
   }
 });
 
+// Récupérer les objets d'un utilisateur (pour la vitrine publique)
+router.get('/:userId/objects', auth, async (req, res) => {
+  try {
+    const ObjectModel = require('../models/Object');
+    const { userId } = req.params;
+
+    const objects = await ObjectModel.find({ 
+      owner: userId, 
+      status: 'available' // Seulement les objets disponibles
+    })
+    .populate('owner', 'pseudo city')
+    .sort({ createdAt: -1 });
+
+    res.json(objects);
+  } catch (err) {
+    console.error('Erreur lors de la récupération des objets:', err);
+    res.status(500).json({ message: "Erreur serveur lors de la récupération des objets." });
+  }
+});
+
 module.exports = router;

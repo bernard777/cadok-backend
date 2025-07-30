@@ -94,6 +94,46 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// ========== RÉCUPÉRER LES DÉTAILS D'UN ÉCHANGE ==========
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id)
+      .populate([
+        { path: 'offeredObjects', populate: { path: 'owner', select: 'pseudo city' } },
+        { path: 'requestedObjects', populate: { path: 'owner', select: 'pseudo city' } },
+        { path: 'fromUser', select: 'pseudo city' },
+        { path: 'toUser', select: 'pseudo city' }
+      ]);
+
+    if (!trade) {
+      return res.status(404).json({ message: 'Échange introuvable' });
+    }
+
+    // Vérifier que l'utilisateur a accès à ce trade
+    if (trade.fromUser._id.toString() !== req.user.id && trade.toUser._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Accès non autorisé à cet échange' });
+    }
+
+    // Adapter la structure pour correspondre à ce qu'attend le frontend
+    const adaptedTrade = {
+      _id: trade._id,
+      status: trade.status,
+      message: trade.message,
+      createdAt: trade.createdAt,
+      acceptedAt: trade.acceptedAt,
+      refusedAt: trade.refusedAt,
+      requester: trade.fromUser,
+      owner: trade.toUser,
+      requestedObjects: trade.requestedObjects,
+      offeredObjects: trade.offeredObjects
+    };
+
+    res.json(adaptedTrade);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ========== LISTER SES NOTIFICATIONS ==========
 router.get('/notifications', auth, async (req, res) => {
   try {
@@ -400,6 +440,198 @@ router.get('/:id/messages', auth, async (req, res) => {
     const messages = await Message.find({ trade: trade._id }).populate('from', 'pseudo').sort('createdAt');
     res.json(messages);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== ROUTES PATCH POUR FRONTEND ==========
+
+// PATCH /trades/:id/accept - Accepter un trade (alias pour PUT)
+router.patch('/:id/accept', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) {
+      return res.status(404).json({ message: 'Trade introuvable' });
+    }
+
+    // Vérifier que l'utilisateur peut accepter ce trade
+    if (trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter ce troc.' });
+    }
+
+    if (trade.status !== 'pending' && trade.status !== 'proposed') {
+      return res.status(400).json({ message: 'Ce troc ne peut plus être accepté.' });
+    }
+
+    // Marquer les objets comme échangés
+    if (trade.requestedObjects && trade.requestedObjects.length > 0) {
+      await ObjectModel.updateMany(
+        { _id: { $in: trade.requestedObjects } },
+        { status: OBJECT_STATUS.TRADED }
+      );
+    }
+
+    if (trade.offeredObjects && trade.offeredObjects.length > 0) {
+      await ObjectModel.updateMany(
+        { _id: { $in: trade.offeredObjects } },
+        { status: OBJECT_STATUS.TRADED }
+      );
+    }
+
+    trade.status = TRADE_STATUS.ACCEPTED;
+    trade.acceptedAt = new Date();
+    await trade.save();
+
+    // Créer notification pour le demandeur
+    await Notification.create({
+      user: trade.fromUser,
+      message: "Votre proposition de troc a été acceptée !",
+      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
+      trade: trade._id
+    });
+
+    res.json({ message: 'Troc accepté avec succès.', trade });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /trades/:id/decline - Refuser un trade (alias pour PUT)
+router.patch('/:id/decline', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) {
+      return res.status(404).json({ message: 'Trade introuvable' });
+    }
+
+    // Vérifier que l'utilisateur peut refuser ce trade
+    if (trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à refuser ce troc.' });
+    }
+
+    if (trade.status !== 'pending' && trade.status !== 'proposed') {
+      return res.status(400).json({ message: 'Ce troc ne peut plus être refusé.' });
+    }
+
+    trade.status = TRADE_STATUS.REFUSED;
+    trade.refusedAt = new Date();
+    await trade.save();
+
+    // Créer notification pour le demandeur
+    await Notification.create({
+      user: trade.fromUser,
+      message: "Votre proposition de troc a été refusée.",
+      type: NOTIFICATION_TYPE.TRADE_REFUSED,
+      trade: trade._id
+    });
+
+    res.json({ message: 'Troc refusé.', trade });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== CONTRE-PROPOSITION ==========
+router.post('/:id/counter-proposal', auth, async (req, res) => {
+  try {
+    const { proposedObjectId } = req.body;
+    const tradeId = req.params.id;
+
+    // Vérifier que l'objet proposé existe et appartient à l'utilisateur
+    const proposedObject = await ObjectModel.findById(proposedObjectId);
+    if (!proposedObject) {
+      return res.status(404).json({ message: 'Objet proposé introuvable.' });
+    }
+    if (proposedObject.owner.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Vous ne pouvez proposer que vos propres objets.' });
+    }
+
+    // Récupérer le trade original
+    const originalTrade = await Trade.findById(tradeId);
+    if (!originalTrade) {
+      return res.status(404).json({ message: 'Troc introuvable.' });
+    }
+
+    // Vérifier que l'utilisateur est le destinataire du troc
+    if (originalTrade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Vous ne pouvez faire une contre-proposition que sur les trocs qui vous sont destinés.' });
+    }
+
+    // Créer un nouveau troc inversé (contre-proposition)
+    const counterTrade = new Trade({
+      fromUser: req.user.id,
+      toUser: originalTrade.fromUser,
+      requestedObjects: originalTrade.requestedObjects, // Les mêmes objets demandés
+      offeredObjects: [proposedObjectId], // L'objet proposé en retour
+      status: TRADE_STATUS.PENDING,
+      originalTrade: tradeId, // Référence au troc original
+      message: `Contre-proposition pour le troc de ${originalTrade.requestedObjects.length > 0 ? 'vos objets' : 'votre objet'}`
+    });
+
+    const savedCounterTrade = await counterTrade.save();
+
+    // Marquer le troc original comme ayant une contre-proposition
+    originalTrade.status = 'counter-proposed';
+    originalTrade.counterProposal = savedCounterTrade._id;
+    await originalTrade.save();
+
+    // Notification pour l'utilisateur qui avait fait la demande initiale
+    await Notification.create({
+      user: originalTrade.fromUser,
+      message: `Vous avez reçu une contre-proposition pour votre demande de troc.`,
+      type: NOTIFICATION_TYPE.TRADE_REQUEST,
+      trade: savedCounterTrade._id
+    });
+
+    res.status(201).json(savedCounterTrade);
+  } catch (err) {
+    console.error('Erreur lors de la création de la contre-proposition:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== DEMANDER DE CHOISIR AUTRE CHOSE ==========
+router.patch('/:id/ask-different', auth, async (req, res) => {
+  try {
+    const tradeId = req.params.id;
+
+    // Récupérer le trade
+    const trade = await Trade.findById(tradeId).populate('fromUser toUser requestedObjects offeredObjects');
+    if (!trade) {
+      return res.status(404).json({ message: 'Troc introuvable.' });
+    }
+
+    // Vérifier que l'utilisateur est le demandeur initial
+    if (trade.fromUser._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Vous ne pouvez demander de choisir autre chose que sur vos propres demandes.' });
+    }
+
+    // Remettre le trade en statut "pending" pour que l'autre personne puisse rechoisir
+    trade.status = TRADE_STATUS.PENDING;
+    trade.offeredObjects = []; // Effacer l'objet précédemment proposé
+    await trade.save();
+
+    // Notification pour l'autre utilisateur
+    await Notification.create({
+      user: trade.toUser._id,
+      message: `${trade.fromUser.firstName} vous demande de choisir un autre objet pour l'échange.`,
+      type: NOTIFICATION_TYPE.TRADE_REQUEST,
+      trade: tradeId
+    });
+
+    // Ajouter un message automatique dans la conversation
+    await Message.create({
+      sender: req.user.id,
+      trade: tradeId,
+      content: "J'aimerais que vous choisissiez un autre objet pour l'échange.",
+      isSystemMessage: true
+    });
+
+    res.json({ message: 'Demande envoyée avec succès.' });
+  } catch (err) {
+    console.error('Erreur lors de la demande de choix différent:', err);
     res.status(500).json({ error: err.message });
   }
 });
