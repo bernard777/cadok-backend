@@ -42,17 +42,18 @@ router.put('/me/notification-preferences', auth, async (req, res) => {
 const Category = require('../models/Category'); // Assurez-vous d'importer le modèle Category
 const bcrypt = require('bcryptjs');
 
-const REQUIRED_CATEGORY_COUNT = 4;
+const MIN_CATEGORY_COUNT = 4;
+const MAX_CATEGORY_COUNT = 8; // Modifiez ce nombre selon la limite souhaitée
 
 router.post('/me/favorites', auth, async (req, res) => {
   const { categories } = req.body;
-  if (!Array.isArray(categories) || categories.length !== REQUIRED_CATEGORY_COUNT) {
-    return res.status(400).json({ message: `Vous devez sélectionner exactement ${REQUIRED_CATEGORY_COUNT} catégories.` });
+  if (!Array.isArray(categories) || categories.length < MIN_CATEGORY_COUNT || categories.length > MAX_CATEGORY_COUNT) {
+    return res.status(400).json({ message: `Vous devez sélectionner entre ${MIN_CATEGORY_COUNT} et ${MAX_CATEGORY_COUNT} catégories.` });
   }
   // Vérifie que toutes les catégories existent
   try {
     const found = await Category.find({ _id: { $in: categories } });
-    if (found.length !== REQUIRED_CATEGORY_COUNT) {
+    if (found.length < MIN_CATEGORY_COUNT || found.length !== categories.length) {
       return res.status(400).json({ message: "Une ou plusieurs catégories sont invalides." });
     }
     const user = await User.findByIdAndUpdate(req.user.id, { favoriteCategories: categories }, { new: true });
