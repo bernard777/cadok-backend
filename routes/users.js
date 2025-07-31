@@ -2,6 +2,43 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth');
 const User = require('../models/User');
+
+// --- Préférences de notification ---
+// GET /me/notification-preferences
+router.get('/me/notification-preferences', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('notificationPreferences');
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    res.json({ notificationPreferences: user.notificationPreferences });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// PUT /me/notification-preferences
+router.put('/me/notification-preferences', auth, async (req, res) => {
+  const allowedFields = ['notifications_push', 'notifications_email', 'promotions', 'sound', 'vibration'];
+  const updates = {};
+  for (const key of allowedFields) {
+    if (typeof req.body[key] === 'boolean') {
+      updates[`notificationPreferences.${key}`] = req.body[key];
+    }
+  }
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ message: 'Aucune préférence valide fournie.' });
+  }
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true, select: 'notificationPreferences' }
+    );
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    res.json({ notificationPreferences: user.notificationPreferences });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
 const Category = require('../models/Category'); // Assurez-vous d'importer le modèle Category
 const bcrypt = require('bcryptjs');
 
