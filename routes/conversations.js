@@ -4,6 +4,13 @@ const Message = require('../models/Message');
 const Trade = require('../models/Trade');
 const auth = require('../middlewares/auth');
 
+// Utilitaire pour générer une URL complète pour l'avatar
+function getFullUrl(req, relativePath) {
+  if (!relativePath) return '';
+  const host = req.protocol + '://' + req.get('host');
+  return relativePath.startsWith('/') ? host + relativePath : host + '/' + relativePath;
+}
+
 // GET /conversations - Récupérer toutes les conversations de l'utilisateur
 router.get('/conversations', auth, async (req, res) => {
   try {
@@ -15,8 +22,8 @@ router.get('/conversations', auth, async (req, res) => {
       ]
     })
     .populate([
-      { path: 'fromUser', select: 'pseudo city' },
-      { path: 'toUser', select: 'pseudo city' },
+      { path: 'fromUser', select: 'pseudo city avatar' },
+      { path: 'toUser', select: 'pseudo city avatar' },
       { path: 'requestedObjects', select: 'title category imageUrl images' },
       { path: 'offeredObjects', select: 'title category imageUrl images' }
     ])
@@ -27,7 +34,7 @@ router.get('/conversations', auth, async (req, res) => {
     for (const trade of trades) {
       // Récupérer le dernier message pour ce trade
       const lastMessage = await Message.findOne({ trade: trade._id })
-        .populate('from', 'pseudo')
+        .populate('from', 'pseudo avatar')
         .sort({ createdAt: -1 });
 
       // Compter les messages non lus (messages des autres utilisateurs non lus)
@@ -36,6 +43,14 @@ router.get('/conversations', auth, async (req, res) => {
         from: { $ne: req.user.id },
         read: false
       });
+
+      // Convertir les avatars en URLs complets
+      if (trade.fromUser && trade.fromUser.avatar)
+        trade.fromUser.avatar = getFullUrl(req, trade.fromUser.avatar);
+      if (trade.toUser && trade.toUser.avatar)
+        trade.toUser.avatar = getFullUrl(req, trade.toUser.avatar);
+      if (lastMessage && lastMessage.from && lastMessage.from.avatar)
+        lastMessage.from.avatar = getFullUrl(req, lastMessage.from.avatar);
 
       const conversation = {
         trade: {
@@ -52,7 +67,8 @@ router.get('/conversations', auth, async (req, res) => {
           _id: lastMessage._id,
           content: lastMessage.content,
           from: lastMessage.from._id,
-          createdAt: lastMessage.createdAt
+          createdAt: lastMessage.createdAt,
+          avatar: lastMessage.from.avatar // Ajout de l'avatar complet
         } : null,
         hasUnreadMessages: unreadCount > 0,
         unreadCount: unreadCount
@@ -92,10 +108,16 @@ router.get('/conversations/:tradeId/messages', auth, async (req, res) => {
 
     // Récupérer tous les messages de ce trade
     const messages = await Message.find({ trade: tradeId })
-      .populate('from', 'pseudo')
+      .populate('from', 'pseudo avatar')
       .sort({ createdAt: 1 }); // Du plus ancien au plus récent
 
-    res.json(messages);
+    const messagesWithFullAvatar = messages.map(msg => {
+      if (msg.from && msg.from.avatar)
+        msg.from.avatar = getFullUrl(req, msg.from.avatar);
+      return msg;
+    });
+
+    res.json(messagesWithFullAvatar);
   } catch (error) {
     console.error('Erreur lors de la récupération des messages:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des messages' });
@@ -140,7 +162,7 @@ router.post('/conversations/:tradeId/messages', auth, async (req, res) => {
     await trade.save();
 
     // Populer le message avant de le renvoyer
-    await message.populate('from', 'pseudo');
+    await message.populate('from', 'pseudo avatar');
 
     // Créer une notification pour l'autre utilisateur
     const Notification = require('../models/Notification');

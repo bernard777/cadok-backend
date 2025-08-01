@@ -4,14 +4,33 @@ const User = require('../models/User');
 const auth = require('../middlewares/auth');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 
 // Nombre de catégories favorites attendu (doit être cohérent avec routes/users.js)
-const FAVORITE_CATEGORIES_COUNT = 4;
+const MIN_FAVORITE_CATEGORIES_COUNT = 4;
 
 // Statuts valides pour les objets
 const VALID_STATUSES = ['available', 'traded', 'reserved'];
+
+// Dossier de destination pour les images d'objets
+const objectImagesDir = path.join(__dirname, '../uploads/object-images');
+if (!fs.existsSync(objectImagesDir)) {
+  fs.mkdirSync(objectImagesDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, objectImagesDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '');
+    cb(null, `${base}-${Date.now()}${ext}`);
+  }
+});
+const upload = multer({ storage });
 
 // 🛠️ Fonction utilitaire pour valider et traiter les images
 const validateAndProcessImages = (images) => {
@@ -152,7 +171,7 @@ router.get('/', async (req, res) => {
     const objects = await ObjectModel.find({ ...filters, ...ownerFilter })
       .skip(skip)
       .limit(limitNum)
-      .populate('owner', 'pseudo city')
+      .populate('owner', 'pseudo city avatar')
       .populate('category', 'name');
       
     const total = await ObjectModel.countDocuments({ ...filters, ...ownerFilter });
@@ -179,15 +198,15 @@ router.get('/feed', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé." });
     }
-    if (!user.favoriteCategories || user.favoriteCategories.length !== FAVORITE_CATEGORIES_COUNT) {
-      return res.status(400).json({ message: "Catégories favorites non définies." });
+    if (!user.favoriteCategories || user.favoriteCategories.length < MIN_FAVORITE_CATEGORIES_COUNT) {
+      return res.status(400).json({ message: `Vous devez avoir au moins ${MIN_FAVORITE_CATEGORIES_COUNT} catégories favorites.` });
     }
     const objects = await ObjectModel.find({
       category: { $in: user.favoriteCategories },
       owner: { $ne: req.user.id }
     })
       .sort({ createdAt: -1 })
-      .populate('owner', 'pseudo city')
+      .populate('owner', 'pseudo city avatar')
       .populate('category', 'name');
     res.json(objects);
   } catch (err) {
@@ -199,7 +218,7 @@ router.get('/feed', auth, async (req, res) => {
 // GET /api/objects/me
 router.get('/me', auth, async (req, res) => {
   try {
-    const objects = await ObjectModel.find({ owner: req.user.id }).populate('owner', 'pseudo city').populate('category', 'name');
+    const objects = await ObjectModel.find({ owner: req.user.id }).populate('owner', 'pseudo city avatar').populate('category', 'name');
     res.json({ objects });
   } catch (err) {
     console.error('Erreur /objects/me:', err);
@@ -216,13 +235,40 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'ID d\'objet invalide.' });
     }
 
-    const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city').populate('category', 'name');
+    const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city avatar').populate('category', 'name');
     if (!object) return res.status(404).json({ message: 'Objet introuvable' });
     res.json(object);
   } catch (err) {
     res.status(500).json({ error: 'Une erreur interne est survenue.' });
   }
 });
+
+// Utilitaire pour générer une URL complète pour l'avatar
+function getFullUrl(req, relativePath) {
+  if (!relativePath) return '';
+  const host = req.protocol + '://' + req.get('host');
+  return relativePath.startsWith('/') ? host + relativePath : host + '/' + relativePath;
+}
+
+// PATCH object detail endpoint to always return full avatar URL for owner
+const oldObjectDetailHandler = router.stack.find(layer => layer.route && layer.route.path === '/:id' && layer.route.methods.get);
+if (oldObjectDetailHandler) {
+  const originalHandler = oldObjectDetailHandler.route.stack[0].handle;
+  oldObjectDetailHandler.route.stack[0].handle = async function(req, res, next) {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ error: 'ID d\'objet invalide.' });
+      }
+      const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city avatar').populate('category', 'name');
+      if (!object) return res.status(404).json({ message: 'Objet introuvable' });
+      if (object.owner && object.owner.avatar)
+        object.owner.avatar = getFullUrl(req, object.owner.avatar);
+      res.json(object);
+    } catch (err) {
+      res.status(500).json({ error: 'Une erreur interne est survenue.' });
+    }
+  };
+}
 
 // 🖊️ 3. Modifier un objet
 // PUT /api/objects/:id
@@ -455,6 +501,16 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Endpoint d’upload d’image d’objet
+router.post('/upload-image', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Aucun fichier reçu.' });
+  }
+  // URL publique à adapter selon ton domaine si besoin
+  const imageUrl = `/uploads/object-images/${req.file.filename}`;
+  res.json({ url: imageUrl });
 });
 
 

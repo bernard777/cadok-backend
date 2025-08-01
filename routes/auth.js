@@ -1,3 +1,9 @@
+// Utilitaire pour générer une URL complète pour l'avatar
+function getFullUrl(req, relativePath) {
+  if (!relativePath) return '';
+  const host = req.protocol + '://' + req.get('host');
+  return relativePath.startsWith('/') ? host + relativePath : host + '/' + relativePath;
+}
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -91,7 +97,8 @@ router.post(
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
-      const userToReturn = await User.findById(newUser._id).select('-password');
+      let userToReturn = await User.findById(newUser._id).select('-password').lean();
+      userToReturn.avatar = getFullUrl(req, userToReturn.avatar);
       res.status(201).json({ token, user: userToReturn });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -131,7 +138,8 @@ router.post(
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
-      const userToReturn = await User.findById(user._id).select('-password');
+      let userToReturn = await User.findById(user._id).select('-password').lean();
+      userToReturn.avatar = getFullUrl(req, userToReturn.avatar);
       res.status(200).json({ token, user: userToReturn });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -142,8 +150,9 @@ router.post(
 // Route protégée
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    let user = await User.findById(req.user.id).select('-password').lean();
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
+    user.avatar = getFullUrl(req, user.avatar);
     res.json({ user });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -198,17 +207,18 @@ router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => 
       return res.status(400).json({ message: 'Aucune image envoyée ou paramètre de suppression absent.' });
     }
 
-    const user = await User.findByIdAndUpdate(
+    let user = await User.findByIdAndUpdate(
       req.user.id,
       { avatar: avatarUrl },
       { new: true }
-    ).select('-password');
+    ).select('-password').lean();
 
     if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-
+    user.avatar = getFullUrl(req, user.avatar);
     res.json({ user });
   } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', error: err.message });
+    console.error('Erreur lors de la mise à jour de l\'avatar:', err);
+    res.status(500).json({ message: 'Erreur serveur', error: err.message, stack: err.stack });
   }
 });
 
