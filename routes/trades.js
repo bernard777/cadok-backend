@@ -85,10 +85,22 @@ router.get('/', auth, async (req, res) => {
       .populate([
         { path: 'offeredObjects' },
         { path: 'requestedObjects' },
-        { path: 'fromUser', select: 'pseudo city' },
-        { path: 'toUser', select: 'pseudo city' }
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' }
       ]);
-    res.json(trades);
+    
+    // Adapter la structure pour correspondre à ce qu'attend le frontend
+    const adaptedTrades = trades.map(trade => ({
+      _id: trade._id,
+      status: trade.status,
+      createdAt: trade.createdAt,
+      requester: trade.fromUser,
+      owner: trade.toUser,
+      requestedObjects: trade.requestedObjects,
+      offeredObjects: trade.offeredObjects
+    }));
+    
+    res.json(adaptedTrades);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -99,10 +111,10 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const trade = await Trade.findById(req.params.id)
       .populate([
-        { path: 'offeredObjects', populate: { path: 'owner', select: 'pseudo city' } },
-        { path: 'requestedObjects', populate: { path: 'owner', select: 'pseudo city' } },
-        { path: 'fromUser', select: 'pseudo city' },
-        { path: 'toUser', select: 'pseudo city' }
+        { path: 'offeredObjects', populate: { path: 'owner', select: 'pseudo city avatar' } },
+        { path: 'requestedObjects', populate: { path: 'owner', select: 'pseudo city avatar' } },
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' }
       ]);
 
     if (!trade) {
