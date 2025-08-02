@@ -58,7 +58,7 @@ router.get('/plans', (req, res) => {
       price: 5,
       currency: 'EUR',
       period: 'month',
-      features: ['Objets illimités', 'Échanges illimités', 'Support prioritaire 24/7', 'Recherche avancée', 'Mise en avant des objets', 'Statistiques détaillées'],
+      features: ['Objets illimités', 'Échanges illimités', 'Support prioritaire 24/7', 'Recherche avancée'],
       limits: { maxObjects: 'unlimited', maxTrades: 'unlimited' }
     }
   };
