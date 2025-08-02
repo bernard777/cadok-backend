@@ -91,8 +91,8 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// GET /conversations/:tradeId/messages - Récupérer les messages d'une conversation
-router.get('/conversations/:tradeId/messages', auth, async (req, res) => {
+// GET /:tradeId/messages - Récupérer les messages d'une conversation
+router.get('/:tradeId/messages', auth, async (req, res) => {
   try {
     const { tradeId } = req.params;
 
@@ -124,8 +124,8 @@ router.get('/conversations/:tradeId/messages', auth, async (req, res) => {
   }
 });
 
-// POST /conversations/:tradeId/messages - Envoyer un message
-router.post('/conversations/:tradeId/messages', auth, async (req, res) => {
+// POST /:tradeId/messages - Envoyer un message
+router.post('/:tradeId/messages', auth, async (req, res) => {
   try {
     const { tradeId } = req.params;
     const { content } = req.body;
@@ -182,8 +182,8 @@ router.post('/conversations/:tradeId/messages', auth, async (req, res) => {
   }
 });
 
-// PATCH /conversations/:tradeId/read - Marquer tous les messages d'une conversation comme lus
-router.patch('/conversations/:tradeId/read', auth, async (req, res) => {
+// PATCH /:tradeId/read - Marquer tous les messages d'une conversation comme lus
+router.patch('/:tradeId/read', auth, async (req, res) => {
   try {
     const { tradeId } = req.params;
 
