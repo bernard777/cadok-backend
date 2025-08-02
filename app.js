@@ -49,6 +49,14 @@ app.use('/api/categories', categoryRoutes);
 const statsRoutes = require('./routes/stats');
 app.use('/api/stats', statsRoutes);
 
+// Ajout des routes d'abonnement
+const subscriptionRoutes = require('./routes/subscription');
+app.use('/api/subscriptions', subscriptionRoutes);
+
+// Ajout des routes de publicité
+const advertisementRoutes = require('./routes/advertisements');
+app.use('/api/advertisements', advertisementRoutes);
+
 // Ajout de la route des notifications
 const notificationsRoutePath = path.join(__dirname, 'routes', 'notifications.js');
 
