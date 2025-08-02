@@ -68,14 +68,27 @@ router.post('/upgrade', auth, async (req, res) => {
   try {
     const { plan, paymentMethod } = req.body;
     
+    console.log('📋 Demande de changement d\'abonnement:', { 
+      userId: req.user.id, 
+      nouveauPlan: plan, 
+      paymentMethod: paymentMethod ? 'fourni' : 'non fourni' 
+    });
+    
     if (!['basic', 'premium'].includes(plan)) {
+      console.log('❌ Plan invalide:', plan);
       return res.status(400).json({ message: 'Plan invalide' });
     }
     
     let subscription = await Subscription.findOne({ user: req.user.id });
     
     if (!subscription) {
+      console.log('🆕 Création d\'un nouvel abonnement');
       subscription = new Subscription({ user: req.user.id });
+    } else {
+      console.log('📝 Abonnement existant:', { 
+        planActuel: subscription.plan, 
+        statut: subscription.status 
+      });
     }
     
     // Calculer la date de fin selon le plan
@@ -100,14 +113,23 @@ router.post('/upgrade', auth, async (req, res) => {
       transactionId: `txn_${Date.now()}`
     });
     
+    console.log('💾 Sauvegarde de l\'abonnement:', {
+      plan: subscription.plan,
+      status: subscription.status,
+      endDate: subscription.endDate,
+      monthlyPrice: subscription.monthlyPrice
+    });
+    
     await subscription.save();
+    
+    console.log('✅ Abonnement sauvegardé avec succès');
     
     res.json({
       message: `Abonnement mis à niveau vers ${plan}`,
       subscription
     });
   } catch (error) {
-    console.error('Erreur lors de la mise à niveau:', error);
+    console.error('❌ Erreur lors de la mise à niveau:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });
