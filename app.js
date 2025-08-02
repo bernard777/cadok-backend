@@ -72,7 +72,7 @@ const conversationsRoutePath = path.join(__dirname, 'routes', 'conversations.js'
 
 if (fs.existsSync(conversationsRoutePath)) {
   const conversationRoutes = require('./routes/conversations');
-  app.use('/api', conversationRoutes);
+  app.use('/api/conversations', conversationRoutes);
 } else {
   console.warn("Warning: './routes/conversations.js' not found. '/api/conversations' route not registered.");
 }

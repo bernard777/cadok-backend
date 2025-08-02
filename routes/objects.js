@@ -198,16 +198,30 @@ router.get('/feed', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé." });
     }
-    if (!user.favoriteCategories || user.favoriteCategories.length < MIN_FAVORITE_CATEGORIES_COUNT) {
-      return res.status(400).json({ message: `Vous devez avoir au moins ${MIN_FAVORITE_CATEGORIES_COUNT} catégories favorites.` });
+    
+    let objects;
+    
+    // Si l'utilisateur a des catégories favorites, les utiliser
+    if (user.favoriteCategories && user.favoriteCategories.length > 0) {
+      console.log(`📱 Utilisateur avec ${user.favoriteCategories.length} catégories favorites`);
+      objects = await ObjectModel.find({
+        category: { $in: user.favoriteCategories },
+        owner: { $ne: req.user.id }
+      })
+        .sort({ createdAt: -1 })
+        .populate('owner', 'pseudo city avatar')
+        .populate('category', 'name');
+    } else {
+      // Sinon, afficher tous les objets (sauf les siens)
+      console.log('📱 Utilisateur sans catégories favorites - affichage de tous les objets');
+      objects = await ObjectModel.find({
+        owner: { $ne: req.user.id }
+      })
+        .sort({ createdAt: -1 })
+        .limit(20) // Limiter à 20 pour les performances
+        .populate('owner', 'pseudo city avatar')
+        .populate('category', 'name');
     }
-    const objects = await ObjectModel.find({
-      category: { $in: user.favoriteCategories },
-      owner: { $ne: req.user.id }
-    })
-      .sort({ createdAt: -1 })
-      .populate('owner', 'pseudo city avatar')
-      .populate('category', 'name');
     res.json(objects);
   } catch (err) {
     res.status(500).json({ error: err.message });

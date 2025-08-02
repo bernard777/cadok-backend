@@ -26,7 +26,9 @@ describe('Subscription System - Smoke Test', () => {
     const user = await User.create({
       name: 'Test User',
       email: 'test@test.com',
-      password: 'password123'
+      password: 'password123',
+      pseudo: 'testuser',
+      city: 'Test City'
     });
 
     const subscription = await Subscription.create({

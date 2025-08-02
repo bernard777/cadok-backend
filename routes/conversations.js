@@ -12,7 +12,7 @@ function getFullUrl(req, relativePath) {
 }
 
 // GET /conversations - Récupérer toutes les conversations de l'utilisateur
-router.get('/conversations', auth, async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     // Récupérer tous les trades auxquels l'utilisateur participe
     const trades = await Trade.find({

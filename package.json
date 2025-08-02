@@ -6,7 +6,12 @@
     "test": "cross-env NODE_ENV=test jest",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage",
-    "test:subscription": "cross-env NODE_ENV=test jest tests/subscription/"
+    "test:subscription": "cross-env NODE_ENV=test jest tests/subscription/",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "prebuild": "npm test",
+    "build": "echo 'Backend build completed successfully'",
+    "build:prod": "npm run test && npm run build"
   },
   "keywords": [],
   "author": "",
