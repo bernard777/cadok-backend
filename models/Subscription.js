@@ -36,6 +36,14 @@ const subscriptionSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Gestion des changements programmés (comme les downgrades)
+  scheduledPlan: {
+    type: String,
+    enum: ['free', 'basic', 'premium']
+  },
+  scheduledChangeDate: {
+    type: Date
+  },
   // Historique des paiements
   payments: [{
     date: { type: Date, default: Date.now },
@@ -91,6 +99,23 @@ subscriptionSchema.methods.isPremium = function() {
 // Méthode pour vérifier si l'utilisateur est Basic ou plus
 subscriptionSchema.methods.isBasicOrHigher = function() {
   return (this.plan === 'basic' || this.plan === 'premium') && this.isActive();
+};
+
+// Méthode pour vérifier et appliquer les changements programmés
+subscriptionSchema.methods.applyScheduledChanges = function() {
+  if (this.scheduledPlan && this.scheduledChangeDate && new Date() >= this.scheduledChangeDate) {
+    this.plan = this.scheduledPlan;
+    this.scheduledPlan = null;
+    this.scheduledChangeDate = null;
+    
+    if (this.plan === 'free') {
+      this.endDate = null;
+      this.monthlyPrice = 0;
+    }
+    
+    return true; // Changement appliqué
+  }
+  return false; // Aucun changement
 };
 
 // Méthode pour obtenir les limites selon le plan
