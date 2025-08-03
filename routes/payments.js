@@ -56,11 +56,33 @@ router.post('/create-subscription', auth, async (req, res) => {
   try {
     const { plan, paymentMethodId } = req.body;
     
+    console.log('=== DÉBUT CRÉATION ABONNEMENT ===');
+    console.log('Plan demandé:', plan);
+    console.log('PaymentMethodId:', paymentMethodId);
+    console.log('User ID:', req.user.id);
+    
+    // Récupérer l'utilisateur complet pour avoir son email
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      console.log('❌ Utilisateur non trouvé');
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+    
+    console.log('✅ Utilisateur trouvé:', user.email);
+    
     const result = await paymentService.createRecurringSubscription(
       req.user.id,
       plan,
-      paymentMethodId
+      paymentMethodId,
+      user.email
     );
+    
+    console.log('Résultat service:', result);
 
     if (result.success) {
       // Mettre à jour l'utilisateur avec les informations Stripe
@@ -82,13 +104,16 @@ router.post('/create-subscription', auth, async (req, res) => {
         }
       });
     } else {
+      console.log('❌ Échec service:', result.error);
       res.status(400).json({
         success: false,
         message: result.error
       });
     }
   } catch (error) {
-    console.error('Erreur création abonnement:', error);
+    console.error('❌ ERREUR CRITIQUE création abonnement:');
+    console.error('- Message:', error.message);
+    console.error('- Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la création de l\'abonnement'

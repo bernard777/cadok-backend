@@ -44,10 +44,17 @@ class PaymentService {
   /**
    * Créer un abonnement récurrent Stripe
    */
-  async createRecurringSubscription(userId, plan, paymentMethodId) {
+  async createRecurringSubscription(userId, plan, paymentMethodId, userEmail = null) {
     try {
+      console.log('🔄 Service: Début createRecurringSubscription');
+      console.log('- userId:', userId);
+      console.log('- plan:', plan);
+      console.log('- paymentMethodId:', paymentMethodId);
+      console.log('- userEmail:', userEmail);
+      
       // Créer ou récupérer le client Stripe
-      let customer = await this.getOrCreateCustomer(userId);
+      let customer = await this.getOrCreateCustomer(userId, userEmail);
+      console.log('✅ Service: Client Stripe créé/récupéré:', customer.id);
       
       // Attacher la méthode de paiement au client
       await this.stripe.paymentMethods.attach(paymentMethodId, {
@@ -62,10 +69,13 @@ class PaymentService {
       });
 
       // Créer l'abonnement Stripe
+      const priceId = this.getStripePriceId(plan);
+      console.log('💰 Price ID utilisé:', priceId);
+      
       const subscription = await this.stripe.subscriptions.create({
         customer: customer.id,
         items: [{
-          price: this.getStripePriceId(plan),
+          price: priceId,
         }],
         default_payment_method: paymentMethodId,
         metadata: {
@@ -73,16 +83,25 @@ class PaymentService {
           plan
         }
       });
+      
+      console.log('✅ Service: Abonnement créé:', subscription.id);
+      console.log('📅 Current period end:', subscription.current_period_end);
 
       return {
         success: true,
         stripeSubscriptionId: subscription.id,
         stripeCustomerId: customer.id,
         status: subscription.status,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+        currentPeriodEnd: subscription.current_period_end ? 
+          new Date(subscription.current_period_end * 1000) : 
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours par défaut
       };
     } catch (error) {
-      console.error('Erreur abonnement Stripe:', error);
+      console.error('❌ ERREUR Service Stripe:');
+      console.error('- Message:', error.message);
+      console.error('- Type:', error.type);
+      console.error('- Code:', error.code);
+      console.error('- Stack:', error.stack);
       return {
         success: false,
         error: error.message
@@ -114,22 +133,38 @@ class PaymentService {
   /**
    * Créer ou récupérer un client Stripe
    */
-  async getOrCreateCustomer(userId) {
+  async getOrCreateCustomer(userId, userEmail = null) {
     try {
-      // Chercher un client existant
-      const existingCustomers = await this.stripe.customers.list({
-        metadata: { userId: userId.toString() },
-        limit: 1
-      });
+      console.log('🔍 Recherche client existant...');
+      
+      // Chercher un client existant par email s'il est fourni
+      let existingCustomers = { data: [] };
+      if (userEmail) {
+        existingCustomers = await this.stripe.customers.list({
+          email: userEmail,
+          limit: 1
+        });
+        console.log('Clients trouvés par email:', existingCustomers.data.length);
+      }
 
       if (existingCustomers.data.length > 0) {
+        console.log('✅ Client existant trouvé:', existingCustomers.data[0].id);
         return existingCustomers.data[0];
       }
 
+      console.log('🆕 Création nouveau client Stripe...');
+
       // Créer un nouveau client
-      const customer = await this.stripe.customers.create({
+      const customerData = {
         metadata: { userId: userId.toString() }
-      });
+      };
+      
+      // Ajouter l'email si fourni
+      if (userEmail) {
+        customerData.email = userEmail;
+      }
+      
+      const customer = await this.stripe.customers.create(customerData);
 
       return customer;
     } catch (error) {
