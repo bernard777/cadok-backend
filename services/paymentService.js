@@ -300,6 +300,266 @@ class PaymentService {
       console.log(`Abonnement annulé pour l'utilisateur ${userId}`);
     }
   }
+
+  /**
+   * Ajouter une nouvelle méthode de paiement
+   */
+  async addPaymentMethod(userId, paymentMethodId) {
+    try {
+      const User = require('../models/User');
+      
+      // Récupérer l'utilisateur
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      // Récupérer la méthode de paiement depuis Stripe
+      const paymentMethod = await this.stripe.paymentMethods.retrieve(paymentMethodId);
+      
+      if (!paymentMethod || !paymentMethod.card) {
+        throw new Error('Méthode de paiement invalide');
+      }
+
+      // Obtenir ou créer le client Stripe
+      let customer = await this.getOrCreateCustomer(userId, user.email);
+
+      // Attacher la méthode de paiement au client
+      await this.stripe.paymentMethods.attach(paymentMethodId, {
+        customer: customer.id,
+      });
+
+      // Créer l'objet méthode de paiement pour la base de données
+      const newPaymentMethod = {
+        stripePaymentMethodId: paymentMethodId,
+        type: paymentMethod.type,
+        last4: paymentMethod.card.last4,
+        brand: paymentMethod.card.brand,
+        expiryMonth: paymentMethod.card.exp_month,
+        expiryYear: paymentMethod.card.exp_year,
+        isDefault: user.paymentMethods.length === 0, // Premier = défaut
+        createdAt: new Date()
+      };
+
+      // Ajouter la méthode de paiement à l'utilisateur
+      await User.findByIdAndUpdate(userId, {
+        $push: { paymentMethods: newPaymentMethod },
+        stripeCustomerId: customer.id
+      });
+
+      return {
+        success: true,
+        paymentMethod: newPaymentMethod
+      };
+    } catch (error) {
+      console.error('Erreur ajout méthode de paiement:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Obtenir les méthodes de paiement d'un utilisateur
+   */
+  async getPaymentMethods(userId) {
+    try {
+      const User = require('../models/User');
+      const user = await User.findById(userId).select('paymentMethods stripeCustomerId');
+      
+      if (!user) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      return {
+        success: true,
+        paymentMethods: user.paymentMethods || []
+      };
+    } catch (error) {
+      console.error('Erreur récupération méthodes de paiement:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Supprimer une méthode de paiement
+   */
+  async removePaymentMethod(userId, paymentMethodId) {
+    try {
+      const User = require('../models/User');
+      
+      // Récupérer l'utilisateur
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      // Trouver la méthode de paiement
+      const paymentMethod = user.paymentMethods.find(
+        pm => pm.stripePaymentMethodId === paymentMethodId
+      );
+
+      if (!paymentMethod) {
+        throw new Error('Méthode de paiement non trouvée');
+      }
+
+      // Détacher de Stripe si l'utilisateur a un ID client
+      if (user.stripeCustomerId) {
+        await this.stripe.paymentMethods.detach(paymentMethodId);
+      }
+
+      // Supprimer de la base de données
+      await User.findByIdAndUpdate(userId, {
+        $pull: { paymentMethods: { stripePaymentMethodId: paymentMethodId } }
+      });
+
+      // Si c'était la méthode par défaut, définir une nouvelle par défaut
+      if (paymentMethod.isDefault && user.paymentMethods.length > 1) {
+        const remainingMethods = user.paymentMethods.filter(
+          pm => pm.stripePaymentMethodId !== paymentMethodId
+        );
+        
+        if (remainingMethods.length > 0) {
+          await User.findOneAndUpdate(
+            { 
+              _id: userId,
+              'paymentMethods.stripePaymentMethodId': remainingMethods[0].stripePaymentMethodId
+            },
+            { 
+              $set: { 'paymentMethods.$.isDefault': true } 
+            }
+          );
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Méthode de paiement supprimée avec succès'
+      };
+    } catch (error) {
+      console.error('Erreur suppression méthode de paiement:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Définir une méthode de paiement par défaut
+   */
+  async setDefaultPaymentMethod(userId, paymentMethodId) {
+    try {
+      const User = require('../models/User');
+      
+      // Récupérer l'utilisateur
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      // Vérifier que la méthode de paiement existe
+      const paymentMethodExists = user.paymentMethods.some(
+        pm => pm.stripePaymentMethodId === paymentMethodId
+      );
+
+      if (!paymentMethodExists) {
+        throw new Error('Méthode de paiement non trouvée');
+      }
+
+      // Retirer le statut par défaut de toutes les méthodes
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'paymentMethods.$[].isDefault': false }
+      });
+
+      // Définir la nouvelle méthode par défaut
+      await User.findOneAndUpdate(
+        { 
+          _id: userId,
+          'paymentMethods.stripePaymentMethodId': paymentMethodId
+        },
+        { 
+          $set: { 'paymentMethods.$.isDefault': true } 
+        }
+      );
+
+      // Mettre à jour dans Stripe aussi
+      if (user.stripeCustomerId) {
+        await this.stripe.customers.update(user.stripeCustomerId, {
+          invoice_settings: {
+            default_payment_method: paymentMethodId,
+          },
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Méthode de paiement par défaut mise à jour'
+      };
+    } catch (error) {
+      console.error('Erreur définition méthode par défaut:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Mettre à jour une méthode de paiement (par exemple, la date d'expiration)
+   */
+  async updatePaymentMethod(userId, paymentMethodId, updateData) {
+    try {
+      const User = require('../models/User');
+      
+      // Récupérer les données fraîches depuis Stripe
+      const stripePaymentMethod = await this.stripe.paymentMethods.retrieve(paymentMethodId);
+      
+      if (!stripePaymentMethod || !stripePaymentMethod.card) {
+        throw new Error('Méthode de paiement non trouvée dans Stripe');
+      }
+
+      // Mettre à jour dans la base de données avec les données Stripe
+      const updateFields = {
+        'paymentMethods.$.last4': stripePaymentMethod.card.last4,
+        'paymentMethods.$.brand': stripePaymentMethod.card.brand,
+        'paymentMethods.$.expiryMonth': stripePaymentMethod.card.exp_month,
+        'paymentMethods.$.expiryYear': stripePaymentMethod.card.exp_year
+      };
+
+      await User.findOneAndUpdate(
+        { 
+          _id: userId,
+          'paymentMethods.stripePaymentMethodId': paymentMethodId
+        },
+        { 
+          $set: updateFields
+        }
+      );
+
+      return {
+        success: true,
+        message: 'Méthode de paiement mise à jour',
+        paymentMethod: {
+          stripePaymentMethodId: paymentMethodId,
+          last4: stripePaymentMethod.card.last4,
+          brand: stripePaymentMethod.card.brand,
+          expiryMonth: stripePaymentMethod.card.exp_month,
+          expiryYear: stripePaymentMethod.card.exp_year
+        }
+      };
+    } catch (error) {
+      console.error('Erreur mise à jour méthode de paiement:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 }
 
 module.exports = new PaymentService();

@@ -350,4 +350,167 @@ router.post('/validate-payment', auth, async (req, res) => {
   }
 });
 
+/**
+ * @route POST /api/payments/payment-methods
+ * @desc Ajouter une nouvelle méthode de paiement
+ * @access Private
+ */
+router.post('/payment-methods', auth, async (req, res) => {
+  try {
+    const { paymentMethodId } = req.body;
+    
+    if (!paymentMethodId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de méthode de paiement requis'
+      });
+    }
+
+    const result = await paymentService.addPaymentMethod(req.user.id, paymentMethodId);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        paymentMethod: result.paymentMethod,
+        message: 'Méthode de paiement ajoutée avec succès'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Erreur ajout méthode de paiement:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de l\'ajout de la méthode de paiement'
+    });
+  }
+});
+
+/**
+ * @route GET /api/payments/payment-methods
+ * @desc Obtenir les méthodes de paiement d'un utilisateur
+ * @access Private
+ */
+router.get('/payment-methods', auth, async (req, res) => {
+  try {
+    const result = await paymentService.getPaymentMethods(req.user.id);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        paymentMethods: result.paymentMethods
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Erreur récupération méthodes de paiement:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des méthodes de paiement'
+    });
+  }
+});
+
+/**
+ * @route DELETE /api/payments/payment-methods/:paymentMethodId
+ * @desc Supprimer une méthode de paiement
+ * @access Private
+ */
+router.delete('/payment-methods/:paymentMethodId', auth, async (req, res) => {
+  try {
+    const { paymentMethodId } = req.params;
+    
+    const result = await paymentService.removePaymentMethod(req.user.id, paymentMethodId);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Erreur suppression méthode de paiement:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la suppression de la méthode de paiement'
+    });
+  }
+});
+
+/**
+ * @route PUT /api/payments/payment-methods/:paymentMethodId/default
+ * @desc Définir une méthode de paiement par défaut
+ * @access Private
+ */
+router.put('/payment-methods/:paymentMethodId/default', auth, async (req, res) => {
+  try {
+    const { paymentMethodId } = req.params;
+    
+    const result = await paymentService.setDefaultPaymentMethod(req.user.id, paymentMethodId);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Erreur définition méthode par défaut:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la définition de la méthode par défaut'
+    });
+  }
+});
+
+/**
+ * @route PUT /api/payments/payment-methods/:paymentMethodId
+ * @desc Mettre à jour une méthode de paiement
+ * @access Private
+ */
+router.put('/payment-methods/:paymentMethodId', auth, async (req, res) => {
+  try {
+    const { paymentMethodId } = req.params;
+    const updateData = req.body;
+    
+    const result = await paymentService.updatePaymentMethod(req.user.id, paymentMethodId, updateData);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        paymentMethod: result.paymentMethod,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Erreur mise à jour méthode de paiement:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la mise à jour de la méthode de paiement'
+    });
+  }
+});
+
 module.exports = router;
