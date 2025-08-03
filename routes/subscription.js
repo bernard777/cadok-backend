@@ -77,15 +77,33 @@ router.get('/plans', (req, res) => {
 // @access  Private
 router.post('/upgrade', auth, async (req, res) => {
   try {
+    console.log('🔄 Upgrade request received:', req.body);
+    console.log('👤 User from auth:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      console.log('❌ Utilisateur non authentifié');
+      return res.status(401).json({ message: 'Utilisateur non authentifié' });
+    }
+    
     const { plan, paymentMethod } = req.body;
     
+    if (!plan) {
+      console.log('❌ Plan manquant');
+      return res.status(400).json({ message: 'Plan requis' });
+    }
+    
     if (!['free', 'basic', 'premium'].includes(plan)) {
+      console.log('❌ Plan invalide:', plan);
       return res.status(400).json({ message: 'Plan invalide' });
     }
     
+    console.log('✅ Plan valide:', plan);
+    
     let subscription = await Subscription.findOne({ user: req.user.id });
+    console.log('📋 Subscription trouvé:', subscription ? 'Oui' : 'Non');
     
     if (!subscription) {
+      console.log('🆕 Création nouvel abonnement');
       subscription = new Subscription({ user: req.user.id });
     }
 
@@ -150,14 +168,21 @@ router.post('/upgrade', auth, async (req, res) => {
     }
     
     await subscription.save();
+    console.log('✅ Subscription sauvé avec succès');
     
     res.json({
+      success: true,
       message: `Abonnement mis à niveau vers ${plan}`,
       subscription
     });
   } catch (error) {
-    console.error('Erreur lors de la mise à niveau:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('❌ Erreur lors de la mise à niveau:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur serveur',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

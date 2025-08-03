@@ -51,11 +51,17 @@ const subscriptionSchema = new mongoose.Schema({
     status: { type: String, enum: ['success', 'failed', 'pending'] },
     transactionId: String
   }],
-  // Méthode de paiement
+  // Méthode de paiement - simplifié pour stocker l'ID Stripe
   paymentMethod: {
+    type: String, // ID Stripe (pm_xxx)
+    default: null
+  },
+  // Détails de paiement additionnels (optionnel)
+  paymentDetails: {
     type: {
       type: String,
-      enum: ['stripe', 'paypal', 'credit_card']
+      enum: ['stripe', 'paypal', 'credit_card'],
+      default: 'stripe'
     },
     customerId: String,
     last4: String
