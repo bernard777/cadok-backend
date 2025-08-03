@@ -87,6 +87,57 @@ const deliverySchema = new mongoose.Schema({
       email: String
     }
   },
+
+  // Protection des données personnelles (RGPD)
+  privacy: {
+    // Niveau de protection appliqué
+    level: {
+      type: String,
+      enum: ['NONE', 'PARTIAL', 'FULL_ANONYMIZATION', 'DIRECT_CONTACT'],
+      default: 'NONE'
+    },
+    
+    // Méthode de protection utilisée
+    method: {
+      type: String,
+      enum: ['CADOK_SECURE', 'PICKUP', 'STANDARD'],
+      default: 'STANDARD'
+    },
+    
+    // Identifiants anonymes utilisés
+    anonymousIds: {
+      sender: String,
+      recipient: String
+    },
+    
+    // Mapping chiffré pour le service client (accès limité)
+    encryptedMapping: {
+      type: String,
+      select: false // Exclu par défaut des requêtes
+    },
+    
+    // Code de vérification pour le support
+    verificationCode: String,
+    
+    // Conformité RGPD
+    compliance: {
+      isCompliant: { type: Boolean, default: false },
+      level: {
+        type: String,
+        enum: ['RGPD_COMPLIANT', 'NEEDS_REVIEW', 'NOT_COMPLIANT'],
+        default: 'NOT_COMPLIANT'
+      },
+      checkedAt: { type: Date, default: Date.now }
+    },
+    
+    // Instructions sécurisées pour le transporteur
+    carrierInstructions: {
+      reference: String,
+      description: String,
+      emergencyContact: String,
+      platformName: String
+    }
+  },
   
   // Point relais (pour Mondial Relay)
   pickupPoint: {

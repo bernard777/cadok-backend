@@ -1,5 +1,8 @@
+const PrivacyProtectionService = require('./privacyProtectionService');
+
 class DeliveryService {
   constructor() {
+    this.privacyService = new PrivacyProtectionService();
     this.deliveryMethods = [
       {
         id: 'pickup',
@@ -153,30 +156,78 @@ class DeliveryService {
   }
 
   /**
-   * Créer une étiquette de livraison
+   * Créer une étiquette de livraison avec protection des données
    */
   async createShippingLabel(deliveryData) {
-    const { tradeId, method, addresses, weight } = deliveryData;
+    const { tradeId, method, addresses, weight, tradeData } = deliveryData;
 
     try {
       let result;
+      let labelAddresses = addresses;
+
+      // Si les données de trade sont fournies, activer la protection des données
+      if (tradeData && method !== 'pickup') {
+        console.log('🔒 Activation de la protection des données personnelles');
+        
+        const privacyProtectedLabel = await this.privacyService.createPrivacyProtectedLabel(
+          {
+            method,
+            realSenderAddress: addresses.sender,
+            realRecipientAddress: addresses.recipient
+          },
+          tradeData
+        );
+
+        // Utiliser les adresses anonymisées pour l'étiquette
+        labelAddresses = privacyProtectedLabel.labelAddresses;
+        
+        // Validation RGPD
+        const compliance = this.privacyService.validatePrivacyCompliance(privacyProtectedLabel);
+        console.log('📋 Validation RGPD:', compliance.isCompliant ? '✅ Conforme' : '❌ Non conforme');
+        
+        if (!compliance.isCompliant) {
+          console.warn('⚠️ Problème de conformité RGPD:', compliance.checks);
+        }
+
+        // Ajouter les métadonnées de sécurité au résultat
+        result = {
+          privacy: privacyProtectedLabel.privacy,
+          security: privacyProtectedLabel.security,
+          instructions: privacyProtectedLabel.instructions,
+          compliance: compliance
+        };
+      }
       
       switch (method) {
         case 'colissimo':
-          result = await this.createColissimoLabel(deliveryData);
+          const colissimoResult = await this.createColissimoLabel({
+            ...deliveryData,
+            addresses: labelAddresses
+          });
+          result = { ...result, ...colissimoResult };
           break;
         case 'mondial_relay':
-          result = await this.createMondialRelayLabel(deliveryData);
+          const mondialResult = await this.createMondialRelayLabel({
+            ...deliveryData,
+            addresses: labelAddresses
+          });
+          result = { ...result, ...mondialResult };
           break;
         case 'chronopost':
-          result = await this.createChronopostLabel(deliveryData);
+          const chronoResult = await this.createChronopostLabel({
+            ...deliveryData,
+            addresses: labelAddresses
+          });
+          result = { ...result, ...chronoResult };
           break;
         case 'pickup':
           result = {
+            ...result,
             success: true,
             trackingNumber: `PICKUP-${tradeId}`,
             labelUrl: null,
-            message: 'Retrait en main propre - Aucune étiquette nécessaire'
+            message: 'Retrait en main propre - Aucune étiquette nécessaire',
+            privacy: { level: 'DIRECT_CONTACT', method: 'PICKUP' }
           };
           break;
         default:

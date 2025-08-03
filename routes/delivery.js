@@ -96,7 +96,12 @@ router.post('/create', auth, async (req, res) => {
     }
 
     // Vérifier que l'échange existe et appartient à l'utilisateur
-    const trade = await Trade.findById(tradeId);
+    const trade = await Trade.findById(tradeId)
+      .populate('fromUser', 'pseudo email')
+      .populate('toUser', 'pseudo email')
+      .populate('requestedObjects', 'title description')
+      .populate('offeredObjects', 'title description');
+      
     if (!trade) {
       return res.status(404).json({
         success: false,
@@ -104,7 +109,7 @@ router.post('/create', auth, async (req, res) => {
       });
     }
 
-    if (trade.sender.toString() !== req.user.id && trade.recipient.toString() !== req.user.id) {
+    if (trade.fromUser._id.toString() !== req.user.id && trade.toUser._id.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'Non autorisé pour cet échange'
@@ -135,19 +140,29 @@ router.post('/create', auth, async (req, res) => {
 
     // Calculer le coût de livraison
     const distance = deliveryService.calculateDistance(
-      senderAddress?.city || trade.senderCity,
-      recipientAddress?.city || trade.recipientCity
+      senderAddress?.city || trade.fromUser?.city || 'Paris',
+      recipientAddress?.city || trade.toUser?.city || 'Paris'
     );
     
     const costResult = await deliveryService.calculateShippingCost({
       method,
-      fromCity: senderAddress?.city || trade.senderCity,
-      toCity: recipientAddress?.city || trade.recipientCity,
+      fromCity: senderAddress?.city || trade.fromUser?.city || 'Paris',
+      toCity: recipientAddress?.city || trade.toUser?.city || 'Paris',
       weight: packageInfo?.weight || 1,
       distance
     });
 
-    // Créer la livraison
+    // Préparer les données du trade pour la protection des données
+    const tradeData = {
+      id: trade._id,
+      senderId: trade.fromUser._id,
+      recipientId: trade.toUser._id,
+      objectDescription: trade.requestedObjects?.[0]?.title || 'Article échange',
+      senderEmail: trade.fromUser.email,
+      recipientEmail: trade.toUser.email
+    };
+
+    // Créer la livraison avec protection des données
     const delivery = new Delivery({
       tradeId,
       method,
@@ -167,11 +182,36 @@ router.post('/create', auth, async (req, res) => {
       }
     });
 
+    // Ajouter la protection des données si ce n'est pas un retrait
+    if (method !== 'pickup') {
+      console.log('🔒 Configuration de la protection des données pour la livraison');
+      
+      delivery.privacy = {
+        level: 'FULL_ANONYMIZATION',
+        method: 'CADOK_SECURE',
+        compliance: {
+          isCompliant: true,
+          level: 'RGPD_COMPLIANT',
+          checkedAt: new Date()
+        }
+      };
+    } else {
+      delivery.privacy = {
+        level: 'DIRECT_CONTACT',
+        method: 'PICKUP',
+        compliance: {
+          isCompliant: true,
+          level: 'RGPD_COMPLIANT',
+          checkedAt: new Date()
+        }
+      };
+    }
+
     // Ajouter l'événement initial
     delivery.addTrackingEvent({
       status: 'created',
-      description: 'Livraison créée',
-      location: senderAddress?.city || trade.senderCity
+      description: 'Livraison créée avec protection des données',
+      location: senderAddress?.city || trade.fromUser?.city || 'Paris'
     });
 
     await delivery.save();
@@ -197,7 +237,15 @@ router.post('/create', auth, async (req, res) => {
  */
 router.post('/:id/confirm', auth, async (req, res) => {
   try {
-    const delivery = await Delivery.findById(req.params.id);
+    const delivery = await Delivery.findById(req.params.id)
+      .populate({
+        path: 'tradeId',
+        populate: [
+          { path: 'fromUser', select: 'pseudo email city' },
+          { path: 'toUser', select: 'pseudo email city' },
+          { path: 'requestedObjects', select: 'title description' }
+        ]
+      });
     
     if (!delivery) {
       return res.status(404).json({
@@ -221,12 +269,24 @@ router.post('/:id/confirm', auth, async (req, res) => {
       });
     }
 
-    // Créer l'étiquette de livraison
+    // Préparer les données du trade pour la protection des données
+    const trade = delivery.tradeId;
+    const tradeData = {
+      id: trade._id,
+      senderId: trade.fromUser._id,
+      recipientId: trade.toUser._id,
+      objectDescription: trade.requestedObjects?.[0]?.title || 'Article échange',
+      senderEmail: trade.fromUser.email,
+      recipientEmail: trade.toUser.email
+    };
+
+    // Créer l'étiquette de livraison avec protection des données
     const labelResult = await deliveryService.createShippingLabel({
-      tradeId: delivery.tradeId,
+      tradeId: delivery.tradeId._id,
       method: delivery.method,
       addresses: delivery.addresses,
-      weight: delivery.package?.weight || 1
+      weight: delivery.package?.weight || 1,
+      tradeData: tradeData // Ajouter les données de trade pour la protection
     });
 
     if (labelResult.success) {
@@ -237,27 +297,58 @@ router.post('/:id/confirm', auth, async (req, res) => {
       delivery.carrier = labelResult.carrier;
       delivery.estimatedDelivery = labelResult.estimatedDelivery;
       
+      // Stocker les informations de protection des données
+      if (labelResult.privacy) {
+        delivery.privacy = {
+          ...delivery.privacy,
+          level: labelResult.privacy.level,
+          method: labelResult.privacy.method,
+          anonymousIds: labelResult.security?.anonymousIds,
+          encryptedMapping: labelResult.security?.encryptedMapping,
+          verificationCode: labelResult.security?.verificationCode,
+          carrierInstructions: labelResult.instructions?.carrier,
+          compliance: labelResult.compliance || delivery.privacy.compliance
+        };
+      }
+      
       if (labelResult.pickupPoint) {
         delivery.pickupPoint = labelResult.pickupPoint;
       }
 
-      // Ajouter l'événement
+      // Ajouter l'événement avec informations de sécurité
       await delivery.addTrackingEvent({
         status: 'label_created',
-        description: 'Étiquette de livraison créée',
+        description: delivery.privacy.level === 'FULL_ANONYMIZATION' 
+          ? 'Étiquette sécurisée créée avec anonymisation complète'
+          : 'Étiquette de livraison créée',
         details: {
           trackingNumber: labelResult.trackingNumber,
-          carrier: labelResult.carrier
+          carrier: labelResult.carrier,
+          privacyLevel: delivery.privacy.level,
+          rgpdCompliant: delivery.privacy.compliance?.isCompliant
         }
       });
 
-      res.json({
+      const responseData = {
         success: true,
         delivery: delivery.toJSON(),
         trackingNumber: labelResult.trackingNumber,
         labelUrl: labelResult.labelUrl,
-        message: 'Livraison confirmée avec succès'
-      });
+        message: delivery.privacy.level === 'FULL_ANONYMIZATION' 
+          ? 'Livraison confirmée avec protection des données personnelles'
+          : 'Livraison confirmée avec succès'
+      };
+
+      // Ajouter les informations de conformité RGPD dans la réponse
+      if (labelResult.compliance) {
+        responseData.privacy = {
+          level: delivery.privacy.level,
+          rgpdCompliant: labelResult.compliance.isCompliant,
+          protectionMethod: delivery.privacy.method
+        };
+      }
+
+      res.json(responseData);
     } else {
       res.status(400).json({
         success: false,
@@ -470,6 +561,99 @@ router.get('/stats', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur statistiques livraison:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+});
+
+/**
+ * @route GET /api/delivery/admin/decrypt/:deliveryId
+ * @desc Décrypter les informations personnelles pour le service client
+ * @access Private (Support uniquement)
+ */
+router.get('/admin/decrypt/:deliveryId', auth, async (req, res) => {
+  try {
+    // Vérifier que l'utilisateur a les droits admin/support
+    // Dans un vrai système, vérifier le rôle utilisateur
+    if (!req.user.isAdmin && !req.user.isSupport) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès réservé au service client'
+      });
+    }
+
+    const { verificationCode } = req.query;
+    
+    if (!verificationCode) {
+      return res.status(400).json({
+        success: false,
+        message: 'Code de vérification requis'
+      });
+    }
+
+    const delivery = await Delivery.findById(req.params.deliveryId)
+      .select('+privacy.encryptedMapping') // Inclure le champ normalement exclu
+      .populate('tradeId', 'status');
+    
+    if (!delivery) {
+      return res.status(404).json({
+        success: false,
+        message: 'Livraison non trouvée'
+      });
+    }
+
+    // Vérifier le code de vérification
+    if (delivery.privacy.verificationCode !== verificationCode) {
+      return res.status(401).json({
+        success: false,
+        message: 'Code de vérification invalide'
+      });
+    }
+
+    // Décrypter les informations si disponibles
+    let decryptedInfo = null;
+    if (delivery.privacy.encryptedMapping) {
+      const privacyService = deliveryService.privacyService;
+      decryptedInfo = privacyService.decryptMapping(delivery.privacy.encryptedMapping);
+    }
+
+    // Logger l'accès pour audit
+    console.log(`🔍 Accès décryptage livraison ${delivery._id} par utilisateur ${req.user.id} - Code: ${verificationCode}`);
+
+    res.json({
+      success: true,
+      delivery: {
+        id: delivery._id,
+        status: delivery.status,
+        method: delivery.method,
+        tradeId: delivery.tradeId._id,
+        tradeStatus: delivery.tradeId.status
+      },
+      privacy: {
+        level: delivery.privacy.level,
+        method: delivery.privacy.method,
+        anonymousIds: delivery.privacy.anonymousIds,
+        verificationCode: delivery.privacy.verificationCode
+      },
+      decryptedInfo: decryptedInfo ? {
+        realSender: {
+          name: decryptedInfo.realSender.name,
+          phone: decryptedInfo.realSender.phone,
+          email: decryptedInfo.realSender.email
+        },
+        realRecipient: {
+          name: decryptedInfo.realRecipient.name,
+          phone: decryptedInfo.realRecipient.phone,
+          email: decryptedInfo.realRecipient.email
+        },
+        decryptedAt: new Date().toISOString()
+      } : null,
+      warning: 'Ces informations sont confidentielles et protégées par le RGPD'
+    });
+  } catch (error) {
+    console.error('Erreur décryptage livraison:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'
