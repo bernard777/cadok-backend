@@ -36,32 +36,38 @@ router.get('/current', auth, async (req, res) => {
 // @desc    Obtenir les plans disponibles
 // @access  Public
 router.get('/plans', (req, res) => {
-  const plans = {
-    free: {
+  const plans = [
+    {
+      id: 'free',
       name: 'Gratuit',
       price: 0,
       currency: 'EUR',
       period: 'forever',
       features: ['3 objets maximum', '2 échanges maximum', 'Support communautaire'],
-      limits: { maxObjects: 3, maxTrades: 2 }
+      limits: { maxObjects: 3, maxTrades: 2 },
+      recommended: false
     },
-    basic: {
+    {
+      id: 'basic',
       name: 'Basic',
       price: 2,
       currency: 'EUR',
       period: 'month',
       features: ['10 objets maximum', '5 échanges maximum', 'Support prioritaire', 'Recherche avancée'],
-      limits: { maxObjects: 10, maxTrades: 5 }
+      limits: { maxObjects: 10, maxTrades: 5 },
+      recommended: false
     },
-    premium: {
+    {
+      id: 'premium',
       name: 'Premium',
       price: 5,
       currency: 'EUR',
       period: 'month',
-      features: ['Objets illimités', 'Échanges illimités', 'Support prioritaire 24/7', 'Recherche avancée'],
-      limits: { maxObjects: 'unlimited', maxTrades: 'unlimited' }
+      features: ['Objets illimités', 'Échanges illimités', 'Support prioritaire 24/7', 'Recherche avancée', 'Fonctionnalités exclusives'],
+      limits: { maxObjects: 'unlimited', maxTrades: 'unlimited' },
+      recommended: true
     }
-  };
+  ];
   
   res.json(plans);
 });
