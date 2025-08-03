@@ -210,6 +210,7 @@ router.post('/cancel', auth, async (req, res) => {
       await subscription.save();
       
       return res.json({
+        success: true,
         message: 'Changement programmé annulé. Votre abonnement continuera jusqu\'à la fin de la période en cours.',
         subscription,
         action: 'scheduled_change_cancelled'
@@ -227,6 +228,7 @@ router.post('/cancel', auth, async (req, res) => {
         await subscription.save();
         
         return res.json({
+          success: true,
           message: `Abonnement annulé. Vous conserverez les bénéfices jusqu'au ${subscription.endDate.toLocaleDateString()}`,
           subscription,
           action: 'cancellation_scheduled'
