@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const PickupPointService = require('../services/pickupPointService');
 const Trade = require('../models/Trade');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { auth } = require('../middlewares/authMiddleware');
 
 // ==================== GÉNÉRATION BORDEREAU POINT RELAIS ====================
 
@@ -15,7 +15,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
  * Générer un bordereau de livraison via point relais
  * POST /api/trades/:tradeId/generate-pickup-label
  */
-router.post('/:tradeId/generate-pickup-label', authMiddleware, async (req, res) => {
+router.post('/:tradeId/generate-pickup-label', auth, async (req, res) => {
     try {
         console.log('🎫 Génération bordereau point relais...');
         
@@ -103,7 +103,7 @@ router.post('/:tradeId/generate-pickup-label', authMiddleware, async (req, res) 
  * Télécharger le bordereau PDF
  * GET /api/trades/:tradeId/download-pickup-label
  */
-router.get('/:tradeId/download-pickup-label', authMiddleware, async (req, res) => {
+router.get('/:tradeId/download-pickup-label', auth, async (req, res) => {
     try {
         const { tradeId } = req.params;
         const userId = req.user.id;
@@ -157,7 +157,7 @@ router.get('/:tradeId/download-pickup-label', authMiddleware, async (req, res) =
  * Confirmer l'expédition du colis
  * POST /api/trades/:tradeId/confirm-shipment
  */
-router.post('/:tradeId/confirm-shipment', authMiddleware, async (req, res) => {
+router.post('/:tradeId/confirm-shipment', auth, async (req, res) => {
     try {
         const { tradeId } = req.params;
         const userId = req.user.id;
@@ -208,7 +208,7 @@ router.post('/:tradeId/confirm-shipment', authMiddleware, async (req, res) => {
  * Confirmer la récupération du colis
  * POST /api/trades/:tradeId/confirm-pickup
  */
-router.post('/:tradeId/confirm-pickup', authMiddleware, async (req, res) => {
+router.post('/:tradeId/confirm-pickup', auth, async (req, res) => {
     try {
         const { tradeId } = req.params;
         const userId = req.user.id;
@@ -270,7 +270,7 @@ router.post('/:tradeId/confirm-pickup', authMiddleware, async (req, res) => {
  * Rechercher des points relais près d'un code postal
  * GET /api/pickup-points/near/:zipCode
  */
-router.get('/pickup-points/near/:zipCode', authMiddleware, async (req, res) => {
+router.get('/pickup-points/near/:zipCode', auth, async (req, res) => {
     try {
         const { zipCode } = req.params;
         const { limit = 5 } = req.query;
@@ -298,7 +298,7 @@ router.get('/pickup-points/near/:zipCode', authMiddleware, async (req, res) => {
  * Obtenir le statut détaillé d'une livraison
  * GET /api/trades/:tradeId/delivery-status
  */
-router.get('/:tradeId/delivery-status', authMiddleware, async (req, res) => {
+router.get('/:tradeId/delivery-status', auth, async (req, res) => {
     try {
         const { tradeId } = req.params;
         const userId = req.user.id;
