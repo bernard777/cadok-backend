@@ -208,13 +208,11 @@ router.post('/create', auth, async (req, res) => {
     }
 
     // Ajouter l'événement initial
-    delivery.addTrackingEvent({
+    await delivery.addTrackingEvent({
       status: 'created',
       description: 'Livraison créée avec protection des données',
       location: senderAddress?.city || trade.fromUser?.city || 'Paris'
     });
-
-    await delivery.save();
 
     res.status(201).json({
       success: true,

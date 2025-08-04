@@ -222,4 +222,13 @@ router.put('/update-avatar', auth, upload.single('avatar'), async (req, res) => 
   }
 });
 
+// Endpoint de test de connectivité
+router.get('/test-connection', (req, res) => {
+  res.json({ 
+    message: 'Connectivité OK', 
+    timestamp: new Date().toISOString(),
+    server: 'CADOK Backend'
+  });
+});
+
 module.exports = router;

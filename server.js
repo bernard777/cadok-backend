@@ -11,8 +11,9 @@ mongoose.connect(MONGO_URI, {
 })
 .then(() => {
   console.log('✅ Connecté à MongoDB');
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur lancé sur le port ${PORT}`);
+    console.log(`🌐 Accessible sur: http://192.168.1.16:${PORT}`);
   });
 })
 .catch((err) => {

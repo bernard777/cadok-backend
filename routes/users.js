@@ -116,6 +116,19 @@ router.get('/:userId/objects', auth, async (req, res) => {
     const ObjectModel = require('../models/Object');
     const { userId } = req.params;
 
+    console.log('🔧 [DEBUG] Récupération objets pour userId:', userId);
+
+    // Validation du userId
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      return res.status(400).json({ message: "ID utilisateur manquant ou invalide." });
+    }
+
+    // Vérifier que l'ID est un ObjectId valide
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "ID utilisateur invalide." });
+    }
+
     const objects = await ObjectModel.find({ 
       owner: userId, 
       status: 'available' // Seulement les objets disponibles
@@ -123,6 +136,7 @@ router.get('/:userId/objects', auth, async (req, res) => {
     .populate('owner', 'pseudo city')
     .sort({ createdAt: -1 });
 
+    console.log('✅ [DEBUG] Objets trouvés:', objects.length);
     res.json(objects);
   } catch (err) {
     console.error('Erreur lors de la récupération des objets:', err);
