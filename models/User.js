@@ -49,7 +49,31 @@ const userSchema = new mongoose.Schema({
     endDate: { type: Date, default: null },
     status: { type: String, enum: ['active', 'canceled', 'expired'], required: true },
     amount: { type: Number, required: true }
-  }]
+  }],
+  
+  // Statistiques pour le système de réputation (troc pur)
+  tradeStats: {
+    completedTrades: { type: Number, default: 0 },
+    cancelledTrades: { type: Number, default: 0 },
+    averageRating: { type: Number, default: 0 },
+    totalRatings: { type: Number, default: 0 },
+    trustScore: { type: Number, default: 50, min: 0, max: 100 }, // Score de confiance sur 100
+    lastActivity: { type: Date, default: Date.now },
+    violations: {
+      noShipment: { type: Number, default: 0 }, // Nombre de fois où l'utilisateur n'a pas envoyé
+      badQuality: { type: Number, default: 0 }, // Objet non conforme
+      communication: { type: Number, default: 0 }, // Problèmes de communication
+      total: { type: Number, default: 0 }
+    },
+    // Historique des évaluations reçues
+    ratingsReceived: [{
+      fromUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      tradeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
+      rating: { type: Number, min: 1, max: 5 },
+      comment: String,
+      createdAt: { type: Date, default: Date.now }
+    }]
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

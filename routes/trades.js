@@ -7,6 +7,10 @@ const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const Message = require('../models/Message');
 const sanitizeHtml = require('sanitize-html');
+const PureTradeSecurityService = require('../services/pureTradeSecurityService');
+
+// Initialiser le service de sécurité
+const securityService = new PureTradeSecurityService();
 
 // Utilitaire pour générer une URL complète pour l'avatar
 function getFullUrl(req, relativePath) {
@@ -57,19 +61,47 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Impossible de troquer avec soi-même.' });
     }
 
+    // Analyser le risque du troc avec le nouveau système de sécurité
+    const riskAnalysis = await securityService.analyzeTradeRisk(req.user.id, ownerId);
+
     const newTrade = new Trade({
       fromUser: req.user.id,
       toUser: ownerId,
       requestedObjects,
-      status: TRADE_STATUS.PENDING
+      status: riskAnalysis.constraints.photosRequired ? 'photos_required' : TRADE_STATUS.PENDING,
+      security: {
+        trustScores: {
+          sender: riskAnalysis.fromUserScore,
+          recipient: riskAnalysis.toUserScore
+        },
+        riskLevel: riskAnalysis.riskLevel,
+        pureTradeValidation: {
+          steps: {
+            photosSubmitted: { fromUser: false, toUser: false },
+            shippingConfirmed: { fromUser: false, toUser: false },
+            deliveryConfirmed: { fromUser: false, toUser: false }
+          },
+          constraints: riskAnalysis.constraints,
+          timeline: [{
+            step: 'trade_created',
+            userId: req.user.id,
+            timestamp: new Date(),
+            data: { riskLevel: riskAnalysis.riskLevel, recommendation: riskAnalysis.recommendation }
+          }]
+        }
+      }
     });
 
     const saved = await newTrade.save();
 
     // Notification pour l'utilisateur 2
+    const notificationMessage = riskAnalysis.constraints.photosRequired 
+      ? "Vous avez reçu une demande de troc sécurisé. Photos requises avant validation."
+      : "Vous avez reçu une nouvelle demande de troc sur plusieurs objets.";
+
     await Notification.create({
       user: ownerId,
-      message: "Vous avez reçu une nouvelle demande de troc sur plusieurs objets.",
+      message: notificationMessage,
       type: NOTIFICATION_TYPE.TRADE_REQUEST,
       trade: saved._id
     });
@@ -762,6 +794,160 @@ router.patch('/:id/ask-different', auth, async (req, res) => {
   } catch (err) {
     console.error('Erreur lors de la demande de choix différent:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== ROUTES DU SYSTÈME DE SÉCURITÉ PURE TRADE ==========
+
+// Analyser un troc proposé (analyse de risque)
+router.get('/:id/security-analysis', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) {
+      return res.status(404).json({ message: 'Troc non trouvé' });
+    }
+
+    // Vérifier que l'utilisateur fait partie du troc
+    if (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+
+    const analysis = await securityService.analyzeTradeRisk(trade.fromUser, trade.toUser);
+    res.json({
+      success: true,
+      tradeId: req.params.id,
+      analysis
+    });
+  } catch (error) {
+    console.error('Erreur analyse sécurité:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Soumettre des photos avant expédition
+router.post('/:id/submit-photos', auth, async (req, res) => {
+  try {
+    const { photos, trackingNumber } = req.body;
+    
+    if (!Array.isArray(photos) || photos.length === 0) {
+      return res.status(400).json({ success: false, error: 'Photos requises' });
+    }
+
+    const result = await securityService.submitPhotos(
+      req.params.id,
+      req.user.id,
+      photos,
+      trackingNumber
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur soumission photos:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Confirmer l'expédition
+router.post('/:id/confirm-shipment', auth, async (req, res) => {
+  try {
+    const { trackingNumber } = req.body;
+
+    const result = await securityService.confirmShipment(
+      req.params.id,
+      req.user.id,
+      trackingNumber
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur confirmation expédition:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Confirmer la réception et évaluer
+router.post('/:id/confirm-delivery', auth, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, error: 'Note requise (1-5)' });
+    }
+
+    const result = await securityService.confirmDelivery(
+      req.params.id,
+      req.user.id,
+      rating,
+      comment
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur confirmation livraison:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Signaler un problème
+router.post('/:id/report-problem', auth, async (req, res) => {
+  try {
+    const { reason, description, evidence } = req.body;
+
+    if (!reason || !description) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Raison et description requises' 
+      });
+    }
+
+    const result = await securityService.reportProblem(
+      req.params.id,
+      req.user.id,
+      reason,
+      description,
+      evidence || []
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur signalement problème:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtenir le statut de sécurité d'un troc
+router.get('/:id/security-status', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) {
+      return res.status(404).json({ success: false, error: 'Troc non trouvé' });
+    }
+
+    // Vérifier que l'utilisateur fait partie du troc
+    if (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Accès non autorisé' });
+    }
+
+    const result = await securityService.getSecurityStatus(req.params.id);
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur statut sécurité:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtenir le score de confiance de l'utilisateur connecté
+router.get('/my-trust-score', auth, async (req, res) => {
+  try {
+    const trustScore = await securityService.calculateTrustScore(req.user.id);
+    res.json({
+      success: true,
+      trustScore,
+      userId: req.user.id
+    });
+  } catch (error) {
+    console.error('Erreur score confiance:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

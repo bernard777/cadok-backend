@@ -4,7 +4,15 @@ const TRADE_STATUS = {
   PENDING: 'pending', // Demande envoyée, en attente de sélection d'objet par toUser
   PROPOSED: 'proposed', // Objet proposé par toUser, en attente de validation par fromUser
   ACCEPTED: 'accepted',
-  REFUSED: 'refused'
+  REFUSED: 'refused',
+  SECURED: 'secured', // Avec dépôt de garantie
+  // Nouveaux statuts pour le système de sécurité pur
+  SECURITY_PENDING: 'security_pending', // En attente des preuves de sécurité
+  PHOTOS_REQUIRED: 'photos_required', // Photos requises avant expédition
+  SHIPPING_CONFIRMED: 'shipping_confirmed', // Expédition confirmée
+  DELIVERY_CONFIRMED: 'delivery_confirmed', // Livraison confirmée
+  COMPLETED: 'completed', // Échange terminé avec succès
+  CANCELLED: 'cancelled' // Annulé (avec remboursement si applicable)
 };
 
 const tradeSchema = new mongoose.Schema({
@@ -16,6 +24,151 @@ const tradeSchema = new mongoose.Schema({
     type: String,
     enum: Object.values(TRADE_STATUS),
     default: TRADE_STATUS.PENDING
+  },
+
+  // Dépôt de garantie (Escrow)
+  escrow: {
+    paymentIntentId: String, // ID Stripe du Payment Intent
+    amount: Number, // Montant du dépôt en euros
+    status: {
+      type: String,
+      enum: ['none', 'held', 'released', 'cancelled'],
+      default: 'none'
+    },
+    createdAt: Date,
+    expiresAt: Date,
+    releasedAt: Date,
+    cancelledAt: Date,
+    releaseReason: String,
+    cancelReason: String,
+    releaseConditions: {
+      deliveryConfirmed: { type: Boolean, default: false },
+      recipientApproval: { type: Boolean, default: false },
+      disputePeriodExpired: { type: Boolean, default: false }
+    },
+    dispute: {
+      status: {
+        type: String,
+        enum: ['none', 'open', 'in_review', 'resolved'],
+        default: 'none'
+      },
+      details: String,
+      createdAt: Date,
+      resolution: {
+        decision: String, // 'release', 'refund', 'partial'
+        amount: Number,
+        reason: String,
+        resolvedAt: Date,
+        resolvedBy: String
+      }
+    }
+  },
+
+  // Valeur estimée pour le calcul du dépôt
+  estimatedValue: {
+    amount: Number,
+    currency: { type: String, default: 'EUR' },
+    calculatedAt: Date
+  },
+
+  // Score de confiance et sécurité
+  security: {
+    trustScores: {
+      sender: Number,
+      recipient: Number
+    },
+    riskLevel: {
+      type: String,
+      enum: ['LOW_RISK', 'MEDIUM_RISK', 'HIGH_RISK', 'VERY_HIGH_RISK'],
+      default: 'MEDIUM_RISK'
+    },
+    requiresEscrow: { type: Boolean, default: false },
+    requiresIdentityVerification: { type: Boolean, default: false },
+    secureDeliveryRequired: { type: Boolean, default: false },
+    
+    // Système de sécurité pour troc pur (sans argent)
+    pureTradeValidation: {
+      // Étapes de validation
+      steps: {
+        photosSubmitted: {
+          fromUser: { type: Boolean, default: false },
+          toUser: { type: Boolean, default: false }
+        },
+        shippingConfirmed: {
+          fromUser: { type: Boolean, default: false },
+          toUser: { type: Boolean, default: false }
+        },
+        deliveryConfirmed: {
+          fromUser: { type: Boolean, default: false },
+          toUser: { type: Boolean, default: false }
+        }
+      },
+      
+      // Preuves photographiques
+      proofs: {
+        fromUser: {
+          beforeShipping: [String], // URLs des photos avant expédition
+          packaging: [String], // Photos de l'emballage
+          trackingNumber: String,
+          submittedAt: Date
+        },
+        toUser: {
+          beforeShipping: [String],
+          packaging: [String],
+          trackingNumber: String,
+          submittedAt: Date
+        }
+      },
+      
+      // Contraintes de sécurité
+      constraints: {
+        photosRequired: { type: Boolean, default: false },
+        trackingRequired: { type: Boolean, default: false },
+        maxDeliveryDays: { type: Number, default: 7 },
+        requiresInsurance: { type: Boolean, default: false }
+      },
+      
+      // Timeline de validation
+      timeline: [{
+        step: String, // 'photos_submitted', 'shipping_confirmed', etc.
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now },
+        data: mongoose.Schema.Types.Mixed // Données associées (photos, tracking, etc.)
+      }],
+      
+      // Système de reporting
+      reports: [{
+        reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        reason: {
+          type: String,
+          enum: ['not_shipped', 'wrong_item', 'damaged', 'fake', 'communication_issue']
+        },
+        description: String,
+        evidence: [String], // URLs des preuves
+        status: {
+          type: String,
+          enum: ['pending', 'investigating', 'resolved', 'dismissed'],
+          default: 'pending'
+        },
+        createdAt: { type: Date, default: Date.now },
+        resolvedAt: Date,
+        resolution: String
+      }]
+    }
+  },
+
+  // Évaluations finales
+  ratings: {
+    fromUserRating: {
+      score: { type: Number, min: 1, max: 5 },
+      comment: String,
+      submittedAt: Date
+    },
+    toUserRating: {
+      score: { type: Number, min: 1, max: 5 },
+      comment: String,
+      submittedAt: Date
+    }
   }
 }, { timestamps: true });
 
