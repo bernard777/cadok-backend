@@ -65,6 +65,10 @@ app.use('/api/payments', paymentRoutes);
 const deliveryRoutes = require('./routes/delivery');
 app.use('/api/delivery', deliveryRoutes);
 
+// Ajout des routes de livraison point relais
+const pickupRoutes = require('./routes/pickupRoutes');
+app.use('/api/trades', pickupRoutes);
+
 // Ajout de la route des notifications
 const notificationsRoutePath = path.join(__dirname, 'routes', 'notifications.js');
 

@@ -9,7 +9,10 @@ const TRADE_STATUS = {
   // Nouveaux statuts pour le système de sécurité pur
   SECURITY_PENDING: 'security_pending', // En attente des preuves de sécurité
   PHOTOS_REQUIRED: 'photos_required', // Photos requises avant expédition
+  SHIPPING_PREPARED: 'shipping_prepared', // Bordereau généré, prêt à expédier
   SHIPPING_CONFIRMED: 'shipping_confirmed', // Expédition confirmée
+  SHIPPED: 'shipped', // Colis en transit
+  ARRIVED_AT_PICKUP: 'arrived_at_pickup', // Colis arrivé au point relais
   DELIVERY_CONFIRMED: 'delivery_confirmed', // Livraison confirmée
   COMPLETED: 'completed', // Échange terminé avec succès
   CANCELLED: 'cancelled' // Annulé (avec remboursement si applicable)
@@ -169,6 +172,56 @@ const tradeSchema = new mongoose.Schema({
       comment: String,
       submittedAt: Date
     }
+  },
+
+  // Système de livraison (point relais, etc.)
+  delivery: {
+    method: {
+      type: String,
+      enum: ['pickup_point', 'direct_delivery', 'manual'],
+      default: 'manual'
+    },
+    
+    // Données spécifiques au point relais
+    pickupPoint: {
+      id: String,
+      partner: String, // 'mondial_relay', 'pickup', etc.
+      name: String,
+      address: {
+        street: String,
+        city: String,
+        zipCode: String,
+        country: String
+      },
+      openingHours: String,
+      phone: String,
+      coordinates: {
+        lat: Number,
+        lng: Number
+      }
+    },
+    
+    // Code de retrait unique
+    withdrawalCode: String,
+    
+    // Statut de la livraison
+    status: {
+      type: String,
+      enum: ['none', 'label_generated', 'in_transit', 'arrived_at_pickup', 'delivered'],
+      default: 'none'
+    },
+    
+    // Dates importantes
+    createdAt: Date,
+    shippedAt: Date,
+    arrivedAt: Date,
+    deliveredAt: Date,
+    
+    // Numéro de suivi transporteur
+    trackingNumber: String,
+    
+    // Instructions spéciales
+    specialInstructions: [String]
   }
 }, { timestamps: true });
 
