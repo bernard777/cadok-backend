@@ -8,9 +8,11 @@ const Notification = require('../models/Notification');
 const Message = require('../models/Message');
 const sanitizeHtml = require('sanitize-html');
 const PureTradeSecurityService = require('../services/pureTradeSecurityService');
+const DeliveryLabelService = require('../services/deliveryLabelService');
 
-// Initialiser le service de sécurité
+// Initialiser les services
 const securityService = new PureTradeSecurityService();
+const labelService = new DeliveryLabelService();
 
 // Utilitaire pour générer une URL complète pour l'avatar
 function getFullUrl(req, relativePath) {
@@ -947,6 +949,62 @@ router.get('/my-trust-score', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur score confiance:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ========== GÉNÉRATION DE BORDEREAU D'ENVOI ==========
+
+// Générer un bordereau d'envoi avec redirection automatique
+router.post('/:id/generate-delivery-label', auth, async (req, res) => {
+  try {
+    const result = await labelService.generateDeliveryLabel(req.params.id, req.user.id);
+    
+    if (result.success) {
+      // Sauvegarder les infos de livraison dans le troc
+      await Trade.findByIdAndUpdate(req.params.id, {
+        $set: {
+          'security.pureTradeValidation.deliveryLabel': {
+            labelUrl: result.labelUrl,
+            redirectionCode: result.redirectionCode,
+            generatedAt: new Date(),
+            estimatedDelivery: result.estimatedDelivery
+          }
+        }
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur génération bordereau:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Télécharger le bordereau d'envoi
+router.get('/:id/download-label', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) {
+      return res.status(404).json({ success: false, error: 'Troc non trouvé' });
+    }
+
+    // Vérifier que l'utilisateur fait partie du troc
+    if (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Accès non autorisé' });
+    }
+
+    const labelInfo = trade.security?.pureTradeValidation?.deliveryLabel;
+    if (!labelInfo) {
+      return res.status(404).json({ success: false, error: 'Bordereau non généré' });
+    }
+
+    const filepath = require('path').join(__dirname, '../uploads/labels', 
+      require('path').basename(labelInfo.labelUrl));
+    
+    res.download(filepath, `bordereau-${trade._id}.pdf`);
+  } catch (error) {
+    console.error('Erreur téléchargement bordereau:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
