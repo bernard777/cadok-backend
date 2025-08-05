@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 /**
  * Tests ultra-rapides pour vérifier que Jest fonctionne
  */

@@ -1,0 +1,442 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CADOK E2E Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
+        .summary { display: flex; gap: 20px; margin: 20px 0; }
+        .metric { background: #e8f4fd; padding: 15px; border-radius: 5px; text-align: center; }
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        .error { color: #dc3545; }
+        .suite { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .recommendation { padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .recommendation.critical { background: #f8d7da; }
+        .recommendation.warning { background: #fff3cd; }
+        .recommendation.success { background: #d4edda; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 CADOK E2E Test Report</h1>
+        <p>Généré le: 2025-08-05T16:40:10.520Z</p>
+    </div>
+
+    <div class="summary">
+        <div class="metric">
+            <h3>Total Tests</h3>
+            <h2>0</h2>
+        </div>
+        <div class="metric">
+            <h3>Réussis</h3>
+            <h2 class="success">0</h2>
+        </div>
+        <div class="metric">
+            <h3>Échoués</h3>
+            <h2 class="error">0</h2>
+        </div>
+        <div class="metric">
+            <h3>Taux de Réussite</h3>
+            <h2>0%</h2>
+        </div>
+        <div class="metric">
+            <h3>Durée</h3>
+            <h2>27s</h2>
+        </div>
+    </div>
+
+    <h2>📋 Suites de Tests</h2>
+    
+        <div class="suite">
+            <h3>complete-user-journey.test.js</h3>
+            <p>Status: <span class="error">failed</span></p>
+            
+            <p class="error">Erreur: Command failed: npm test -- tests/e2e/complete-user-journey.test.js --verbose --coverage
+● Validation Warning:
+
+  Unknown option "testTimeout" with value 60000 was found.
+  This is probably a typing mistake. Fixing it will remove this message.
+
+  Configuration Documentation:
+  https://jestjs.io/docs/configuration
+
+FAIL e2e-tests tests/e2e/complete-user-journey.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../app' from 'tests/e2e/complete-user-journey.test.js'
+
+    [0m [90m  6 |[39m [36mconst[39m request [33m=[39m require([32m'supertest'[39m)[33m;[39m
+     [90m  7 |[39m [36mconst[39m mongoose [33m=[39m require([32m'mongoose'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m  8 |[39m [36mconst[39m app [33m=[39m require([32m'../app'[39m)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m  9 |[39m [36mconst[39m [33mUser[39m [33m=[39m require([32m'../models/User'[39m)[33m;[39m
+     [90m 10 |[39m [36mconst[39m [33mObject[39m [33m=[39m require([32m'../models/Object'[39m)[33m;[39m
+     [90m 11 |[39m [36mconst[39m [33mTrade[39m [33m=[39m require([32m'../models/Trade'[39m)[33m;[39m[0m
+
+      at Resolver._throwModNotFoundError (../node_modules/jest-cli/node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (tests/e2e/complete-user-journey.test.js:8:13)
+
+Failed to collect coverage from C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js
+ERROR: C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js: Missing semicolon. (23:7)
+
+[0m [90m 21 |[39m [90m   * Créer une caution pour un troc (les 2 utilisateurs versent une petite caution)[39m
+ [90m 22 |[39m [90m   */[39m
+[31m[1m>[22m[39m[90m 23 |[39m   [36masync[39m createTradeGuarantee(tradeId[33m,[39m userId[33m,[39m paymentMethodId[33m,[39m customAmount [33m=[39m [36mnull[39m) {
+ [90m    |[39m        [31m[1m^[22m[39m
+ [90m 24 |[39m     [36mtry[39m {
+ [90m 25 |[39m       [36mconst[39m trade [33m=[39m [36mawait[39m [33mTrade[39m[33m.[39mfindById(tradeId)[33m;[39m
+ [90m 26 |[39m       [36mif[39m ([33m![39mtrade) {[0m
+STACK: SyntaxError: C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js: Missing semicolon. (23:7)
+
+[0m [90m 21 |[39m [90m   * Créer une caution pour un troc (les 2 utilisateurs versent une petite caution)[39m
+ [90m 22 |[39m [90m   */[39m
+[31m[1m>[22m[39m[90m 23 |[39m   [36masync[39m createTradeGuarantee(tradeId[33m,[39m userId[33m,[39m paymentMethodId[33m,[39m customAmount [33m=[39m [36mnull[39m) {
+ [90m    |[39m        [31m[1m^[22m[39m
+ [90m 24 |[39m     [36mtry[39m {
+ [90m 25 |[39m       [36mconst[39m trade [33m=[39m [36mawait[39m [33mTrade[39m[33m.[39mfindById(tradeId)[33m;[39m
+ [90m 26 |[39m       [36mif[39m ([33m![39mtrade) {[0m
+    at constructor (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:367:19)
+    at Parser.raise (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:6627:19)
+    at Parser.semicolon (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:6923:10)
+    at Parser.parseExpressionStatement (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13285:10)
+    at Parser.parseStatementContent (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12899:19)
+    at Parser.parseStatementLike (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12767:17)
+    at Parser.parseStatementListItem (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12747:17)
+    at Parser.parseBlockOrModuleBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13316:61)
+    at Parser.parseBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13309:10)
+    at Parser.parseBlock (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13297:10)
+    at Parser.parseFunctionBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12101:24)
+    at Parser.parseFunctionBodyAndFinish (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12087:10)
+    at Parser.parseMethod (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12045:31)
+    at Parser.pushClassMethod (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13727:30)
+    at Parser.parseClassMemberWithIsStatic (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13638:14)
+    at Parser.parseClassMember (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13563:10)
+    at C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13517:14
+    at Parser.withSmartMixTopicForbiddingContext (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12404:14)
+    at Parser.parseClassBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13499:10)
+    at Parser.parseClass (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13474:22)
+    at Parser.parseStatementContent (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12794:21)
+    at Parser.parseStatementLike (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12767:17)
+    at Parser.parseModuleItem (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12744:17)
+    at Parser.parseBlockOrModuleBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13316:36)
+    at Parser.parseBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13309:10)
+    at Parser.parseProgram (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12625:10)
+    at Parser.parseTopLevel (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12615:25)
+    at Parser.parse (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:14492:10)
+    at parse (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:14526:38)
+    at parser (C:\Users\JB\Music\node_modules\@babel\core\lib\parser\index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (C:\Users\JB\Music\node_modules\@babel\core\lib\transformation\normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (C:\Users\JB\Music\node_modules\@babel\core\lib\transformation\index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (C:\Users\JB\Music\node_modules\@babel\core\lib\transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (C:\Users\JB\Music\node_modules\gensync\index.js:261:32)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:273:13
+    at async.call.result.err.err (C:\Users\JB\Music\node_modules\gensync\index.js:223:11)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:189:28
+    at C:\Users\JB\Music\node_modules\@babel\core\lib\gensync-utils\async.js:67:7
+    at C:\Users\JB\Music\node_modules\gensync\index.js:113:33
+    at step (C:\Users\JB\Music\node_modules\gensync\index.js:287:14)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:273:13
+    at async.call.result.err.err (C:\Users\JB\Music\node_modules\gensync\index.js:223:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Jest: "global" coverage threshold for statements (80%) not met: 0%
+Jest: "global" coverage threshold for branches (80%) not met: 0%
+Jest: "global" coverage threshold for lines (80%) not met: 0%
+Jest: "global" coverage threshold for functions (80%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for statements (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for branches (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for lines (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for functions (85%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for statements (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for branches (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for lines (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for functions (90%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for statements (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for branches (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for lines (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for functions (85%) not met: 0%
+Jest: Coverage data for ./services/securityService.js was not found.
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        6.729 s
+Ran all test suites matching /tests\\e2e\\complete-user-journey.test.js/i.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\JB\Music\cadok-backend
+npm error workspace cadok-backend@1.0.0
+npm error location C:\Users\JB\Music\cadok-backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c cross-env NODE_ENV=test jest tests/e2e/complete-user-journey.test.js --verbose --coverage
+</p>
+        </div>
+    
+        <div class="suite">
+            <h3>security-flows.test.js</h3>
+            <p>Status: <span class="error">failed</span></p>
+            
+            <p class="error">Erreur: Command failed: npm test -- tests/e2e/security-flows.test.js --verbose --coverage
+● Validation Warning:
+
+  Unknown option "testTimeout" with value 60000 was found.
+  This is probably a typing mistake. Fixing it will remove this message.
+
+  Configuration Documentation:
+  https://jestjs.io/docs/configuration
+
+FAIL e2e-tests tests/e2e/security-flows.test.js
+  ● Test suite failed to run
+
+    TypeError: require(...) is not a function
+
+    [0m[31m[1m>[22m[39m[90m 1 |[39m [36mconst[39m stripe [33m=[39m require([32m'stripe'[39m)(process[33m.[39menv[33m.[39m[33mSTRIPE_SECRET_KEY[39m)[33m;[39m
+     [90m   |[39m                                 [31m[1m^[22m[39m
+     [90m 2 |[39m
+     [90m 3 |[39m [36mclass[39m [33mPaymentService[39m {
+     [90m 4 |[39m   constructor() {[0m
+
+      at Object.<anonymous> (services/paymentService.js:1:33)
+      at Object.require (routes/payments.js:3:24)
+      at Object.require (app.js:61:23)
+      at Object.require (tests/e2e/security-flows.test.js:7:13)
+
+Failed to collect coverage from C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js
+ERROR: C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js: Missing semicolon. (23:7)
+
+[0m [90m 21 |[39m [90m   * Créer une caution pour un troc (les 2 utilisateurs versent une petite caution)[39m
+ [90m 22 |[39m [90m   */[39m
+[31m[1m>[22m[39m[90m 23 |[39m   [36masync[39m createTradeGuarantee(tradeId[33m,[39m userId[33m,[39m paymentMethodId[33m,[39m customAmount [33m=[39m [36mnull[39m) {
+ [90m    |[39m        [31m[1m^[22m[39m
+ [90m 24 |[39m     [36mtry[39m {
+ [90m 25 |[39m       [36mconst[39m trade [33m=[39m [36mawait[39m [33mTrade[39m[33m.[39mfindById(tradeId)[33m;[39m
+ [90m 26 |[39m       [36mif[39m ([33m![39mtrade) {[0m
+STACK: SyntaxError: C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js: Missing semicolon. (23:7)
+
+[0m [90m 21 |[39m [90m   * Créer une caution pour un troc (les 2 utilisateurs versent une petite caution)[39m
+ [90m 22 |[39m [90m   */[39m
+[31m[1m>[22m[39m[90m 23 |[39m   [36masync[39m createTradeGuarantee(tradeId[33m,[39m userId[33m,[39m paymentMethodId[33m,[39m customAmount [33m=[39m [36mnull[39m) {
+ [90m    |[39m        [31m[1m^[22m[39m
+ [90m 24 |[39m     [36mtry[39m {
+ [90m 25 |[39m       [36mconst[39m trade [33m=[39m [36mawait[39m [33mTrade[39m[33m.[39mfindById(tradeId)[33m;[39m
+ [90m 26 |[39m       [36mif[39m ([33m![39mtrade) {[0m
+    at constructor (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:367:19)
+    at Parser.raise (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:6627:19)
+    at Parser.semicolon (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:6923:10)
+    at Parser.parseExpressionStatement (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13285:10)
+    at Parser.parseStatementContent (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12899:19)
+    at Parser.parseStatementLike (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12767:17)
+    at Parser.parseStatementListItem (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12747:17)
+    at Parser.parseBlockOrModuleBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13316:61)
+    at Parser.parseBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13309:10)
+    at Parser.parseBlock (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13297:10)
+    at Parser.parseFunctionBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12101:24)
+    at Parser.parseFunctionBodyAndFinish (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12087:10)
+    at Parser.parseMethod (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12045:31)
+    at Parser.pushClassMethod (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13727:30)
+    at Parser.parseClassMemberWithIsStatic (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13638:14)
+    at Parser.parseClassMember (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13563:10)
+    at C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13517:14
+    at Parser.withSmartMixTopicForbiddingContext (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12404:14)
+    at Parser.parseClassBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13499:10)
+    at Parser.parseClass (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13474:22)
+    at Parser.parseStatementContent (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12794:21)
+    at Parser.parseStatementLike (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12767:17)
+    at Parser.parseModuleItem (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12744:17)
+    at Parser.parseBlockOrModuleBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13316:36)
+    at Parser.parseBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13309:10)
+    at Parser.parseProgram (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12625:10)
+    at Parser.parseTopLevel (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12615:25)
+    at Parser.parse (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:14492:10)
+    at parse (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:14526:38)
+    at parser (C:\Users\JB\Music\node_modules\@babel\core\lib\parser\index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (C:\Users\JB\Music\node_modules\@babel\core\lib\transformation\normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (C:\Users\JB\Music\node_modules\@babel\core\lib\transformation\index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (C:\Users\JB\Music\node_modules\@babel\core\lib\transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (C:\Users\JB\Music\node_modules\gensync\index.js:261:32)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:273:13
+    at async.call.result.err.err (C:\Users\JB\Music\node_modules\gensync\index.js:223:11)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:189:28
+    at C:\Users\JB\Music\node_modules\@babel\core\lib\gensync-utils\async.js:67:7
+    at C:\Users\JB\Music\node_modules\gensync\index.js:113:33
+    at step (C:\Users\JB\Music\node_modules\gensync\index.js:287:14)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:273:13
+    at async.call.result.err.err (C:\Users\JB\Music\node_modules\gensync\index.js:223:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Jest: "global" coverage threshold for statements (80%) not met: 0%
+Jest: "global" coverage threshold for branches (80%) not met: 0%
+Jest: "global" coverage threshold for lines (80%) not met: 0%
+Jest: "global" coverage threshold for functions (80%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for statements (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for branches (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for lines (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for functions (85%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for statements (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for branches (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for lines (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for functions (90%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for statements (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for branches (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for lines (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for functions (85%) not met: 0%
+Jest: Coverage data for ./services/securityService.js was not found.
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        8.3 s
+Ran all test suites matching /tests\\e2e\\security-flows.test.js/i.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\JB\Music\cadok-backend
+npm error workspace cadok-backend@1.0.0
+npm error location C:\Users\JB\Music\cadok-backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c cross-env NODE_ENV=test jest tests/e2e/security-flows.test.js --verbose --coverage
+</p>
+        </div>
+    
+        <div class="suite">
+            <h3>payment-flows.test.js</h3>
+            <p>Status: <span class="error">failed</span></p>
+            
+            <p class="error">Erreur: Command failed: npm test -- tests/e2e/payment-flows.test.js --verbose --coverage
+● Validation Warning:
+
+  Unknown option "testTimeout" with value 60000 was found.
+  This is probably a typing mistake. Fixing it will remove this message.
+
+  Configuration Documentation:
+  https://jestjs.io/docs/configuration
+
+FAIL e2e-tests tests/e2e/payment-flows.test.js
+  ● Test suite failed to run
+
+    TypeError: require(...) is not a function
+
+    [0m[31m[1m>[22m[39m[90m 1 |[39m [36mconst[39m stripe [33m=[39m require([32m'stripe'[39m)(process[33m.[39menv[33m.[39m[33mSTRIPE_SECRET_KEY[39m)[33m;[39m
+     [90m   |[39m                                 [31m[1m^[22m[39m
+     [90m 2 |[39m
+     [90m 3 |[39m [36mclass[39m [33mPaymentService[39m {
+     [90m 4 |[39m   constructor() {[0m
+
+      at Object.<anonymous> (services/paymentService.js:1:33)
+      at Object.require (routes/payments.js:3:24)
+      at Object.require (app.js:61:23)
+      at Object.require (tests/e2e/payment-flows.test.js:7:13)
+
+Failed to collect coverage from C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js
+ERROR: C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js: Missing semicolon. (23:7)
+
+[0m [90m 21 |[39m [90m   * Créer une caution pour un troc (les 2 utilisateurs versent une petite caution)[39m
+ [90m 22 |[39m [90m   */[39m
+[31m[1m>[22m[39m[90m 23 |[39m   [36masync[39m createTradeGuarantee(tradeId[33m,[39m userId[33m,[39m paymentMethodId[33m,[39m customAmount [33m=[39m [36mnull[39m) {
+ [90m    |[39m        [31m[1m^[22m[39m
+ [90m 24 |[39m     [36mtry[39m {
+ [90m 25 |[39m       [36mconst[39m trade [33m=[39m [36mawait[39m [33mTrade[39m[33m.[39mfindById(tradeId)[33m;[39m
+ [90m 26 |[39m       [36mif[39m ([33m![39mtrade) {[0m
+STACK: SyntaxError: C:\Users\JB\Music\cadok-backend\services\escrowService.backup.js: Missing semicolon. (23:7)
+
+[0m [90m 21 |[39m [90m   * Créer une caution pour un troc (les 2 utilisateurs versent une petite caution)[39m
+ [90m 22 |[39m [90m   */[39m
+[31m[1m>[22m[39m[90m 23 |[39m   [36masync[39m createTradeGuarantee(tradeId[33m,[39m userId[33m,[39m paymentMethodId[33m,[39m customAmount [33m=[39m [36mnull[39m) {
+ [90m    |[39m        [31m[1m^[22m[39m
+ [90m 24 |[39m     [36mtry[39m {
+ [90m 25 |[39m       [36mconst[39m trade [33m=[39m [36mawait[39m [33mTrade[39m[33m.[39mfindById(tradeId)[33m;[39m
+ [90m 26 |[39m       [36mif[39m ([33m![39mtrade) {[0m
+    at constructor (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:367:19)
+    at Parser.raise (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:6627:19)
+    at Parser.semicolon (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:6923:10)
+    at Parser.parseExpressionStatement (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13285:10)
+    at Parser.parseStatementContent (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12899:19)
+    at Parser.parseStatementLike (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12767:17)
+    at Parser.parseStatementListItem (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12747:17)
+    at Parser.parseBlockOrModuleBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13316:61)
+    at Parser.parseBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13309:10)
+    at Parser.parseBlock (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13297:10)
+    at Parser.parseFunctionBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12101:24)
+    at Parser.parseFunctionBodyAndFinish (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12087:10)
+    at Parser.parseMethod (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12045:31)
+    at Parser.pushClassMethod (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13727:30)
+    at Parser.parseClassMemberWithIsStatic (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13638:14)
+    at Parser.parseClassMember (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13563:10)
+    at C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13517:14
+    at Parser.withSmartMixTopicForbiddingContext (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12404:14)
+    at Parser.parseClassBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13499:10)
+    at Parser.parseClass (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13474:22)
+    at Parser.parseStatementContent (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12794:21)
+    at Parser.parseStatementLike (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12767:17)
+    at Parser.parseModuleItem (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12744:17)
+    at Parser.parseBlockOrModuleBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13316:36)
+    at Parser.parseBlockBody (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:13309:10)
+    at Parser.parseProgram (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12625:10)
+    at Parser.parseTopLevel (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:12615:25)
+    at Parser.parse (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:14492:10)
+    at parse (C:\Users\JB\Music\node_modules\@babel\parser\lib\index.js:14526:38)
+    at parser (C:\Users\JB\Music\node_modules\@babel\core\lib\parser\index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (C:\Users\JB\Music\node_modules\@babel\core\lib\transformation\normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (C:\Users\JB\Music\node_modules\@babel\core\lib\transformation\index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (C:\Users\JB\Music\node_modules\@babel\core\lib\transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (C:\Users\JB\Music\node_modules\gensync\index.js:261:32)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:273:13
+    at async.call.result.err.err (C:\Users\JB\Music\node_modules\gensync\index.js:223:11)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:189:28
+    at C:\Users\JB\Music\node_modules\@babel\core\lib\gensync-utils\async.js:67:7
+    at C:\Users\JB\Music\node_modules\gensync\index.js:113:33
+    at step (C:\Users\JB\Music\node_modules\gensync\index.js:287:14)
+    at C:\Users\JB\Music\node_modules\gensync\index.js:273:13
+    at async.call.result.err.err (C:\Users\JB\Music\node_modules\gensync\index.js:223:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Jest: "global" coverage threshold for statements (80%) not met: 0%
+Jest: "global" coverage threshold for branches (80%) not met: 0%
+Jest: "global" coverage threshold for lines (80%) not met: 0%
+Jest: "global" coverage threshold for functions (80%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for statements (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for branches (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for lines (85%) not met: 0%
+Jest: "./routes/objects.js" coverage threshold for functions (85%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for statements (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for branches (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for lines (90%) not met: 0%
+Jest: "./services/deliveryLabelService.js" coverage threshold for functions (90%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for statements (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for branches (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for lines (85%) not met: 0%
+Jest: "./services/bidirectionalTradeService.js" coverage threshold for functions (85%) not met: 0%
+Jest: Coverage data for ./services/securityService.js was not found.
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        6.053 s
+Ran all test suites matching /tests\\e2e\\payment-flows.test.js/i.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\JB\Music\cadok-backend
+npm error workspace cadok-backend@1.0.0
+npm error location C:\Users\JB\Music\cadok-backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c cross-env NODE_ENV=test jest tests/e2e/payment-flows.test.js --verbose --coverage
+</p>
+        </div>
+    
+
+    <h2>💡 Recommandations</h2>
+    
+        <div class="recommendation success">
+            <strong>🎉 Tous les tests E2E passent - Prêt pour la bêta !</strong><br>
+            Action: Procéder au déploiement
+        </div>
+    
+</body>
+</html>

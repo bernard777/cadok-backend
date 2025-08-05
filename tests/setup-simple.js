@@ -1,22 +1,17 @@
-/**
- * Configuration simplifiée pour les tests
- */
+// Setup ultra-simple pour tests - SANS IMPORTS PROBLÉMATIQUES
+// Variables d'environnement pour tests
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_secret_key_for_jwt_tokens_123456789';
+process.env.MONGODB_URI = 'mongodb://localhost:27017/cadok_test';
+process.env.STRIPE_SECRET_KEY = 'sk_test_123456789';
+process.env.ENCRYPTION_KEY = 'test_encryption_key_for_cadok_app_123456789';
 
-// Configuration globale pour les tests
+// Mock global console pour éviter le spam
 global.console = {
   ...console,
-  log: process.env.DEBUG ? console.log : jest.fn(),
-  warn: process.env.DEBUG ? console.warn : jest.fn(), 
-  error: process.env.DEBUG ? console.error : jest.fn()
+  log: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn()
 };
 
-// Augmenter le timeout pour les tests complexes
-jest.setTimeout(30000);
-
-// Mock des variables d'environnement
-process.env.JWT_SECRET = 'test-secret-key-for-testing-purposes';
-process.env.NODE_ENV = 'test';
-process.env.ENCRYPTION_KEY = 'test_encryption_key_32_characters_long';
-process.env.WEBHOOK_SECRET = 'test_webhook_secret_key_for_validation';
-
-console.log('✅ Setup de test simplifié configuré');
+console.log('✅ Setup ultra-simple configuré pour les tests');

@@ -1,3 +1,130 @@
+
+// Mock du modèle Subscription
+// Mock complet du modèle Subscription
+jest.mock('../../models/Subscription', () => {
+  const mockSubscription = function(data) {
+    Object.assign(this, {
+      user: data.user,
+      plan: data.plan || 'free',
+      status: data.status || 'active',
+      endDate: data.endDate,
+      startDate: data.startDate || new Date(),
+      paymentHistory: data.paymentHistory || [],
+      payments: data.payments || [],
+      premiumFeatures: data.premiumFeatures || {
+        objectsPublished: 0,
+        tradesCompleted: 0,
+        advancedFilters: false,
+        prioritySupport: false
+      },
+      monthlyPrice: data.plan === 'free' ? 0 : data.plan === 'basic' ? 5 : 15,
+      currency: data.currency || 'EUR',
+      autoRenew: data.autoRenew !== undefined ? data.autoRenew : true,
+      ...data
+    });
+    
+    // Méthodes d'instance
+    this.save = jest.fn().mockImplementation(() => {
+      // Validation basique
+      if (!this.user) {
+        return Promise.reject(new Error('User is required'));
+      }
+      if (!['free', 'basic', 'premium'].includes(this.plan)) {
+        return Promise.reject(new Error('Invalid plan'));
+      }
+      if (!['active', 'cancelled', 'expired'].includes(this.status)) {
+        return Promise.reject(new Error('Invalid status'));
+      }
+      if (['basic', 'premium'].includes(this.plan) && !this.endDate) {
+        return Promise.reject(new Error('EndDate required for paid plans'));
+      }
+      return Promise.resolve(this);
+    });
+    
+    this.isActive = jest.fn().mockImplementation(() => {
+      if (this.plan === 'free') return this.status === 'active';
+      if (this.status !== 'active') return false;
+      if (!this.endDate) return false;
+      return new Date(this.endDate) > new Date();
+    });
+    
+    this.isPremium = jest.fn().mockImplementation(() => {
+      return this.plan === 'premium' && this.isActive();
+    });
+    
+    this.isBasicOrHigher = jest.fn().mockImplementation(() => {
+      return ['basic', 'premium'].includes(this.plan) && this.isActive();
+    });
+    
+    this.getUsageLimits = jest.fn().mockImplementation(() => {
+      const limits = {
+        free: { objects: 5, trades: 10 },
+        basic: { objects: 20, trades: 50 },
+        premium: { objects: 'unlimited', trades: 'unlimited' }
+      };
+      return limits[this.plan] || limits.free;
+    });
+    
+    this.getLimits = jest.fn().mockImplementation(() => {
+      return this.getUsageLimits();
+    });
+    
+    this.renew = jest.fn().mockImplementation(() => {
+      if (this.plan !== 'free') {
+        this.status = 'active';
+        this.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      }
+      return Promise.resolve(this);
+    });
+    
+    return this;
+  };
+  
+  // Méthodes statiques
+  mockSubscription.findOne = jest.fn().mockImplementation((query) => {
+    if (query && query.user) {
+      return Promise.resolve(null); // Pas trouvé par défaut
+    }
+    return Promise.resolve(null);
+  });
+  
+  mockSubscription.find = jest.fn().mockResolvedValue([]);
+  mockSubscription.create = jest.fn().mockImplementation((data) => {
+    return Promise.resolve(new mockSubscription(data));
+  });
+  mockSubscription.deleteMany = jest.fn().mockResolvedValue({ deletedCount: 0 });
+  mockSubscription.countDocuments = jest.fn().mockResolvedValue(0);
+  mockSubscription.updateOne = jest.fn().mockResolvedValue({ modifiedCount: 1 });
+  mockSubscription.updateMany = jest.fn().mockResolvedValue({ modifiedCount: 1 });
+  mockSubscription.aggregate = jest.fn().mockResolvedValue([]);
+  
+  return mockSubscription;
+});
+    
+    this.save = jest.fn().mockResolvedValue(this);
+    this.isActive = jest.fn().mockReturnValue(this.status === 'active' && (!this.endDate || new Date(this.endDate) > new Date()));
+    this.isPremium = jest.fn().mockReturnValue(this.plan === 'premium' && this.isActive());
+    this.getUsageLimits = jest.fn().mockReturnValue({
+      objects: this.plan === 'free' ? 5 : this.plan === 'basic' ? 20 : 'unlimited',
+      trades: this.plan === 'free' ? 10 : this.plan === 'basic' ? 50 : 'unlimited'
+    });
+    this.renew = jest.fn().mockImplementation(() => {
+      this.status = 'active';
+      this.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      return Promise.resolve(this);
+    });
+    
+    return this;
+  };
+  
+  mockSubscription.findOne = jest.fn();
+  mockSubscription.find = jest.fn();
+  mockSubscription.create = jest.fn();
+  mockSubscription.deleteMany = jest.fn().mockResolvedValue({ deletedCount: 0 });
+  
+  return mockSubscription;
+});
+
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { requirePremium, requireBasicOrHigher, checkUsageLimits } = require('../../middlewares/subscription');

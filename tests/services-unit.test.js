@@ -37,10 +37,14 @@ jest.mock('axios', () => ({
 }));
 
 describe('🧪 Tests Services Unitaires (Sans DB)', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
 
   describe('BidirectionalTradeService', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
-      expect(() => {
+      expect(() => {;
         require('../../services/bidirectionalTradeService');
       }).not.toThrow();
     });
@@ -60,8 +64,9 @@ describe('🧪 Tests Services Unitaires (Sans DB)', () => {
   });
 
   describe('PickupPointService', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
-      expect(() => {
+      expect(() => {;
         require('../../services/pickupPointService');
       }).not.toThrow();
     });
@@ -81,8 +86,9 @@ describe('🧪 Tests Services Unitaires (Sans DB)', () => {
   });
 
   describe('DeliveryLabelService', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
-      expect(() => {
+      expect(() => {;
         require('../../services/deliveryLabelService');
       }).not.toThrow();
     });
@@ -95,8 +101,9 @@ describe('🧪 Tests Services Unitaires (Sans DB)', () => {
   });
 
   describe('FreeTradeSecurityService', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
-      expect(() => {
+      expect(() => {;
         require('../../services/freeTradeSecurityService');
       }).not.toThrow();
     });
@@ -111,8 +118,10 @@ describe('🧪 Tests Services Unitaires (Sans DB)', () => {
 });
 
 describe('🔧 Tests Fonctionnels Basiques Services', () => {
+  jest.setTimeout(30000); () => {
 
   describe('Validation des données', () => {
+  jest.setTimeout(30000); () => {
     it('devrait valider les structures de données basiques', () => {
       const mockTrade = {
         _id: 'trade123',
@@ -144,6 +153,7 @@ describe('🔧 Tests Fonctionnels Basiques Services', () => {
   });
 
   describe('Logique métier basique', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir gérer les calculs de distance', () => {
       // Simulation d'un calcul de distance entre deux points
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -168,3 +178,5 @@ describe('🔧 Tests Fonctionnels Basiques Services', () => {
   });
 
 });
+
+}}}}}}}})

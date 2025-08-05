@@ -3,8 +3,12 @@
  */
 
 describe('🚀 Tests de Validation Système', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
   
   describe('Configuration de base', () => {
+  jest.setTimeout(30000); () => {
     it('devrait avoir les variables d\'environnement', () => {
       expect(process.env.NODE_ENV).toBe('test');
       expect(process.env.JWT_SECRET).toBeDefined();
@@ -25,6 +29,7 @@ describe('🚀 Tests de Validation Système', () => {
   });
 
   describe('Services disponibles', () => {
+  jest.setTimeout(30000); () => {
     it('devrait charger BidirectionalTradeService', () => {
       const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
       expect(typeof BidirectionalTradeService).toBe('function');
@@ -42,6 +47,7 @@ describe('🚀 Tests de Validation Système', () => {
   });
 
   describe('Modèles disponibles', () => {
+  jest.setTimeout(30000); () => {
     it('devrait charger le modèle User', () => {
       const User = require('../../models/User');
       expect(User).toBeDefined();
@@ -62,6 +68,7 @@ describe('🚀 Tests de Validation Système', () => {
   });
 
   describe('Fonctions utilitaires', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir créer des dates', () => {
       const now = new Date();
       expect(now).toBeInstanceOf(Date);
@@ -82,6 +89,7 @@ describe('🚀 Tests de Validation Système', () => {
   });
 
   describe('APIs externes mockées', () => {
+  jest.setTimeout(30000); () => {
     it('devrait pouvoir mocker les appels HTTP', () => {
       // Mock axios pour les tests
       jest.doMock('axios', () => ({
@@ -99,6 +107,7 @@ describe('🚀 Tests de Validation Système', () => {
 
 // Test spécifique pour les fichiers critiques du système
 describe('📁 Fichiers Système Critiques', () => {
+  jest.setTimeout(30000); () => {
   
   it('devrait pouvoir lire package.json', () => {
     const pkg = require('../../package.json');
@@ -120,3 +129,5 @@ describe('📁 Fichiers Système Critiques', () => {
     expect(pkg.scripts['test:security']).toBeDefined();
   });
 });
+
+}}}}}}})

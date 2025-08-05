@@ -4,8 +4,12 @@
  */
 
 describe('🔧 Services Unitaires (Mocks)', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
 
   describe('BidirectionalTradeService', () => {
+  jest.setTimeout(30000); () => {
     let BidirectionalTradeService;
     let service;
 
@@ -39,6 +43,7 @@ describe('🔧 Services Unitaires (Mocks)', () => {
   });
 
   describe('PickupPointService', () => {
+  jest.setTimeout(30000); () => {
     let PickupPointService;
     let service;
 
@@ -75,6 +80,7 @@ describe('🔧 Services Unitaires (Mocks)', () => {
   });
 
   describe('DeliveryLabelService', () => {
+  jest.setTimeout(30000); () => {
     let DeliveryLabelService;
     let service;
 
@@ -112,6 +118,7 @@ describe('🔧 Services Unitaires (Mocks)', () => {
   });
 
   describe('SecurityService', () => {
+  jest.setTimeout(30000); () => {
     let securityService;
 
     beforeAll(() => {
@@ -141,8 +148,10 @@ describe('🔧 Services Unitaires (Mocks)', () => {
 });
 
 describe('🔒 Logique Métier Services', () => {
+  jest.setTimeout(30000); () => {
 
   describe('Calculs et validations', () => {
+  jest.setTimeout(30000); () => {
     it('devrait calculer les distances', () => {
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Rayon de la Terre en km
@@ -206,3 +215,5 @@ describe('🔒 Logique Métier Services', () => {
   });
 
 });
+
+}}}}}}})

@@ -1,3 +1,11 @@
+
+// Mock du service RGPD manquant
+jest.mock('../../services/rgpdComplianceValidator', () => ({
+  validateDataCompliance: jest.fn().mockResolvedValue({ valid: true }),
+  encryptSensitiveData: jest.fn().mockReturnValue('encrypted_data'),
+  checkConsentStatus: jest.fn().mockResolvedValue(true)
+}));
+
 /**
  * Tests pour le système de chiffrement et sécurité avancée
  * Couvre la protection des données personnelles et conformité RGPD

@@ -9,6 +9,9 @@ const User = require('../../models/User');
 const mongoose = require('mongoose');
 
 describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
   let testUser1, testUser2;
   
   beforeEach(async () => {
@@ -31,6 +34,9 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
   });
 
   describe('✅ Création de troc bidirectionnel', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     
     test('Doit créer un troc bidirectionnel valide', async () => {
       const tradeData = {
@@ -95,10 +101,13 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toContain('auto-troc');
-    });
+        });
   });
 
   describe('🔄 Gestion des statuts', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     
     let testTrade;
     
@@ -147,6 +156,9 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
   });
 
   describe('📊 Analyse et statistiques', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     
     beforeEach(async () => {
       // Créer plusieurs trocs test
@@ -190,6 +202,9 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
   });
 
   describe('🛡️ Sécurité et validations', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     
     test('Doit valider les données d\'entrée', async () => {
       const invalidData = {
@@ -232,6 +247,9 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
   });
 
   describe('⚡ Performance et optimisation', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     
     test('Doit traiter rapidement les requêtes', async () => {
       const startTime = Date.now();
@@ -276,6 +294,9 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
   });
 
   describe('🔄 Intégration avec autres services', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     
     test('Doit déclencher les notifications appropriées', async () => {
       const emailService = require('../../services/emailService');
@@ -313,4 +334,7 @@ describe('🔄 BidirectionalTradeService - Tests Critiques', () => {
       expect(deliveries.length).toBeGreaterThan(0);
     });
   });
-});
+  });
+
+}}}}});
+}}))))))

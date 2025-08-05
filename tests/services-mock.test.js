@@ -50,9 +50,12 @@ jest.mock('mongoose', () => ({
 }));
 
 describe('🔧 Tests Services avec Mocks', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
   
   it('devrait pouvoir charger BidirectionalTradeService', () => {
-    expect(() => {
+    expect(() => {;
       const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
       expect(typeof BidirectionalTradeService).toBe('function');
     }).not.toThrow();
@@ -65,21 +68,21 @@ describe('🔧 Tests Services avec Mocks', () => {
   });
 
   it('devrait pouvoir charger DeliveryLabelService', () => {
-    expect(() => {
+    expect(() => {;
       const DeliveryLabelService = require('../../services/deliveryLabelService');
       expect(typeof DeliveryLabelService).toBe('function');
     }).not.toThrow();
   });
 
   it('devrait pouvoir charger PickupPointService', () => {
-    expect(() => {
+    expect(() => {;
       const PickupPointService = require('../../services/pickupPointService');
       expect(typeof PickupPointService).toBe('function');
     }).not.toThrow();
   });
 
   it('devrait pouvoir charger les modèles avec mocks', () => {
-    expect(() => {
+    expect(() => {;
       require('../../models/User');
       require('../../models/Trade');
       require('../../models/PickupPoint');
@@ -89,6 +92,7 @@ describe('🔧 Tests Services avec Mocks', () => {
 });
 
 describe('📋 Tests Fonctionnels Services', () => {
+  jest.setTimeout(30000); () => {
   
   it('devrait pouvoir créer une instance de service bidirectionnel', () => {
     const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
@@ -122,6 +126,7 @@ describe('📋 Tests Fonctionnels Services', () => {
 });
 
 describe('🧪 Tests Méthodes Services', () => {
+  jest.setTimeout(30000); () => {
   
   it('devrait pouvoir appeler des méthodes de service en mode mock', async () => {
     // Mock des dépendances externes
@@ -141,9 +146,11 @@ describe('🧪 Tests Méthodes Services', () => {
       service.validatePickupPointData({
         relayId: 'TEST123',
         name: 'Test Point',
-        address: { zipCode: mockZipCode }
+        address: { zipCode: mockZipCode };
       });
     }).not.toThrow();
   });
 
 });
+
+}}})

@@ -11,6 +11,9 @@ jest.mock('../../models/Trade');
 jest.mock('../../models/User');
 
 describe('Livraisons Bidirectionnelles Complexes', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
   let bidirectionalService;
   let mockTrade;
   let mockUser1;
@@ -69,6 +72,9 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
   });
 
   describe('Création des Livraisons Bidirectionnelles', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     test('doit créer deux livraisons simultanées avec codes différents', async () => {
       const result = await bidirectionalService.createBidirectionalDelivery('trade123');
 
@@ -105,10 +111,13 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
       expect(mockTrade.delivery.status).toBe('labels_generated');
       expect(mockTrade.delivery.fromUserDelivery.status).toBe('label_generated');
       expect(mockTrade.delivery.toUserDelivery.status).toBe('label_generated');
-    });
+        });
   });
 
   describe('Gestion des Expéditions Séquentielles', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     beforeEach(() => {
       mockTrade.delivery.status = 'labels_generated';
       mockTrade.delivery.fromUserDelivery.status = 'label_generated';
@@ -155,6 +164,9 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
   });
 
   describe('Suivi des Arrivées aux Points Relais', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     beforeEach(() => {
       mockTrade.delivery.status = 'both_shipped';
       mockTrade.delivery.fromUserDelivery.status = 'shipped';
@@ -189,6 +201,9 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
   });
 
   describe('Récupération des Colis', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     beforeEach(() => {
       mockTrade.delivery.status = 'both_arrived';
       mockTrade.delivery.fromUserDelivery.status = 'arrived';
@@ -249,6 +264,9 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
   });
 
   describe('Gestion des Problèmes et Conflits', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     test('doit détecter si un seul utilisateur a expédié après 3 jours', async () => {
       const threeDaysAgo = new Date();
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -310,6 +328,9 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
   });
 
   describe('Métriques et Analytics', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     test('doit calculer le temps moyen de livraison bidirectionnelle', async () => {
       const completedTrades = [
         { 
@@ -347,6 +368,9 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
   });
 
   describe('Notifications et Communications', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     test('doit envoyer des notifications différenciées pour chaque étape', async () => {
       const notificationService = bidirectionalService.getNotificationService();
       const sendNotificationSpy = jest.spyOn(notificationService, 'send').mockResolvedValue(true);
@@ -357,12 +381,12 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
 
       expect(sendNotificationSpy).toHaveBeenCalledWith('user1', {
         type: 'SHIPMENT_CONFIRMED',
-        message: 'Votre expédition a été confirmée'
+        message: 'Votre expédition a été confirmée';
       });
 
       expect(sendNotificationSpy).toHaveBeenCalledWith('user2', {
         type: 'INCOMING_PACKAGE',
-        message: 'Marie a expédié votre colis'
+        message: 'Marie a expédié votre colis';
       });
     });
 
@@ -375,12 +399,15 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
       expect(reminders).toContain({
         type: 'SHIPPING_REMINDER',
         targetUser: 'user2',
-        message: 'N\'oubliez pas d\'expédier votre colis'
+        message: 'N\'oubliez pas d\'expédier votre colis';
       });
     });
   });
 
   describe('Optimisations et Performance', () => {
+  jest.setTimeout(30000);
+
+  beforeEach(() => {
     test('doit traiter de multiples livraisons bidirectionnelles en parallèle', async () => {
       const tradeIds = ['trade1', 'trade2', 'trade3'];
       
@@ -408,4 +435,7 @@ describe('Livraisons Bidirectionnelles Complexes', () => {
       expect(cacheService.getHitRate()).toBeGreaterThan(0);
     });
   });
-});
+  });
+
+}}}}}}});
+}}))))))))

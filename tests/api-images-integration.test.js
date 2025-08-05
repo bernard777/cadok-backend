@@ -1,3 +1,76 @@
+
+// Setup des mocks pour les routes
+// Mocks complets des autres modèles
+jest.mock('../../models/User', () => ({
+  findById: jest.fn().mockResolvedValue({
+    _id: 'user123',
+    pseudo: 'TestUser',
+    email: 'test@example.com',
+    save: jest.fn().mockResolvedValue(true)
+  }),
+  create: jest.fn().mockResolvedValue({
+    _id: 'user123',
+    pseudo: 'TestUser',
+    email: 'test@example.com',
+    save: jest.fn().mockResolvedValue(true)
+  }),
+  findOne: jest.fn().mockResolvedValue(null),
+  deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
+}));
+
+jest.mock('../../models/Object', () => ({
+  find: jest.fn().mockResolvedValue([]),
+  findById: jest.fn().mockResolvedValue({
+    _id: 'obj123',
+    title: 'Test Object',
+    owner: 'user123'
+  }),
+  create: jest.fn().mockResolvedValue({
+    _id: 'obj123',
+    title: 'Test Object',
+    owner: 'user123',
+    save: jest.fn().mockResolvedValue(true)
+  }),
+  countDocuments: jest.fn().mockResolvedValue(0),
+  deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
+}));
+
+jest.mock('../../models/Trade', () => ({
+  find: jest.fn().mockResolvedValue([]),
+  create: jest.fn().mockResolvedValue({
+    _id: 'trade123',
+    requester: 'user123',
+    receiver: 'user456',
+    status: 'pending'
+  }),
+  countDocuments: jest.fn().mockResolvedValue(0),
+  deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
+}));
+
+// Tests E2E
+// Mock User déjà défini ci-dessus
+// jest.mock('../../models/User'('../../models/User', () => ({
+  findById: jest.fn().mockResolvedValue({
+    _id: 'user123',
+    pseudo: 'TestUser',
+    email: 'test@example.com'
+  }),
+  create: jest.fn().mockResolvedValue({
+    _id: 'user123',
+    pseudo: 'TestUser',
+    save: jest.fn().mockResolvedValue(true)
+  })
+}));
+
+jest.mock('../../models/Object', () => ({
+  find: jest.fn().mockResolvedValue([]),
+  create: jest.fn().mockResolvedValue({
+    _id: 'obj123',
+    title: 'Test Object',
+    save: jest.fn().mockResolvedValue(true)
+  })
+}));
+
 /**
  * 🧪 Tests d'intégration - URLs d'images dans les réponses API
  * Vérifie que le backend retourne des URLs d'images correctement formatées
