@@ -18,6 +18,7 @@
     "test:unit": "cross-env NODE_ENV=test jest tests/services-unit-mock.test.js tests/basic-validation.test.js --config=jest.config.mock.js",
     "test:quick": "cross-env NODE_ENV=test jest tests/basic-validation.test.js tests/diagnosis.test.js --no-coverage",
     "test:anti-regression": "cross-env NODE_ENV=test jest tests/anti-regression.test.js --config=jest.config.mock.js",
+    "test:images": "cross-env NODE_ENV=test jest tests/api-images-integration.test.js",
     "test:all-working": "npm run test:quick && npm run test:anti-regression",
     "start": "node server.js",
     "dev": "nodemon server.js",

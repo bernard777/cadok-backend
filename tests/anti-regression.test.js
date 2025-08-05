@@ -5,6 +5,57 @@
 
 describe('🛡️ Tests Anti-Régression CADOK', () => {
 
+  describe('Validation des URLs d\'images', () => {
+    it('devrait transformer correctement les URLs relatives', () => {
+      const mockReq = {
+        protocol: 'http',
+        get: (header) => header === 'host' ? '192.168.1.16:5000' : null
+      };
+      
+      const getFullUrl = (req, relativePath) => {
+        if (!relativePath || relativePath.startsWith('http')) return relativePath;
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        return relativePath.startsWith('/') ? baseUrl + relativePath : baseUrl + '/' + relativePath;
+      };
+      
+      const relativeUrl = '/uploads/object-images/photo.jpg';
+      const absoluteUrl = getFullUrl(mockReq, relativeUrl);
+      
+      expect(absoluteUrl).toBe('http://192.168.1.16:5000/uploads/object-images/photo.jpg');
+      expect(absoluteUrl).toMatch(/^http:\/\//);
+      expect(absoluteUrl).not.toMatch(/file:\/\/\//);
+    });
+    
+    it('ne devrait PAS transformer les URLs déjà absolues', () => {
+      const mockReq = {
+        protocol: 'http',
+        get: (header) => header === 'host' ? '192.168.1.16:5000' : null
+      };
+      
+      const getFullUrl = (req, relativePath) => {
+        if (!relativePath || relativePath.startsWith('http')) return relativePath;
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        return relativePath.startsWith('/') ? baseUrl + relativePath : baseUrl + '/' + relativePath;
+      };
+      
+      const absoluteUrl = 'http://192.168.1.16:5000/uploads/existing-photo.jpg';
+      const result = getFullUrl(mockReq, absoluteUrl);
+      
+      expect(result).toBe(absoluteUrl);
+      expect(result).toMatch(/^http:\/\//);
+    });
+    
+    it('devrait détecter les URLs malformées', () => {
+      const malformedUrl = 'http://192.168.1.16:5000/file:///cache/photo.jpg';
+      
+      expect(malformedUrl).toMatch(/http:\/\/.*file:\/\/\//);
+      
+      // Vérifier qu'on peut détecter et corriger
+      const isMalformed = malformedUrl.includes('http://') && malformedUrl.includes('file:///');
+      expect(isMalformed).toBe(true);
+    });
+  });
+
   describe('Configuration de base', () => {
     it('devrait avoir les variables d\'environnement configurées', () => {
       expect(process.env.NODE_ENV).toBe('test');

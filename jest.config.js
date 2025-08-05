@@ -40,6 +40,12 @@ module.exports = {
       lines: 80,
       statements: 80
     },
+    './routes/objects.js': {
+      branches: 85,
+      functions: 85,
+      lines: 85,
+      statements: 85
+    },
     './services/deliveryLabelService.js': {
       branches: 90,
       functions: 90,

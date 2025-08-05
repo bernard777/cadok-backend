@@ -174,10 +174,35 @@ router.get('/', async (req, res) => {
       .populate('owner', 'pseudo city avatar')
       .populate('category', 'name');
       
+    // Transformer les URLs d'avatar et d'images en URLs complètes
+    const objectsWithFullUrls = objects.map(object => {
+      if (object.owner && object.owner.avatar) {
+        object.owner.avatar = getFullUrl(req, object.owner.avatar);
+      }
+      
+      // Transformer les URLs d'images en URLs complètes
+      if (object.images && Array.isArray(object.images)) {
+        object.images = object.images.map(img => {
+          if (img.url && !img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: getFullUrl(req, img.url)
+            };
+          }
+          return img;
+        });
+      } else if (object.imageUrl && !object.imageUrl.startsWith('http')) {
+        // Support pour l'ancien système d'image unique
+        object.imageUrl = getFullUrl(req, object.imageUrl);
+      }
+      
+      return object;
+    });
+      
     const total = await ObjectModel.countDocuments({ ...filters, ...ownerFilter });
     
     res.json({
-      objects,
+      objects: objectsWithFullUrls,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -275,8 +300,28 @@ if (oldObjectDetailHandler) {
       }
       const object = await ObjectModel.findById(req.params.id).populate('owner', 'pseudo city avatar').populate('category', 'name');
       if (!object) return res.status(404).json({ message: 'Objet introuvable' });
-      if (object.owner && object.owner.avatar)
+      
+      // Transformer les URLs d'avatar en URLs complètes
+      if (object.owner && object.owner.avatar) {
         object.owner.avatar = getFullUrl(req, object.owner.avatar);
+      }
+      
+      // Transformer les URLs d'images en URLs complètes
+      if (object.images && Array.isArray(object.images)) {
+        object.images = object.images.map(img => {
+          if (img.url && !img.url.startsWith('http')) {
+            return {
+              ...img,
+              url: getFullUrl(req, img.url)
+            };
+          }
+          return img;
+        });
+      } else if (object.imageUrl && !object.imageUrl.startsWith('http')) {
+        // Support pour l'ancien système d'image unique
+        object.imageUrl = getFullUrl(req, object.imageUrl);
+      }
+      
       res.json(object);
     } catch (err) {
       res.status(500).json({ error: 'Une erreur interne est survenue.' });
