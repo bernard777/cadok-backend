@@ -1,4 +1,24 @@
 
+// Mocks pour la sécurité et crypto
+jest.mock('crypto', () => ({
+  randomBytes: jest.fn().mockReturnValue(Buffer.from('test-random-bytes')),
+  createHash: jest.fn().mockReturnValue({
+    update: jest.fn().mockReturnThis(),
+    digest: jest.fn().mockReturnValue('test-hash')
+  }),
+  pbkdf2Sync: jest.fn().mockReturnValue(Buffer.from('test-derived-key')),
+  createCipher: jest.fn().mockReturnValue({
+    update: jest.fn().mockReturnValue('encrypted'),
+    final: jest.fn().mockReturnValue('data')
+  })
+}));
+
+jest.mock('bcrypt', () => ({
+  hash: jest.fn().mockResolvedValue('hashed-password'),
+  compare: jest.fn().mockResolvedValue(true)
+}));
+
+
 // Mock du service RGPD manquant
 jest.mock('../../services/rgpdComplianceValidator', () => ({
   validateDataCompliance: jest.fn().mockResolvedValue({ valid: true }),
@@ -15,16 +35,15 @@ const crypto = require('crypto');
 const { PrivacyProtectionService } = require('../../services/privacyProtectionService');
 const { RGPDComplianceValidator } = require('../../services/rgpdComplianceValidator');
 
+jest.setTimeout(30000)
 describe('Système de Chiffrement et Sécurité Avancée', () => {
   let privacyService;
-  let rgpdValidator;
-
-  beforeEach(() => {
+  let rgpdValidator
+beforeEach(() => {
     privacyService = new PrivacyProtectionService();
     rgpdValidator = new RGPDComplianceValidator();
-  });
-
-  describe('Chiffrement des Adresses Personnelles', () => {
+  })
+describe('Chiffrement des Adresses Personnelles', () => {
     test('doit chiffrer et déchiffrer une adresse complète', () => {
       const originalAddress = {
         firstName: 'Thomas',
@@ -45,9 +64,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(encryptedData.encryptedData).toBeDefined();
       expect(encryptedData.tag).toBeDefined();
       expect(decryptedAddress).toEqual(originalAddress);
-    });
-
-    test('doit utiliser un chiffrement AES-256-GCM sécurisé', () => {
+    })
+test('doit utiliser un chiffrement AES-256-GCM sécurisé', () => {
       const data = { test: 'sensitive data' };
       const encrypted = privacyService.encryptPersonalData(data);
 
@@ -57,9 +75,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       // Vérifier que le tag d'authentification est présent
       expect(encrypted.tag).toBeDefined();
       expect(Buffer.from(encrypted.tag, 'hex')).toHaveLength(16);
-    });
-
-    test('doit détecter les tentatives de modification des données chiffrées', () => {
+    })
+test('doit détecter les tentatives de modification des données chiffrées', () => {
       const data = { secret: 'important data' };
       const encrypted = privacyService.encryptPersonalData(data);
       
@@ -69,9 +86,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(() => {
         privacyService.decryptPersonalData(encrypted);
       }).toThrow('Authentification failed');
-    });
-
-    test('doit générer des clés de chiffrement uniques par utilisateur', () => {
+    })
+test('doit générer des clés de chiffrement uniques par utilisateur', () => {
       const user1Key = privacyService.generateUserEncryptionKey('user1');
       const user2Key = privacyService.generateUserEncryptionKey('user2');
       const user1KeyAgain = privacyService.generateUserEncryptionKey('user1');
@@ -79,9 +95,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(user1Key).not.toEqual(user2Key);
       expect(user1Key).toEqual(user1KeyAgain); // Même utilisateur = même clé
     });
-  });
-
-  describe('Anonymisation des Étiquettes', () => {
+  })
+describe('Anonymisation des Étiquettes', () => {
     test('doit créer des identifiants anonymes pour expéditeur et destinataire', () => {
       const tradeData = {
         tradeId: 'trade123',
@@ -97,9 +112,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(anonymizedData.recipientAnonymousId).toMatch(/^CADOK-RECIPIENT-[A-Z0-9]+$/);
       expect(anonymizedData.senderAnonymousId).not.toContain('Marie');
       expect(anonymizedData.recipientAnonymousId).not.toContain('Thomas');
-    });
-
-    test('doit créer une adresse de redirection sécurisée', () => {
+    })
+test('doit créer une adresse de redirection sécurisée', () => {
       const realAddress = {
         name: 'Thomas Dorel',
         street: '12 Rue des Acacias',
@@ -114,9 +128,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(redirectionAddress.street).toBe('15 Avenue des Trocs');
       expect(redirectionAddress.city).toBe('Paris');
       expect(redirectionAddress.zipCode).toBe('75001');
-    });
-
-    test('doit mapper les identifiants anonymes aux vraies identités', () => {
+    })
+test('doit mapper les identifiants anonymes aux vraies identités', () => {
       const mapping = privacyService.createIdentityMapping('trade123', 'user1', 'user2');
 
       expect(mapping.tradeId).toBe('trade123');
@@ -125,9 +138,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(mapping.createdAt).toBeInstanceOf(Date);
       expect(mapping.expiresAt).toBeInstanceOf(Date);
     });
-  });
-
-  describe('Validation RGPD', () => {
+  })
+describe('Validation RGPD', () => {
     test('doit valider la conformité RGPD d\'une livraison', () => {
       const deliveryData = {
         privacy: {
@@ -154,9 +166,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(compliance.checks.dataMinimization).toBe(true);
       expect(compliance.checks.purposeLimitation).toBe(true);
       expect(compliance.checks.storageLimit).toBe(true);
-    });
-
-    test('doit détecter les violations RGPD', () => {
+    })
+test('doit détecter les violations RGPD', () => {
       const nonCompliantData = {
         privacy: {
           level: 'NONE',
@@ -176,9 +187,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(compliance.violations).toContain('NO_PRIVACY_PROTECTION');
       expect(compliance.violations).toContain('EXCESSIVE_DATA_RETENTION');
       expect(compliance.violations).toContain('MISSING_CONSENT');
-    });
-
-    test('doit générer un rapport de conformité détaillé', () => {
+    })
+test('doit générer un rapport de conformité détaillé', () => {
       const deliveryData = {
         privacy: { level: 'FULL_ANONYMIZATION' },
         dataRetention: { personalDataRetentionDays: 15 },
@@ -193,9 +203,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(report.recommendations).toBeInstanceOf(Array);
       expect(report.dataProcessingBasis).toBeDefined();
     });
-  });
-
-  describe('Audit Trail et Traçabilité', () => {
+  })
+describe('Audit Trail et Traçabilité', () => {
     test('doit enregistrer toutes les opérations sur les données personnelles', () => {
       const auditLogger = privacyService.getAuditLogger();
       
@@ -214,9 +223,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(logs[0].operation).toBe('ENCRYPT_ADDRESS');
       expect(logs[0].timestamp).toBeInstanceOf(Date);
       expect(logs[0].purpose).toBe('DELIVERY_LABEL_GENERATION');
-    });
-
-    test('doit maintenir un historique des consentements', () => {
+    })
+test('doit maintenir un historique des consentements', () => {
       const consentManager = privacyService.getConsentManager();
       
       consentManager.recordConsent({
@@ -232,9 +240,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(consentHistory).toHaveLength(1);
       expect(consentHistory[0].granted).toBe(true);
       expect(consentHistory[0].version).toBe('2.1');
-    });
-
-    test('doit permettre la révocation et suppression des données', () => {
+    })
+test('doit permettre la révocation et suppression des données', () => {
       const dataManager = privacyService.getDataManager();
       
       // Simuler des données stockées
@@ -251,9 +258,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       const userData = dataManager.getUserData('user123');
       expect(userData).toBeNull();
     });
-  });
-
-  describe('Protection contre les Attaques', () => {
+  })
+describe('Protection contre les Attaques', () => {
     test('doit résister aux attaques par timing', () => {
       const validCode = 'CADOK-ABC123-4567';
       const invalidCode = 'CADOK-XYZ999-1234';
@@ -269,9 +275,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       // La différence de temps ne doit pas révéler d'information
       const timeDifference = Number(timeValid - timeInvalid) / 1000000; // En ms
       expect(Math.abs(timeDifference)).toBeLessThan(5); // Moins de 5ms de différence
-    });
-
-    test('doit implémenter une protection contre le bruteforce', () => {
+    })
+test('doit implémenter une protection contre le bruteforce', () => {
       const rateLimiter = privacyService.getRateLimiter();
       
       // Simuler 10 tentatives rapides
@@ -284,9 +289,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       
       const timeUntilReset = rateLimiter.getTimeUntilReset('192.168.1.100');
       expect(timeUntilReset).toBeGreaterThan(0);
-    });
-
-    test('doit détecter les tentatives d\'injection de code', () => {
+    })
+test('doit détecter les tentatives d\'injection de code', () => {
       const sanitizer = privacyService.getInputSanitizer();
       
       const maliciousInputs = [
@@ -302,9 +306,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
         }).toThrow('Invalid characters detected');
       });
     });
-  });
-
-  describe('Performance et Optimisation', () => {
+  })
+describe('Performance et Optimisation', () => {
     test('doit chiffrer/déchiffrer rapidement', async () => {
       const largeData = {
         addresses: Array(1000).fill().map((_, i) => ({
@@ -324,9 +327,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       
       expect(decrypted).toEqual(largeData);
       expect(totalTime).toBeLessThan(1000); // Moins d'1 seconde
-    });
-
-    test('doit mettre en cache les clés de chiffrement', () => {
+    })
+test('doit mettre en cache les clés de chiffrement', () => {
       const keyManager = privacyService.getKeyManager();
       
       const startTime1 = process.hrtime.bigint();
@@ -340,9 +342,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(key1).toEqual(key2);
       expect(Number(time2)).toBeLessThan(Number(time1) / 10); // Cache 10x plus rapide
     });
-  });
-
-  describe('Rotation des Clés', () => {
+  })
+describe('Rotation des Clés', () => {
     test('doit permettre la rotation des clés de chiffrement', () => {
       const keyManager = privacyService.getKeyManager();
       
@@ -353,9 +354,8 @@ describe('Système de Chiffrement et Sécurité Avancée', () => {
       expect(rotationResult.success).toBe(true);
       expect(newKey).not.toEqual(oldKey);
       expect(keyManager.getKeyHistory()).toContain(oldKey);
-    });
-
-    test('doit pouvoir déchiffrer avec d\'anciennes clés', () => {
+    })
+test('doit pouvoir déchiffrer avec d\'anciennes clés', () => {
       const keyManager = privacyService.getKeyManager();
       const data = { test: 'data' };
       

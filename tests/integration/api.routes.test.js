@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 /**
  * 🧪 TESTS API ROUTES - ENDPOINTS CRITIQUES
  * Tests d'intégration pour toutes les routes API principales
@@ -9,13 +10,13 @@ const User = require('../../models/User');
 const Trade = require('../../models/Trade');
 const jwt = require('jsonwebtoken');
 
+jest.setTimeout(30000)
 describe('🚀 API Routes - Tests d\'Intégration', () => {
   let testUser1, testUser2;
-  let authToken1, authToken2;
-  
-  beforeEach(async () => {
+  let authToken1, authToken2
+beforeEach(async () => {
     // Créer utilisateurs test
-    testUser1 = new User({
+    testUser1 = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
       firstName: 'Alice',
       lastName: 'Test',
       email: 'alice@api.test',
@@ -23,9 +24,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       city: 'Paris',
       zipCode: '75001'
     });
-    await testUser1.save();
-    
-    testUser2 = new User({
+    await testUser1.save()
+testUser2 = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
       firstName: 'Bob',
       lastName: 'Test',
       email: 'bob@api.test',
@@ -47,9 +47,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-  });
-
-  describe('🔐 Authentification Routes', () => {
+  })
+describe('🔐 Authentification Routes', () => {
     
     test('POST /api/auth/register - Doit créer un nouvel utilisateur', async () => {
       const userData = {
@@ -70,9 +69,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.user).toBeDefined();
       expect(response.body.token).toBeDefined();
       expect(response.body.user.email).toBe(userData.email);
-    });
-    
-    test('POST /api/auth/login - Doit authentifier un utilisateur existant', async () => {
+    })
+test('POST /api/auth/login - Doit authentifier un utilisateur existant', async () => {
       const loginData = {
         email: testUser1.email,
         password: 'password123'
@@ -86,9 +84,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.token).toBeDefined();
       expect(response.body.user.id).toBe(testUser1._id.toString());
-    });
-    
-    test('POST /api/auth/login - Doit rejeter des identifiants incorrects', async () => {
+    })
+test('POST /api/auth/login - Doit rejeter des identifiants incorrects', async () => {
       const loginData = {
         email: testUser1.email,
         password: 'motdepasseincorrect'
@@ -101,9 +98,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(false);
       expect(response.body.error).toBeDefined();
-    });
-    
-    test('GET /api/auth/profile - Doit récupérer le profil utilisateur', async () => {
+    })
+test('GET /api/auth/profile - Doit récupérer le profil utilisateur', async () => {
       const response = await request(app)
         .get('/api/auth/profile')
         .set('Authorization', `Bearer ${authToken1}`)
@@ -112,9 +108,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.user.id).toBe(testUser1._id.toString());
     });
-  });
-
-  describe('🔄 Trades Routes', () => {
+  })
+describe('🔄 Trades Routes', () => {
     
     test('POST /api/trades - Doit créer un nouveau troc', async () => {
       const tradeData = {
@@ -144,11 +139,10 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.trade).toBeDefined();
       expect(response.body.trade.fromUser).toBe(testUser1._id.toString());
       expect(response.body.trade.status).toBe('pending');
-    });
-    
-    test('GET /api/trades - Doit récupérer les trocs de l\'utilisateur', async () => {
+    })
+test('GET /api/trades - Doit récupérer les trocs de l\'utilisateur', async () => {
       // Créer un troc test
-      const testTrade = new Trade({
+      const testTrade = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         fromUser: testUser1._id,
         toUser: testUser2._id,
         offeredObject: { title: 'Test Object' },
@@ -165,10 +159,9 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.trades)).toBe(true);
       expect(response.body.trades.length).toBeGreaterThan(0);
-    });
-    
-    test('PUT /api/trades/:id/accept - Doit accepter un troc', async () => {
-      const testTrade = new Trade({
+    })
+test('PUT /api/trades/:id/accept - Doit accepter un troc', async () => {
+      const testTrade = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         fromUser: testUser1._id,
         toUser: testUser2._id,
         offeredObject: { title: 'Accept Test' },
@@ -184,10 +177,9 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(response.body.trade.status).toBe('accepted');
-    });
-    
-    test('PUT /api/trades/:id/reject - Doit rejeter un troc', async () => {
-      const testTrade = new Trade({
+    })
+test('PUT /api/trades/:id/reject - Doit rejeter un troc', async () => {
+      const testTrade = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         fromUser: testUser1._id,
         toUser: testUser2._id,
         offeredObject: { title: 'Reject Test' },
@@ -203,10 +195,9 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(response.body.trade.status).toBe('rejected');
-    });
-    
-    test('DELETE /api/trades/:id - Doit supprimer un troc', async () => {
-      const testTrade = new Trade({
+    })
+test('DELETE /api/trades/:id - Doit supprimer un troc', async () => {
+      const testTrade = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         fromUser: testUser1._id,
         toUser: testUser2._id,
         offeredObject: { title: 'Delete Test' },
@@ -226,9 +217,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       const deletedTrade = await Trade.findById(testTrade._id);
       expect(deletedTrade).toBeNull();
     });
-  });
-
-  describe('📍 Pickup Points Routes', () => {
+  })
+describe('📍 Pickup Points Routes', () => {
     
     test('GET /api/pickup-points - Doit récupérer les points relais', async () => {
       const response = await request(app)
@@ -238,9 +228,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.pickupPoints)).toBe(true);
-    });
-    
-    test('GET /api/pickup-points/nearby - Doit trouver les points relais à proximité', async () => {
+    })
+test('GET /api/pickup-points/nearby - Doit trouver les points relais à proximité', async () => {
       const response = await request(app)
         .get('/api/pickup-points/nearby?lat=48.8566&lng=2.3522&radius=5000')
         .set('Authorization', `Bearer ${authToken1}`)
@@ -248,9 +237,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.pickupPoints)).toBe(true);
-    });
-    
-    test('POST /api/pickup-points/:id/reserve - Doit réserver un point relais', async () => {
+    })
+test('POST /api/pickup-points/:id/reserve - Doit réserver un point relais', async () => {
       // Créer un point relais test
       const PickupPoint = require('../../models/PickupPoint');
       const testPickupPoint = new PickupPoint({
@@ -272,9 +260,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.reservation).toBeDefined();
     });
-  });
-
-  describe('💰 Payment Routes', () => {
+  })
+describe('💰 Payment Routes', () => {
     
     test('POST /api/payments/create-intent - Doit créer une intention de paiement', async () => {
       const paymentData = {
@@ -291,9 +278,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(response.body.clientSecret).toBeDefined();
-    });
-    
-    test('GET /api/payments/history - Doit récupérer l\'historique des paiements', async () => {
+    })
+test('GET /api/payments/history - Doit récupérer l\'historique des paiements', async () => {
       const response = await request(app)
         .get('/api/payments/history')
         .set('Authorization', `Bearer ${authToken1}`)
@@ -302,9 +288,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.payments)).toBe(true);
     });
-  });
-
-  describe('📋 Categories Routes', () => {
+  })
+describe('📋 Categories Routes', () => {
     
     test('GET /api/categories - Doit récupérer toutes les catégories', async () => {
       const response = await request(app)
@@ -313,9 +298,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.categories)).toBe(true);
-    });
-    
-    test('GET /api/categories/:id/objects - Doit récupérer les objets d\'une catégorie', async () => {
+    })
+test('GET /api/categories/:id/objects - Doit récupérer les objets d\'une catégorie', async () => {
       // Créer une catégorie test
       const Category = require('../../models/Category');
       const testCategory = new Category({
@@ -331,9 +315,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.objects)).toBe(true);
     });
-  });
-
-  describe('🔍 Search Routes', () => {
+  })
+describe('🔍 Search Routes', () => {
     
     test('GET /api/search - Doit rechercher des objets', async () => {
       const response = await request(app)
@@ -343,9 +326,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.results)).toBe(true);
-    });
-    
-    test('GET /api/search/advanced - Doit effectuer une recherche avancée', async () => {
+    })
+test('GET /api/search/advanced - Doit effectuer une recherche avancée', async () => {
       const searchParams = new URLSearchParams({
         query: 'jeu',
         category: 'Jeux',
@@ -362,9 +344,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.results)).toBe(true);
     });
-  });
-
-  describe('🛡️ Security & Validation', () => {
+  })
+describe('🛡️ Security & Validation', () => {
     
     test('Doit rejeter les requêtes sans token', async () => {
       const response = await request(app)
@@ -373,18 +354,16 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('token');
-    });
-    
-    test('Doit rejeter les tokens invalides', async () => {
+    })
+test('Doit rejeter les tokens invalides', async () => {
       const response = await request(app)
         .get('/api/trades')
         .set('Authorization', 'Bearer invalid.token.here')
         .expect(401);
       
       expect(response.body.success).toBe(false);
-    });
-    
-    test('Doit valider les données d\'entrée', async () => {
+    })
+test('Doit valider les données d\'entrée', async () => {
       const invalidTradeData = {
         // Données manquantes/invalides
         toUser: 'invalid-id',
@@ -400,9 +379,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(false);
       expect(response.body.errors).toBeDefined();
-    });
-    
-    test('Doit limiter le taux de requêtes', async () => {
+    })
+test('Doit limiter le taux de requêtes', async () => {
       const promises = [];
       
       // Envoyer beaucoup de requêtes rapidement
@@ -420,9 +398,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       const limitedResponses = responses.filter(r => r.status === 429);
       expect(limitedResponses.length).toBeGreaterThan(0);
     });
-  });
-
-  describe('📊 Performance & Monitoring', () => {
+  })
+describe('📊 Performance & Monitoring', () => {
     
     test('Les réponses doivent être rapides', async () => {
       const startTime = Date.now();
@@ -435,9 +412,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       const responseTime = endTime - startTime;
       
       expect(responseTime).toBeLessThan(500); // Moins de 500ms
-    });
-    
-    test('Doit retourner les headers appropriés', async () => {
+    })
+test('Doit retourner les headers appropriés', async () => {
       const response = await request(app)
         .get('/api/categories')
         .expect(200);
@@ -445,9 +421,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       expect(response.headers['content-type']).toContain('application/json');
       expect(response.headers['x-powered-by']).toBeDefined();
     });
-  });
-
-  describe('🔄 Error Handling', () => {
+  })
+describe('🔄 Error Handling', () => {
     
     test('Doit gérer les erreurs 404', async () => {
       const response = await request(app)
@@ -457,9 +432,8 @@ describe('🚀 API Routes - Tests d\'Intégration', () => {
       
       expect(response.body.success).toBe(false);
       expect(response.body.error).toBeDefined();
-    });
-    
-    test('Doit gérer les erreurs serveur', async () => {
+    })
+test('Doit gérer les erreurs serveur', async () => {
       // Mock d'une erreur de base de données
       const originalFind = Trade.find;
       Trade.find = jest.fn().mockRejectedValue(new Error('Database error'));

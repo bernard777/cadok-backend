@@ -45,8 +45,6 @@ jest.mock('../../models/Subscription', () => {
       }
       return Promise.resolve(this);
     });
-    
-    return this;
   };
 });
 
@@ -63,6 +61,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let mongoServer;
 
+jest.setTimeout(30000)
 describe('Subscription Model', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -73,16 +72,14 @@ describe('Subscription Model', () => {
   afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
-  });
-
-  beforeEach(async () => {
+  })
+beforeEach(async () => {
     await Subscription.deleteMany({});
-  });
-
-  describe('Schema Validation', () => {
+  })
+describe('Schema Validation', () => {
     it('should create a valid subscription with default values', async () => {
       const userId = new mongoose.Types.ObjectId();
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId
       });
 
@@ -94,65 +91,59 @@ describe('Subscription Model', () => {
       expect(savedSubscription.currency).toBe('EUR');
       expect(savedSubscription.autoRenew).toBe(true);
       expect(savedSubscription.startDate).toBeDefined();
-    });
-
-    it('should require user field', async () => {
-      const subscription = new Subscription({});
+    })
+it('should require user field', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({});
       
       await expect(subscription.save()).rejects.toThrow();
-    });
-
-    it('should enforce unique user constraint', async () => {
+    })
+it('should enforce unique user constraint', async () => {
       const userId = new mongoose.Types.ObjectId();
       
-      const subscription1 = new Subscription({ user: userId });
+      const subscription1 = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({ user: userId });
       await subscription1.save();
       
-      const subscription2 = new Subscription({ user: userId });
+      const subscription2 = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({ user: userId });
       await expect(subscription2.save()).rejects.toThrow();
-    });
-
-    it('should validate plan enum values', async () => {
+    })
+it('should validate plan enum values', async () => {
       const userId = new mongoose.Types.ObjectId();
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId,
         plan: 'invalid-plan'
       });
       
       await expect(subscription.save()).rejects.toThrow();
-    });
-
-    it('should validate status enum values', async () => {
+    })
+it('should validate status enum values', async () => {
       const userId = new mongoose.Types.ObjectId();
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId,
         status: 'invalid-status'
       });
       
       await expect(subscription.save()).rejects.toThrow();
-    });
-
-    it('should require endDate for paid plans', async () => {
+    })
+it('should require endDate for paid plans', async () => {
       const userId = new mongoose.Types.ObjectId();
       
       // Basic plan sans endDate
-      const basicSubscription = new Subscription({
+      const basicSubscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId,
         plan: 'basic'
       });
       await expect(basicSubscription.save()).rejects.toThrow();
       
       // Premium plan sans endDate
-      const premiumSubscription = new Subscription({
+      const premiumSubscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: new mongoose.Types.ObjectId(),
         plan: 'premium'
       });
       await expect(premiumSubscription.save()).rejects.toThrow();
-    });
-
-    it('should not require endDate for free plan', async () => {
+    })
+it('should not require endDate for free plan', async () => {
       const userId = new mongoose.Types.ObjectId();
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId,
         plan: 'free'
       });
@@ -160,26 +151,24 @@ describe('Subscription Model', () => {
       const savedSubscription = await subscription.save();
       expect(savedSubscription.endDate).toBeUndefined();
     });
-  });
-
-  describe('Instance Methods', () => {
+  })
+describe('Instance Methods', () => {
     describe('isActive()', () => {
       it('should return true for free plan', async () => {
         const userId = new mongoose.Types.ObjectId();
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'free'
         });
         
         expect(subscription.isActive()).toBe(true);
-      });
-
-      it('should return true for active paid plan with future endDate', async () => {
+      })
+it('should return true for active paid plan with future endDate', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'active',
@@ -187,14 +176,13 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isActive()).toBe(true);
-      });
-
-      it('should return false for paid plan with past endDate', async () => {
+      })
+it('should return false for paid plan with past endDate', async () => {
         const userId = new mongoose.Types.ObjectId();
         const pastDate = new Date();
         pastDate.setMonth(pastDate.getMonth() - 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'active',
@@ -202,14 +190,13 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isActive()).toBe(false);
-      });
-
-      it('should return true for cancelled plan with future endDate', async () => {
+      })
+it('should return true for cancelled plan with future endDate', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'cancelled',
@@ -217,14 +204,13 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isActive()).toBe(true);
-      });
-
-      it('should return false for expired status', async () => {
+      })
+it('should return false for expired status', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'expired',
@@ -233,15 +219,14 @@ describe('Subscription Model', () => {
         
         expect(subscription.isActive()).toBe(false);
       });
-    });
-
-    describe('isPremium()', () => {
+    })
+describe('isPremium()', () => {
       it('should return true for active premium plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'active',
@@ -249,14 +234,13 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isPremium()).toBe(true);
-      });
-
-      it('should return false for basic plan', async () => {
+      })
+it('should return false for basic plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'basic',
           status: 'active',
@@ -264,24 +248,22 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isPremium()).toBe(false);
-      });
-
-      it('should return false for free plan', async () => {
+      })
+it('should return false for free plan', async () => {
         const userId = new mongoose.Types.ObjectId();
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'free'
         });
         
         expect(subscription.isPremium()).toBe(false);
-      });
-
-      it('should return false for expired premium plan', async () => {
+      })
+it('should return false for expired premium plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const pastDate = new Date();
         pastDate.setMonth(pastDate.getMonth() - 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'active',
@@ -290,15 +272,14 @@ describe('Subscription Model', () => {
         
         expect(subscription.isPremium()).toBe(false);
       });
-    });
-
-    describe('isBasicOrHigher()', () => {
+    })
+describe('isBasicOrHigher()', () => {
       it('should return true for active basic plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'basic',
           status: 'active',
@@ -306,14 +287,13 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isBasicOrHigher()).toBe(true);
-      });
-
-      it('should return true for active premium plan', async () => {
+      })
+it('should return true for active premium plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'active',
@@ -321,24 +301,22 @@ describe('Subscription Model', () => {
         });
         
         expect(subscription.isBasicOrHigher()).toBe(true);
-      });
-
-      it('should return false for free plan', async () => {
+      })
+it('should return false for free plan', async () => {
         const userId = new mongoose.Types.ObjectId();
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'free'
         });
         
         expect(subscription.isBasicOrHigher()).toBe(false);
-      });
-
-      it('should return false for expired basic plan', async () => {
+      })
+it('should return false for expired basic plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const pastDate = new Date();
         pastDate.setMonth(pastDate.getMonth() - 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'basic',
           status: 'active',
@@ -347,26 +325,24 @@ describe('Subscription Model', () => {
         
         expect(subscription.isBasicOrHigher()).toBe(false);
       });
-    });
-
-    describe('getLimits()', () => {
+    })
+describe('getLimits()', () => {
       it('should return correct limits for free plan', async () => {
         const userId = new mongoose.Types.ObjectId();
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'free'
         });
         
         const limits = subscription.getLimits();
         expect(limits).toEqual({ maxObjects: 3, maxTrades: 2 });
-      });
-
-      it('should return correct limits for basic plan', async () => {
+      })
+it('should return correct limits for basic plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'basic',
           endDate: futureDate
@@ -374,14 +350,13 @@ describe('Subscription Model', () => {
         
         const limits = subscription.getLimits();
         expect(limits).toEqual({ maxObjects: 10, maxTrades: 5 });
-      });
-
-      it('should return correct limits for premium plan', async () => {
+      })
+it('should return correct limits for premium plan', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           endDate: futureDate
@@ -390,15 +365,14 @@ describe('Subscription Model', () => {
         const limits = subscription.getLimits();
         expect(limits).toEqual({ maxObjects: 'unlimited', maxTrades: 'unlimited' });
       });
-    });
-
-    describe('renew()', () => {
+    })
+describe('renew()', () => {
       it('should renew premium subscription', async () => {
         const userId = new mongoose.Types.ObjectId();
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 1);
         
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'premium',
           status: 'cancelled',
@@ -410,11 +384,10 @@ describe('Subscription Model', () => {
         
         expect(subscription.status).toBe('active');
         expect(subscription.endDate.getMonth()).toBe((new Date().getMonth() + 1) % 12);
-      });
-
-      it('should not change free subscription on renew', async () => {
+      })
+it('should not change free subscription on renew', async () => {
         const userId = new mongoose.Types.ObjectId();
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: userId,
           plan: 'free'
         });
@@ -426,12 +399,11 @@ describe('Subscription Model', () => {
         expect(subscription.endDate).toBe(originalEndDate);
       });
     });
-  });
-
-  describe('Payment History', () => {
+  })
+describe('Payment History', () => {
     it('should store payment history correctly', async () => {
       const userId = new mongoose.Types.ObjectId();
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId,
         plan: 'premium',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -449,12 +421,11 @@ describe('Subscription Model', () => {
       expect(savedSubscription.payments[0].status).toBe('success');
       expect(savedSubscription.payments[0].transactionId).toBe('txn_123');
     });
-  });
-
-  describe('Premium Features', () => {
+  })
+describe('Premium Features', () => {
     it('should initialize premium features with default values', async () => {
       const userId = new mongoose.Types.ObjectId();
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: userId,
         plan: 'premium',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

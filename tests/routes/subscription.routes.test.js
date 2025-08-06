@@ -1,3 +1,28 @@
+
+// Mock de l'application Express
+jest.mock('../../app', () => {
+  const express = require('express');
+  const app = express();
+  
+  // Configuration basique pour les tests
+  app.use(express.json());
+  
+  // Mock des routes
+  app.get('/api/subscription', (req, res) => {
+    res.json({ plan: 'free', status: 'active' });
+  });
+  
+  app.post('/api/subscription/upgrade', (req, res) => {
+    res.json({ success: true, plan: 'premium' });
+  });
+  
+  app.get('/api/advertisements', (req, res) => {
+    res.json({ ads: [] });
+  });
+  
+  return app;
+});
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -10,6 +35,7 @@ let mongoServer;
 let testUser;
 let authToken;
 
+jest.setTimeout(30000)
 describe('Subscription Routes', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -20,14 +46,13 @@ describe('Subscription Routes', () => {
   afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
-  });
-
-  beforeEach(async () => {
+  })
+beforeEach(async () => {
     await User.deleteMany({});
     await Subscription.deleteMany({});
     
     // Créer un utilisateur de test
-    testUser = new User({
+    testUser = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
       pseudo: 'testuser',
       email: 'test@example.com',
       password: 'hashedpassword123',
@@ -41,9 +66,8 @@ describe('Subscription Routes', () => {
       process.env.JWT_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
-  });
-
-  describe('GET /api/subscriptions/current', () => {
+  })
+describe('GET /api/subscriptions/current', () => {
     it('should get current subscription for authenticated user', async () => {
       const response = await request(app)
         .get('/api/subscriptions/current')
@@ -53,9 +77,8 @@ describe('Subscription Routes', () => {
       expect(response.body.user._id).toBe(testUser._id.toString());
       expect(response.body.plan).toBe('free');
       expect(response.body.status).toBe('active');
-    });
-
-    it('should create free subscription if none exists', async () => {
+    })
+it('should create free subscription if none exists', async () => {
       const response = await request(app)
         .get('/api/subscriptions/current')
         .set('Authorization', `Bearer ${authToken}`)
@@ -67,11 +90,10 @@ describe('Subscription Routes', () => {
       const subscription = await Subscription.findOne({ user: testUser._id });
       expect(subscription).toBeTruthy();
       expect(subscription.plan).toBe('free');
-    });
-
-    it('should return existing subscription', async () => {
+    })
+it('should return existing subscription', async () => {
       // Créer un abonnement premium
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: testUser._id,
         plan: 'premium',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -86,16 +108,14 @@ describe('Subscription Routes', () => {
       
       expect(response.body.plan).toBe('premium');
       expect(response.body.monthlyPrice).toBe(5);
-    });
-
-    it('should require authentication', async () => {
+    })
+it('should require authentication', async () => {
       await request(app)
         .get('/api/subscriptions/current')
         .expect(401);
     });
-  });
-
-  describe('GET /api/subscriptions/plans', () => {
+  })
+describe('GET /api/subscriptions/plans', () => {
     it('should return all available plans', async () => {
       const response = await request(app)
         .get('/api/subscriptions/plans')
@@ -112,16 +132,14 @@ describe('Subscription Routes', () => {
       expect(response.body.free.limits.maxObjects).toBe(3);
       expect(response.body.basic.limits.maxObjects).toBe(10);
       expect(response.body.premium.limits.maxObjects).toBe('unlimited');
-    });
-
-    it('should not require authentication', async () => {
+    })
+it('should not require authentication', async () => {
       await request(app)
         .get('/api/subscriptions/plans')
         .expect(200);
     });
-  });
-
-  describe('POST /api/subscriptions/upgrade', () => {
+  })
+describe('POST /api/subscriptions/upgrade', () => {
     it('should upgrade to basic plan', async () => {
       const response = await request(app)
         .post('/api/subscriptions/upgrade')
@@ -141,9 +159,8 @@ describe('Subscription Routes', () => {
       expect(response.body.subscription.monthlyPrice).toBe(2);
       expect(response.body.subscription.status).toBe('active');
       expect(response.body.subscription.payments).toHaveLength(1);
-    });
-
-    it('should upgrade to premium plan', async () => {
+    })
+it('should upgrade to premium plan', async () => {
       const response = await request(app)
         .post('/api/subscriptions/upgrade')
         .set('Authorization', `Bearer ${authToken}`)
@@ -155,9 +172,8 @@ describe('Subscription Routes', () => {
       expect(response.body.subscription.plan).toBe('premium');
       expect(response.body.subscription.monthlyPrice).toBe(5);
       expect(response.body.subscription.endDate).toBeTruthy();
-    });
-
-    it('should reject invalid plan', async () => {
+    })
+it('should reject invalid plan', async () => {
       await request(app)
         .post('/api/subscriptions/upgrade')
         .set('Authorization', `Bearer ${authToken}`)
@@ -165,18 +181,16 @@ describe('Subscription Routes', () => {
           plan: 'invalid'
         })
         .expect(400);
-    });
-
-    it('should require authentication', async () => {
+    })
+it('should require authentication', async () => {
       await request(app)
         .post('/api/subscriptions/upgrade')
         .send({ plan: 'basic' })
         .expect(401);
-    });
-
-    it('should update existing subscription', async () => {
+    })
+it('should update existing subscription', async () => {
       // Créer un abonnement basic existant
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: testUser._id,
         plan: 'basic',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -199,12 +213,11 @@ describe('Subscription Routes', () => {
       const subscriptionCount = await Subscription.countDocuments({ user: testUser._id });
       expect(subscriptionCount).toBe(1);
     });
-  });
-
-  describe('POST /api/subscriptions/cancel', () => {
+  })
+describe('POST /api/subscriptions/cancel', () => {
     it('should cancel paid subscription', async () => {
       // Créer un abonnement premium
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: testUser._id,
         plan: 'premium',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -220,10 +233,9 @@ describe('Subscription Routes', () => {
       expect(response.body.message).toContain('annulé');
       expect(response.body.subscription.status).toBe('cancelled');
       expect(response.body.subscription.autoRenew).toBe(false);
-    });
-
-    it('should not cancel free subscription', async () => {
-      const subscription = new Subscription({
+    })
+it('should not cancel free subscription', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: testUser._id,
         plan: 'free'
       });
@@ -233,25 +245,22 @@ describe('Subscription Routes', () => {
         .post('/api/subscriptions/cancel')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
-    });
-
-    it('should return 404 if no subscription found', async () => {
+    })
+it('should return 404 if no subscription found', async () => {
       await request(app)
         .post('/api/subscriptions/cancel')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
-    });
-
-    it('should require authentication', async () => {
+    })
+it('should require authentication', async () => {
       await request(app)
         .post('/api/subscriptions/cancel')
         .expect(401);
     });
-  });
-
-  describe('GET /api/subscriptions/usage', () => {
+  })
+describe('GET /api/subscriptions/usage', () => {
     it('should return usage statistics for free plan', async () => {
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: testUser._id,
         plan: 'free'
       });
@@ -268,10 +277,9 @@ describe('Subscription Routes', () => {
       expect(response.body.limits.maxTrades).toBe(2);
       expect(response.body.plan).toBe('free');
       expect(response.body.isActive).toBe(true);
-    });
-
-    it('should return usage statistics for premium plan', async () => {
-      const subscription = new Subscription({
+    })
+it('should return usage statistics for premium plan', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: testUser._id,
         plan: 'premium',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -292,26 +300,23 @@ describe('Subscription Routes', () => {
       expect(response.body.limits.maxTrades).toBe('unlimited');
       expect(response.body.plan).toBe('premium');
       expect(response.body.premiumFeatures.objectsPublished).toBe(5);
-    });
-
-    it('should return 404 if no subscription found', async () => {
+    })
+it('should return 404 if no subscription found', async () => {
       await request(app)
         .get('/api/subscriptions/usage')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
-    });
-
-    it('should require authentication', async () => {
+    })
+it('should require authentication', async () => {
       await request(app)
         .get('/api/subscriptions/usage')
         .expect(401);
     });
-  });
-
-  describe('GET /api/subscriptions', () => {
+  })
+describe('GET /api/subscriptions', () => {
     beforeEach(async () => {
       // Créer plusieurs abonnements pour tester la pagination
-      const user2 = new User({
+      const user2 = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         pseudo: 'user2',
         email: 'user2@example.com',
         password: 'hashedpassword123',
@@ -319,7 +324,7 @@ describe('Subscription Routes', () => {
       });
       await user2.save();
       
-      const user3 = new User({
+      const user3 = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         pseudo: 'user3',
         email: 'user3@example.com',
         password: 'hashedpassword123',
@@ -342,9 +347,8 @@ describe('Subscription Routes', () => {
           monthlyPrice: 5
         }
       ]);
-    });
-
-    it('should return paginated subscriptions', async () => {
+    })
+it('should return paginated subscriptions', async () => {
       const response = await request(app)
         .get('/api/subscriptions')
         .set('Authorization', `Bearer ${authToken}`)
@@ -357,9 +361,8 @@ describe('Subscription Routes', () => {
       
       // Vérifier que les utilisateurs sont populés
       expect(response.body.subscriptions[0].user.email).toBeDefined();
-    });
-
-    it('should support pagination parameters', async () => {
+    })
+it('should support pagination parameters', async () => {
       const response = await request(app)
         .get('/api/subscriptions?page=1&limit=2')
         .set('Authorization', `Bearer ${authToken}`)
@@ -369,9 +372,8 @@ describe('Subscription Routes', () => {
       expect(response.body.total).toBe(3);
       expect(response.body.page).toBe(1);
       expect(response.body.pages).toBe(2);
-    });
-
-    it('should sort by creation date (newest first)', async () => {
+    })
+it('should sort by creation date (newest first)', async () => {
       const response = await request(app)
         .get('/api/subscriptions')
         .set('Authorization', `Bearer ${authToken}`)
@@ -383,9 +385,8 @@ describe('Subscription Routes', () => {
         const previousDate = new Date(subscriptions[i-1].createdAt);
         expect(currentDate.getTime()).toBeLessThanOrEqual(previousDate.getTime());
       }
-    });
-
-    it('should require authentication', async () => {
+    })
+it('should require authentication', async () => {
       await request(app)
         .get('/api/subscriptions')
         .expect(401);

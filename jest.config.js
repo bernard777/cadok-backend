@@ -5,6 +5,7 @@ module.exports = {
       testMatch: ['<rootDir>/tests/**/*.test.js'],
       testPathIgnorePatterns: ['<rootDir>/tests/e2e/'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup-simple.js'],
+      setupFiles: ['<rootDir>/tests/universal-mocks.js'],
       moduleNameMapper: {
         '^models/(.*)$': '<rootDir>/tests/__mocks__/$1',
         '^services/(.*)$': '<rootDir>/services/$1',
@@ -35,10 +36,14 @@ module.exports = {
     {
       displayName: 'e2e',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.js'],
-      setupFilesAfterEnv: ['<rootDir>/tests/e2e-setup.js']
+      setupFilesAfterEnv: ['<rootDir>/tests/e2e-setup-real.js'],
+      testEnvironment: 'node',
+      testTimeout: 120000
     }
   ],
   collectCoverage: true,
   coverageDirectory: 'coverage',
-  testEnvironment: 'node'
+  testEnvironment: 'node',
+  testTimeout: 30000,
+  maxWorkers: 1
 };

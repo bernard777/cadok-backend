@@ -1,9 +1,16 @@
-// Setup E2E - Configuration minimale pour tests bout en bout
-process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test_secret_key_for_jwt_tokens_123456789';
-process.env.MONGODB_URI = 'mongodb://localhost:27017/cadok_test_e2e';
+/**
+ * Setup minimal pour les tests E2E
+ */
 
-// Configuration Jest pour E2E
-jest.setTimeout(30000);
+// Configuration Jest simple pour E2E
+beforeAll(async () => {
+  console.log('🚀 Setup E2E minimal...');
+}, 10000);
 
-console.log('✅ Setup E2E configuré');
+afterAll(async () => {
+  console.log('✅ Cleanup E2E terminé');
+});
+
+beforeEach(async () => {
+  // Nettoyage simple avant chaque test
+});

@@ -34,12 +34,10 @@ jest.mock('mongoose', () => ({
 jest.mock('axios', () => ({
   get: jest.fn().mockResolvedValue({ data: { success: true } }),
   post: jest.fn().mockResolvedValue({ data: { success: true } })
-}));
-
+}))
 describe('🧪 Tests Services Unitaires (Sans DB)', () => {
-  jest.setTimeout(30000);
-
-  beforeEach(() => {
+  jest.setTimeout(30000)
+beforeEach(() => {
 
   describe('BidirectionalTradeService', () => {
   jest.setTimeout(30000); () => {
@@ -47,76 +45,66 @@ describe('🧪 Tests Services Unitaires (Sans DB)', () => {
       expect(() => {;
         require('../../services/bidirectionalTradeService');
       }).not.toThrow();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
       const service = new BidirectionalTradeService();
       expect(service).toBeDefined();
-    });
-
-    it('devrait avoir les méthodes critiques', () => {
+    })
+it('devrait avoir les méthodes critiques', () => {
       const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
       const service = new BidirectionalTradeService();
       
       expect(typeof service.createBidirectionalDelivery).toBe('function');
     });
-  });
-
-  describe('PickupPointService', () => {
+  })
+describe('PickupPointService', () => {
   jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
       expect(() => {;
         require('../../services/pickupPointService');
       }).not.toThrow();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       const PickupPointService = require('../../services/pickupPointService');
       const service = new PickupPointService();
       expect(service).toBeDefined();
-    });
-
-    it('devrait avoir les méthodes critiques', () => {
+    })
+it('devrait avoir les méthodes critiques', () => {
       const PickupPointService = require('../../services/pickupPointService');
       const service = new PickupPointService();
       
       expect(typeof service.findNearbyPickupPoints).toBe('function');
     });
-  });
-
-  describe('DeliveryLabelService', () => {
+  })
+describe('DeliveryLabelService', () => {
   jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
       expect(() => {;
         require('../../services/deliveryLabelService');
       }).not.toThrow();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       const DeliveryLabelService = require('../../services/deliveryLabelService');
       const service = new DeliveryLabelService();
       expect(service).toBeDefined();
     });
-  });
-
-  describe('FreeTradeSecurityService', () => {
+  })
+describe('FreeTradeSecurityService', () => {
   jest.setTimeout(30000); () => {
     it('devrait pouvoir importer le service', () => {
       expect(() => {;
         require('../../services/freeTradeSecurityService');
       }).not.toThrow();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       const FreeTradeSecurityService = require('../../services/freeTradeSecurityService');
       const service = new FreeTradeSecurityService();
       expect(service).toBeDefined();
     });
   });
 
-});
-
+})
 describe('🔧 Tests Fonctionnels Basiques Services', () => {
   jest.setTimeout(30000); () => {
 
@@ -134,9 +122,8 @@ describe('🔧 Tests Fonctionnels Basiques Services', () => {
       expect(mockTrade.fromUser).toBeDefined();
       expect(mockTrade.toUser).toBeDefined();
       expect(mockTrade.status).toBe('accepted');
-    });
-
-    it('devrait valider les structures de point relais', () => {
+    })
+it('devrait valider les structures de point relais', () => {
       const mockPickupPoint = {
         relayId: 'RELAY123',
         name: 'Test Point',
@@ -150,9 +137,8 @@ describe('🔧 Tests Fonctionnels Basiques Services', () => {
       expect(mockPickupPoint.relayId).toBeDefined();
       expect(mockPickupPoint.address.zipCode).toBeDefined();
     });
-  });
-
-  describe('Logique métier basique', () => {
+  })
+describe('Logique métier basique', () => {
   jest.setTimeout(30000); () => {
     it('devrait pouvoir gérer les calculs de distance', () => {
       // Simulation d'un calcul de distance entre deux points
@@ -162,9 +148,8 @@ describe('🔧 Tests Fonctionnels Basiques Services', () => {
 
       const distance = calculateDistance(48.8566, 2.3522, 48.8606, 2.3376);
       expect(distance).toBeGreaterThan(0);
-    });
-
-    it('devrait pouvoir générer des identifiants', () => {
+    })
+it('devrait pouvoir générer des identifiants', () => {
       const crypto = require('crypto');
       const generateId = () => crypto.randomBytes(8).toString('hex');
       

@@ -3,6 +3,7 @@
  * Tests de base pour valider Jest et les fonctions utilitaires
  */
 
+jest.setTimeout(30000)
 describe('🔧 Tests Utilitaires', () => {
   describe('📋 Validation de données', () => {
     
@@ -12,9 +13,8 @@ describe('🔧 Tests Utilitaires', () => {
       expect(emailRegex.test('test@example.com')).toBe(true);
       expect(emailRegex.test('invalid-email')).toBe(false);
       expect(emailRegex.test('')).toBe(false);
-    });
-
-    test('Doit détecter les chaînes suspectes', () => {
+    })
+test('Doit détecter les chaînes suspectes', () => {
       const suspiciousPatterns = ['<script', 'javascript:', 'SELECT *', 'DROP TABLE'];
       const cleanText = 'Ceci est un texte normal pour un objet';
       const maliciousText = '<script>alert("hack")</script>';
@@ -30,18 +30,16 @@ describe('🔧 Tests Utilitaires', () => {
         maliciousText.toLowerCase().includes(pattern.toLowerCase())
       );
       expect(hasMaliciousSuspicious).toBe(true);
-    });
-
-    test('Doit valider les mots de passe', () => {
+    })
+test('Doit valider les mots de passe', () => {
       const strongPassword = 'MonMotDePasse123!';
       const weakPassword = '123';
       
       expect(strongPassword.length >= 8).toBe(true);
       expect(weakPassword.length >= 8).toBe(false);
     });
-  });
-
-  describe('🔒 Fonctions de sécurité', () => {
+  })
+describe('🔒 Fonctions de sécurité', () => {
     
     test('Doit calculer un score de confiance de base', () => {
       const user = {
@@ -57,9 +55,8 @@ describe('🔧 Tests Utilitaires', () => {
       
       expect(trustScore).toBeGreaterThan(80);
       expect(trustScore).toBeLessThanOrEqual(100);
-    });
-
-    test('Doit détecter les valeurs suspectes', () => {
+    })
+test('Doit détecter les valeurs suspectes', () => {
       const suspiciousValues = [
         { title: 'iPhone 15 Pro Max', value: 1 }, // valeur trop faible
         { title: 'Stylo', value: 1000 }, // valeur trop élevée
@@ -74,9 +71,8 @@ describe('🔧 Tests Utilitaires', () => {
         );
         expect(isSuspicious).toBe(true);
       });
-    });
-
-    test('Doit hasher des données sensibles', () => {
+    })
+test('Doit hasher des données sensibles', () => {
       const sensitiveData = 'mot-de-passe-secret';
       const hash1 = require('crypto').createHash('sha256').update(sensitiveData).digest('hex');
       const hash2 = require('crypto').createHash('sha256').update(sensitiveData).digest('hex');
@@ -85,9 +81,8 @@ describe('🔧 Tests Utilitaires', () => {
       expect(hash1).not.toBe(sensitiveData); // Hash différent de l'original
       expect(hash1.length).toBe(64); // SHA256 = 64 caractères hex
     });
-  });
-
-  describe('⚡ Tests de performance', () => {
+  })
+describe('⚡ Tests de performance', () => {
     
     test('Doit traiter rapidement les validations', () => {
       const start = Date.now();

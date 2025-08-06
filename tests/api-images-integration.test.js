@@ -1,3 +1,4 @@
+const app = require('../../app');
 
 // Setup des mocks pour les routes
 // Mocks complets des autres modèles
@@ -79,6 +80,7 @@ jest.mock('../../models/Object', () => ({
 const request = require('supertest');
 const app = require('../app');
 
+jest.setTimeout(30000)
 describe('🖼️ APIs Images - Tests d\'Intégration', () => {
   
   describe('GET /api/objects - Liste des objets', () => {
@@ -116,9 +118,8 @@ describe('🖼️ APIs Images - Tests d\'Intégration', () => {
           }
         });
       }
-    });
-    
-    test('Les avatars des propriétaires doivent aussi être des URLs complètes', async () => {
+    })
+test('Les avatars des propriétaires doivent aussi être des URLs complètes', async () => {
       const response = await request(app)
         .get('/api/objects')
         .expect(200);
@@ -132,9 +133,8 @@ describe('🖼️ APIs Images - Tests d\'Intégration', () => {
         });
       }
     });
-  });
-  
-  describe('GET /api/objects/:id - Détails d\'un objet', () => {
+  })
+describe('GET /api/objects/:id - Détails d\'un objet', () => {
     
     test('Doit retourner des URLs d\'images complètes pour un objet spécifique', async () => {
       // D'abord récupérer un objet existant
@@ -173,9 +173,8 @@ describe('🖼️ APIs Images - Tests d\'Intégration', () => {
         }
       }
     });
-  });
-  
-  describe('Consistency Tests - URLs entre liste et détails', () => {
+  })
+describe('Consistency Tests - URLs entre liste et détails', () => {
     
     test('Les URLs d\'images doivent être identiques entre liste et détails', async () => {
       // Récupérer la liste
@@ -211,9 +210,8 @@ describe('🖼️ APIs Images - Tests d\'Intégration', () => {
         }
       }
     });
-  });
-  
-  describe('Error Cases - Gestion des URLs invalides', () => {
+  })
+describe('Error Cases - Gestion des URLs invalides', () => {
     
     test('Ne doit jamais retourner d\'URLs malformées', async () => {
       const response = await request(app).get('/api/objects');
@@ -249,9 +247,8 @@ describe('🖼️ APIs Images - Tests d\'Intégration', () => {
         response.body.objects.forEach(checkUrlsInObject);
       }
     });
-  });
-  
-  describe('Performance Tests - Temps de réponse avec images', () => {
+  })
+describe('Performance Tests - Temps de réponse avec images', () => {
     
     test('Les réponses avec transformation d\'URLs ne doivent pas être trop lentes', async () => {
       const startTime = Date.now();
@@ -300,3 +297,5 @@ const testImageURLsInAPI = async () => {
 module.exports = {
   testImageURLsInAPI
 };
+
+)

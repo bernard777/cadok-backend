@@ -4,9 +4,8 @@
  */
 
 describe('🔧 Services Unitaires (Mocks)', () => {
-  jest.setTimeout(30000);
-
-  beforeEach(() => {
+  jest.setTimeout(30000)
+beforeEach(() => {
 
   describe('BidirectionalTradeService', () => {
   jest.setTimeout(30000); () => {
@@ -16,18 +15,15 @@ describe('🔧 Services Unitaires (Mocks)', () => {
     beforeAll(() => {
       BidirectionalTradeService = require('../../services/bidirectionalTradeService');
       service = new BidirectionalTradeService();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       expect(service).toBeDefined();
       expect(service.constructor.name).toBe('BidirectionalTradeService');
-    });
-
-    it('devrait avoir les méthodes critiques', () => {
+    })
+it('devrait avoir les méthodes critiques', () => {
       expect(typeof service.createBidirectionalDelivery).toBe('function');
-    });
-
-    it('devrait gérer les données de troc', async () => {
+    })
+it('devrait gérer les données de troc', async () => {
       const mockTrade = {
         _id: 'trade123',
         fromUser: { _id: 'user1', pseudo: 'Alice', city: 'Paris' },
@@ -40,9 +36,8 @@ describe('🔧 Services Unitaires (Mocks)', () => {
       expect(mockTrade.toUser.pseudo).toBe('Bob');
       expect(mockTrade.status).toBe('accepted');
     });
-  });
-
-  describe('PickupPointService', () => {
+  })
+describe('PickupPointService', () => {
   jest.setTimeout(30000); () => {
     let PickupPointService;
     let service;
@@ -50,18 +45,15 @@ describe('🔧 Services Unitaires (Mocks)', () => {
     beforeAll(() => {
       PickupPointService = require('../../services/pickupPointService');
       service = new PickupPointService();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       expect(service).toBeDefined();
       expect(service.constructor.name).toBe('PickupPointService');
-    });
-
-    it('devrait avoir les méthodes de recherche', () => {
+    })
+it('devrait avoir les méthodes de recherche', () => {
       expect(typeof service.findNearbyPickupPoints).toBe('function');
-    });
-
-    it('devrait gérer les données de point relais', () => {
+    })
+it('devrait gérer les données de point relais', () => {
       const mockPickupPoint = {
         relayId: 'RELAY123',
         name: 'Point Relais Test',
@@ -77,9 +69,8 @@ describe('🔧 Services Unitaires (Mocks)', () => {
       expect(mockPickupPoint.address.zipCode).toBe('75001');
       expect(mockPickupPoint.provider).toBe('mondialrelay');
     });
-  });
-
-  describe('DeliveryLabelService', () => {
+  })
+describe('DeliveryLabelService', () => {
   jest.setTimeout(30000); () => {
     let DeliveryLabelService;
     let service;
@@ -87,14 +78,12 @@ describe('🔧 Services Unitaires (Mocks)', () => {
     beforeAll(() => {
       DeliveryLabelService = require('../../services/deliveryLabelService');
       service = new DeliveryLabelService();
-    });
-
-    it('devrait pouvoir instancier le service', () => {
+    })
+it('devrait pouvoir instancier le service', () => {
       expect(service).toBeDefined();
       expect(service.constructor.name).toBe('DeliveryLabelService');
-    });
-
-    it('devrait gérer les données d\'étiquette', () => {
+    })
+it('devrait gérer les données d\'étiquette', () => {
       const mockLabel = {
         trackingNumber: 'TRACK123456789',
         recipientName: 'Test User',
@@ -115,21 +104,18 @@ describe('🔧 Services Unitaires (Mocks)', () => {
       expect(mockLabel.weight).toBe(1.5);
       expect(mockLabel.dimensions.length).toBe(20);
     });
-  });
-
-  describe('SecurityService', () => {
+  })
+describe('SecurityService', () => {
   jest.setTimeout(30000); () => {
     let securityService;
 
     beforeAll(() => {
       securityService = require('../../services/freeTradeSecurityService');
-    });
-
-    it('devrait pouvoir charger le service de sécurité', () => {
+    })
+it('devrait pouvoir charger le service de sécurité', () => {
       expect(securityService).toBeDefined();
-    });
-
-    it('devrait gérer les données de sécurité', () => {
+    })
+it('devrait gérer les données de sécurité', () => {
       const mockSecurityData = {
         userId: 'user123',
         action: 'LOGIN_ATTEMPT',
@@ -145,8 +131,7 @@ describe('🔧 Services Unitaires (Mocks)', () => {
     });
   });
 
-});
-
+})
 describe('🔒 Logique Métier Services', () => {
   jest.setTimeout(30000); () => {
 
@@ -167,9 +152,8 @@ describe('🔒 Logique Métier Services', () => {
       const distance = calculateDistance(48.8566, 2.3522, 45.7640, 4.8357);
       expect(distance).toBeGreaterThan(390);
       expect(distance).toBeLessThan(410);
-    });
-
-    it('devrait valider les codes postaux', () => {
+    })
+it('devrait valider les codes postaux', () => {
       const validateZipCode = (zipCode) => {
         return /^[0-9]{5}$/.test(zipCode);
       };
@@ -178,9 +162,8 @@ describe('🔒 Logique Métier Services', () => {
       expect(validateZipCode('69000')).toBe(true);
       expect(validateZipCode('1234')).toBe(false);
       expect(validateZipCode('12345a')).toBe(false);
-    });
-
-    it('devrait valider les emails', () => {
+    })
+it('devrait valider les emails', () => {
       const validateEmail = (email) => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       };
@@ -190,9 +173,8 @@ describe('🔒 Logique Métier Services', () => {
       expect(validateEmail('invalid-email')).toBe(false);
       expect(validateEmail('test@')).toBe(false);
     });
-  });
-
-  describe('Génération d\'identifiants', () => {
+  })
+describe('Génération d\'identifiants', () => {
     it('devrait générer des IDs uniques', () => {
       const generateId = () => 'ID_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       
@@ -201,9 +183,8 @@ describe('🔒 Logique Métier Services', () => {
       
       expect(id1).not.toBe(id2);
       expect(id1).toMatch(/^ID_\d+_[a-z0-9]{9}$/);
-    });
-
-    it('devrait générer des codes de suivi', () => {
+    })
+it('devrait générer des codes de suivi', () => {
       const generateTrackingCode = (prefix = 'CADOK') => {
         return prefix + '_' + Date.now().toString(36).toUpperCase() + '_' + 
                Math.random().toString(36).substr(2, 6).toUpperCase();

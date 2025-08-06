@@ -1,3 +1,17 @@
+
+// Configuration pour tests de services
+jest.setTimeout(30000);
+
+// Mock des dépendances externes
+jest.mock('axios', () => ({
+  get: jest.fn().mockResolvedValue({ data: {} }),
+  post: jest.fn().mockResolvedValue({ data: { success: true } })
+}));
+
+jest.mock('node-fetch', () => jest.fn().mockResolvedValue({
+  json: jest.fn().mockResolvedValue({ success: true })
+}));
+
 /**
  * Tests pour le service de génération d'étiquettes avec redirection automatique
  * Couvre le système critique de livraison anonyme CADOK
@@ -14,15 +28,13 @@ jest.mock('../../models/Trade');
 jest.mock('../../models/User');
 jest.mock('qrcode');
 jest.mock('pdfkit');
-jest.mock('fs');
-
+jest.mock('fs')
 describe('DeliveryLabelService - Système de Redirection', () => {
   let deliveryLabelService;
   let mockTrade;
   let mockFromUser;
-  let mockToUser;
-
-  beforeEach(() => {
+  let mockToUser
+beforeEach(() => {
     deliveryLabelService = new DeliveryLabelService();
     
     mockFromUser = {
@@ -54,9 +66,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
     });
 
     jest.clearAllMocks();
-  });
-
-  describe('generateDeliveryLabel', () => {
+  })
+describe('generateDeliveryLabel', () => {
     test('doit générer un bordereau avec redirection automatique', async () => {
       const result = await deliveryLabelService.generateDeliveryLabel('trade123', 'user1');
       
@@ -65,16 +76,14 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.labelUrl).toContain('.pdf');
       expect(result.instructions).toBeDefined();
       expect(result.estimatedDelivery).toBeDefined();
-    });
-
-    test('doit rejeter si utilisateur non autorisé', async () => {
+    })
+test('doit rejeter si utilisateur non autorisé', async () => {
       const result = await deliveryLabelService.generateDeliveryLabel('trade123', 'wrongUser');
       
       expect(result.success).toBe(false);
       expect(result.error).toContain('non autorisé');
-    });
-
-    test('doit gérer les erreurs de troc inexistant', async () => {
+    })
+test('doit gérer les erreurs de troc inexistant', async () => {
       Trade.findById.mockReturnValue({
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue(null)
@@ -86,9 +95,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('non trouvé');
     });
-  });
-
-  describe('generateRedirectionCode', () => {
+  })
+describe('generateRedirectionCode', () => {
     test('doit créer un code de redirection unique', async () => {
       deliveryLabelService.saveRedirectionMapping = jest.fn().mockResolvedValue({});
       deliveryLabelService.encryptUserAddress = jest.fn().mockResolvedValue('encrypted_address');
@@ -101,9 +109,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.toUserId).toBe('user2');
       expect(result.status).toBe('active');
       expect(deliveryLabelService.saveRedirectionMapping).toHaveBeenCalledWith(result);
-    });
-
-    test('doit générer des codes différents pour chaque appel', async () => {
+    })
+test('doit générer des codes différents pour chaque appel', async () => {
       deliveryLabelService.saveRedirectionMapping = jest.fn().mockResolvedValue({});
       deliveryLabelService.encryptUserAddress = jest.fn().mockResolvedValue('encrypted_address');
 
@@ -112,9 +119,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       
       expect(result1.code).not.toBe(result2.code);
     });
-  });
-
-  describe('createDeliveryInstructions', () => {
+  })
+describe('createDeliveryInstructions', () => {
     test('doit créer des instructions complètes pour redirection', async () => {
       const redirectionCode = { code: 'CADOK-ABC123-4567' };
       
@@ -133,9 +139,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.senderInstructions).toContain('✅ Utilisez EXACTEMENT cette adresse');
       expect(result.senderInstructions).toContain('⚠️ Ne modifiez RIEN sur l\'étiquette');
     });
-  });
-
-  describe('handleDeliveryRedirection', () => {
+  })
+describe('handleDeliveryRedirection', () => {
     test('doit traiter une redirection webhook correctement', async () => {
       const redirectionCode = 'CADOK-ABC123-4567';
       const carrierData = { tracking: '3S00987654321', carrier: 'colissimo' };
@@ -163,18 +168,16 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.redirectionInstructions.newDestination).toEqual(mockRealAddress);
       expect(result.redirectionInstructions.specialInstructions).toContain('Livraison finale pour troc CADOK');
       expect(result.redirectionInstructions.specialInstructions).toContain('Destinataire: Thomas Dorel');
-    });
-
-    test('doit gérer les codes de redirection invalides', async () => {
+    })
+test('doit gérer les codes de redirection invalides', async () => {
       deliveryLabelService.getRedirectionMapping = jest.fn().mockResolvedValue(null);
 
       const result = await deliveryLabelService.handleDeliveryRedirection('INVALID', {});
       
       expect(result.success).toBe(false);
       expect(result.error).toContain('Code de redirection invalide');
-    });
-
-    test('doit gérer les erreurs de déchiffrement', async () => {
+    })
+test('doit gérer les erreurs de déchiffrement', async () => {
       const mockMapping = { realDestination: 'corrupted_data' };
       deliveryLabelService.getRedirectionMapping = jest.fn().mockResolvedValue(mockMapping);
       deliveryLabelService.decryptUserAddress = jest.fn().mockRejectedValue(new Error('Déchiffrement échoué'));
@@ -184,9 +187,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('Déchiffrement échoué');
     });
-  });
-
-  describe('generateTrackingQRCode', () => {
+  })
+describe('generateTrackingQRCode', () => {
     test('doit générer un QR code de traçabilité valide', async () => {
       const QRCode = require('qrcode');
       QRCode.toBuffer = jest.fn().mockResolvedValue(Buffer.from('fake-qr-data'));
@@ -200,9 +202,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.data.redirectionCode).toBe('CADOK-ABC123-4567');
       expect(result.data.trackingUrl).toContain('https://cadok.com/track/CADOK-ABC123-4567');
     });
-  });
-
-  describe('createLabelPDF', () => {
+  })
+describe('createLabelPDF', () => {
     test('doit créer un PDF de bordereau complet', async () => {
       const PDFDocument = require('pdfkit');
       const mockDoc = {
@@ -246,18 +247,16 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(result.url).toContain('/uploads/labels/');
       expect(mockDoc.text).toHaveBeenCalledWith('CADOK DELIVERY LABEL', 50, 50);
     });
-  });
-
-  describe('calculateEstimatedDelivery', () => {
+  })
+describe('calculateEstimatedDelivery', () => {
     test('doit calculer 1 jour pour même ville', () => {
       const result = deliveryLabelService.calculateEstimatedDelivery('Paris', 'Paris');
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       expect(result).toBe(tomorrow.toISOString().split('T')[0]);
-    });
-
-    test('doit calculer 2 jours pour villes proches', () => {
+    })
+test('doit calculer 2 jours pour villes proches', () => {
       deliveryLabelService.isNearbyCity = jest.fn().mockReturnValue(true);
       
       const result = deliveryLabelService.calculateEstimatedDelivery('Paris', 'Lyon');
@@ -265,9 +264,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       
       expect(result).toBe(dayAfterTomorrow.toISOString().split('T')[0]);
-    });
-
-    test('doit calculer 3 jours pour villes éloignées', () => {
+    })
+test('doit calculer 3 jours pour villes éloignées', () => {
       deliveryLabelService.isNearbyCity = jest.fn().mockReturnValue(false);
       
       const result = deliveryLabelService.calculateEstimatedDelivery('Paris', 'Marseille');
@@ -276,9 +274,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       
       expect(result).toBe(threeDaysLater.toISOString().split('T')[0]);
     });
-  });
-
-  describe('Chiffrement et Sécurité', () => {
+  })
+describe('Chiffrement et Sécurité', () => {
     test('doit chiffrer et déchiffrer une adresse utilisateur', async () => {
       const originalAddress = {
         name: 'Thomas Dorel',
@@ -298,9 +295,8 @@ describe('DeliveryLabelService - Système de Redirection', () => {
       expect(encrypted).toBe('encrypted_data_base64');
       expect(decrypted).toEqual(originalAddress);
     });
-  });
-
-  describe('Intégration complète', () => {
+  })
+describe('Intégration complète', () => {
     test('doit traiter un workflow complet de redirection', async () => {
       // Simuler toutes les étapes
       deliveryLabelService.saveRedirectionMapping = jest.fn().mockResolvedValue({});

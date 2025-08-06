@@ -3,6 +3,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const Subscription = require('../../models/Subscription');
 const User = require('../../models/User');
 
+jest.setTimeout(30000)
 describe('Subscription System - Smoke Test', () => {
   let mongoServer;
 
@@ -14,14 +15,12 @@ describe('Subscription System - Smoke Test', () => {
   afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
-  });
-
-  afterEach(async () => {
+  })
+afterEach(async () => {
     await Subscription.deleteMany({});
     await User.deleteMany({});
-  });
-
-  it('should create and validate subscription system is not broken', async () => {
+  })
+it('should create and validate subscription system is not broken', async () => {
     // Test que le modèle Subscription fonctionne
     const user = await User.create({
       name: 'Test User',

@@ -47,41 +47,35 @@ jest.mock('mongoose', () => ({
   Types: {
     ObjectId: jest.fn().mockImplementation(() => 'mock_object_id')
   }
-}));
-
+}))
 describe('🔧 Tests Services avec Mocks', () => {
-  jest.setTimeout(30000);
-
-  beforeEach(() => {
+  jest.setTimeout(30000)
+beforeEach(() => {
   
   it('devrait pouvoir charger BidirectionalTradeService', () => {
     expect(() => {;
       const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
       expect(typeof BidirectionalTradeService).toBe('function');
     }).not.toThrow();
-  });
-
-  it('devrait pouvoir instancier BidirectionalTradeService', () => {
+  })
+it('devrait pouvoir instancier BidirectionalTradeService', () => {
     const BidirectionalTradeService = require('../../services/bidirectionalTradeService');
     const service = new BidirectionalTradeService();
     expect(service).toBeDefined();
-  });
-
-  it('devrait pouvoir charger DeliveryLabelService', () => {
+  })
+it('devrait pouvoir charger DeliveryLabelService', () => {
     expect(() => {;
       const DeliveryLabelService = require('../../services/deliveryLabelService');
       expect(typeof DeliveryLabelService).toBe('function');
     }).not.toThrow();
-  });
-
-  it('devrait pouvoir charger PickupPointService', () => {
+  })
+it('devrait pouvoir charger PickupPointService', () => {
     expect(() => {;
       const PickupPointService = require('../../services/pickupPointService');
       expect(typeof PickupPointService).toBe('function');
     }).not.toThrow();
-  });
-
-  it('devrait pouvoir charger les modèles avec mocks', () => {
+  })
+it('devrait pouvoir charger les modèles avec mocks', () => {
     expect(() => {;
       require('../../models/User');
       require('../../models/Trade');
@@ -89,8 +83,7 @@ describe('🔧 Tests Services avec Mocks', () => {
     }).not.toThrow();
   });
 
-});
-
+})
 describe('📋 Tests Fonctionnels Services', () => {
   jest.setTimeout(30000); () => {
   
@@ -100,31 +93,28 @@ describe('📋 Tests Fonctionnels Services', () => {
     
     // Vérifier que le service a les méthodes attendues
     expect(typeof service.createBidirectionalDelivery).toBe('function');
-  });
-
-  it('devrait pouvoir créer une instance de service de point relais', () => {
+  })
+it('devrait pouvoir créer une instance de service de point relais', () => {
     const PickupPointService = require('../../services/pickupPointService');
     const service = new PickupPointService();
     
     // Vérifier que le service a les méthodes attendues
     expect(typeof service.findNearbyPickupPoints).toBe('function');
-  });
-
-  it('devrait pouvoir travailler avec des modèles mockés', () => {
+  })
+it('devrait pouvoir travailler avec des modèles mockés', () => {
     const User = require('../../models/User');
     const Trade = require('../../models/Trade');
     
     // Test de création d'instances mockées
-    const user = new User({ pseudo: 'test', email: 'test@test.com' });
+    const user = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({ pseudo: 'test', email: 'test@test.com' });
     expect(user.pseudo).toBe('test');
     expect(user._id).toMatch(/^mock_id_/);
     
-    const trade = new Trade({ fromUser: user._id });
+    const trade = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({ fromUser: user._id });
     expect(trade.fromUser).toBe(user._id);
   });
 
-});
-
+})
 describe('🧪 Tests Méthodes Services', () => {
   jest.setTimeout(30000); () => {
   

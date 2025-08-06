@@ -3,6 +3,7 @@
  * Tests qui fonctionnent à coup sûr pour validation continue
  */
 
+jest.setTimeout(30000)
 describe('🛡️ Tests Anti-Régression CADOK', () => {
 
   describe('Validation des URLs d\'images', () => {
@@ -24,9 +25,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(absoluteUrl).toBe('http://192.168.1.16:5000/uploads/object-images/photo.jpg');
       expect(absoluteUrl).toMatch(/^http:\/\//);
       expect(absoluteUrl).not.toMatch(/file:\/\/\//);
-    });
-    
-    it('ne devrait PAS transformer les URLs déjà absolues', () => {
+    })
+it('ne devrait PAS transformer les URLs déjà absolues', () => {
       const mockReq = {
         protocol: 'http',
         get: (header) => header === 'host' ? '192.168.1.16:5000' : null
@@ -43,9 +43,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       
       expect(result).toBe(absoluteUrl);
       expect(result).toMatch(/^http:\/\//);
-    });
-    
-    it('devrait détecter les URLs malformées', () => {
+    })
+it('devrait détecter les URLs malformées', () => {
       const malformedUrl = 'http://192.168.1.16:5000/file:///cache/photo.jpg';
       
       expect(malformedUrl).toMatch(/http:\/\/.*file:\/\/\//);
@@ -54,33 +53,29 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       const isMalformed = malformedUrl.includes('http://') && malformedUrl.includes('file:///');
       expect(isMalformed).toBe(true);
     });
-  });
-
-  describe('Configuration de base', () => {
+  })
+describe('Configuration de base', () => {
     it('devrait avoir les variables d\'environnement configurées', () => {
       expect(process.env.NODE_ENV).toBe('test');
       expect(process.env.JWT_SECRET).toBeDefined();
       expect(process.env.ENCRYPTION_KEY).toBeDefined();
-    });
-
-    it('devrait pouvoir accéder aux dépendances critiques', () => {
+    })
+it('devrait pouvoir accéder aux dépendances critiques', () => {
       const pkg = require('../package.json');
       expect(pkg.dependencies.express).toBeDefined();
       expect(pkg.dependencies.mongoose).toBeDefined();
       expect(pkg.dependencies.axios).toBeDefined();
       expect(pkg.dependencies.jsonwebtoken).toBeDefined();
-    });
-
-    it('devrait avoir les scripts de test configurés', () => {
+    })
+it('devrait avoir les scripts de test configurés', () => {
       const pkg = require('../package.json');
       expect(pkg.scripts.test).toBeDefined();
       expect(pkg.scripts['test:quick']).toBeDefined();
       expect(pkg.scripts['test:unit']).toBeDefined();
       expect(pkg.scripts['test:mock']).toBeDefined();
     });
-  });
-
-  describe('Validation des structures de données', () => {
+  })
+describe('Validation des structures de données', () => {
     it('devrait valider les structures utilisateur', () => {
       const validUser = {
         pseudo: 'TestUser',
@@ -92,9 +87,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(validUser.pseudo).toBeDefined();
       expect(validUser.email).toContain('@');
       expect(validUser.city).toBeDefined();
-    });
-
-    it('devrait valider les structures de troc', () => {
+    })
+it('devrait valider les structures de troc', () => {
       const validTrade = {
         _id: 'trade123',
         fromUser: 'user1',
@@ -107,9 +101,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(validTrade.fromUser).toBeDefined();
       expect(validTrade.toUser).toBeDefined();
       expect(['pending', 'proposed', 'accepted', 'refused'].includes(validTrade.status)).toBe(true);
-    });
-
-    it('devrait valider les structures de point relais', () => {
+    })
+it('devrait valider les structures de point relais', () => {
       const validPickupPoint = {
         relayId: 'RELAY123',
         name: 'Point Relais Test',
@@ -126,9 +119,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(validPickupPoint.address.zipCode).toMatch(/^\d{5}$/);
       expect(['mondialrelay', 'colissimo', 'chronopost'].includes(validPickupPoint.provider)).toBe(true);
     });
-  });
-
-  describe('Logique métier critique', () => {
+  })
+describe('Logique métier critique', () => {
     it('devrait calculer correctement les distances géographiques', () => {
       // Formule de distance haversine
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -145,9 +137,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       const distance = calculateDistance(48.8566, 2.3522, 45.7640, 4.8357);
       expect(distance).toBeGreaterThan(390);
       expect(distance).toBeLessThan(400);
-    });
-
-    it('devrait valider les formats de données critiques', () => {
+    })
+it('devrait valider les formats de données critiques', () => {
       // Validation email
       const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       expect(isValidEmail('test@cadok.com')).toBe(true);
@@ -163,9 +154,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(isValidPhone('0123456789')).toBe(true);
       expect(isValidPhone('+33123456789')).toBe(true);
       expect(isValidPhone('123')).toBe(false);
-    });
-
-    it('devrait générer des identifiants uniques', () => {
+    })
+it('devrait générer des identifiants uniques', () => {
       const generateId = () => 'CADOK_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       
       const id1 = generateId();
@@ -173,9 +163,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       
       expect(id1).not.toBe(id2);
       expect(id1).toMatch(/^CADOK_\d+_[a-z0-9]{9}$/);
-    });
-
-    it('devrait gérer les statuts de troc correctement', () => {
+    })
+it('devrait gérer les statuts de troc correctement', () => {
       const TRADE_STATUS = {
         PENDING: 'pending',
         PROPOSED: 'proposed',
@@ -192,9 +181,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(validStatuses).toContain('completed');
       expect(validStatuses).not.toContain('invalid_status');
     });
-  });
-
-  describe('Sécurité et validation', () => {
+  })
+describe('Sécurité et validation', () => {
     it('devrait valider la robustesse des mots de passe', () => {
       const isStrongPassword = (password) => {
         return password.length >= 8 && 
@@ -206,18 +194,16 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(isStrongPassword('Password123')).toBe(true);
       expect(isStrongPassword('weak')).toBe(false);
       expect(isStrongPassword('PASSWORD123')).toBe(false); // pas de minuscule
-    });
-
-    it('devrait valider les entrées utilisateur', () => {
+    })
+it('devrait valider les entrées utilisateur', () => {
       const sanitizeInput = (input) => {
         return input.toString().trim().replace(/[<>]/g, '');
       };
 
       expect(sanitizeInput('  test  ')).toBe('test');
       expect(sanitizeInput('<script>alert("xss")</script>')).toBe('scriptalert("xss")/script');
-    });
-
-    it('devrait valider les montants monétaires', () => {
+    })
+it('devrait valider les montants monétaires', () => {
       const isValidAmount = (amount) => {
         return typeof amount === 'number' && amount >= 0 && amount <= 999999.99;
       };
@@ -227,9 +213,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
       expect(isValidAmount(-5)).toBe(false);
       expect(isValidAmount(1000000)).toBe(false);
     });
-  });
-
-  describe('APIs et intégrations', () => {
+  })
+describe('APIs et intégrations', () => {
     it('devrait simuler les réponses des APIs externes', () => {
       // Simulation réponse API Mondial Relay
       const mockMondialRelayResponse = {
@@ -247,9 +232,8 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
 
       expect(mockMondialRelayResponse.success).toBe(true);
       expect(mockMondialRelayResponse.pickupPoints).toHaveLength(1);
-    });
-
-    it('devrait gérer les erreurs d\'API', () => {
+    })
+it('devrait gérer les erreurs d\'API', () => {
       const handleAPIError = (error) => {
         return {
           success: false,
@@ -268,8 +252,7 @@ describe('🛡️ Tests Anti-Régression CADOK', () => {
     });
   });
 
-});
-
+})
 describe('🚀 Tests de Performance', () => {
 
   describe('Algorithmes critiques', () => {
@@ -285,9 +268,8 @@ describe('🚀 Tests de Performance', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe(500);
       expect(end - start).toBeLessThan(10); // Moins de 10ms
-    });
-
-    it('devrait trier efficacement les résultats', () => {
+    })
+it('devrait trier efficacement les résultats', () => {
       const items = [
         { name: 'Charlie', score: 85 },
         { name: 'Alice', score: 95 },

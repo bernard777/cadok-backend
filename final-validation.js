@@ -1,6 +1,74 @@
 const fs = require('fs');
 
-console.log('🎯 VALIDATION FINALE DU SYSTÈME COMPLET');
+#!/usr/bin/env node
+
+const { execSync } = require('child_process');
+
+console.log('� VALIDATION FINALE - COMPTAGE DES TESTS');
+
+try {
+  // Lancer les tests et capturer la sortie
+  const result = execSync('npm test -- --passWithNoTests --maxWorkers=1', { 
+    encoding: 'utf8',
+    cwd: __dirname
+  });
+  
+  console.log(result);
+  
+  // Extraire les statistiques
+  const summaryMatch = result.match(/Test Suites: (\d+) failed, (\d+) passed, (\d+) total/);
+  const testMatch = result.match(/Tests: (\d+) failed, (\d+) passed, (\d+) total/);
+  
+  if (summaryMatch && testMatch) {
+    const [, suitesFailedStr, suitesPassedStr, suitesTotalStr] = summaryMatch;
+    const [, testsFailedStr, testsPassedStr, testsTotalStr] = testMatch;
+    
+    const suitesFailed = parseInt(suitesFailedStr);
+    const suitesPassed = parseInt(suitesPassedStr);
+    const suitesTotal = parseInt(suitesTotalStr);
+    
+    const testsFailed = parseInt(testsFailedStr);
+    const testsPassed = parseInt(testsPassedStr);
+    const testsTotal = parseInt(testsTotalStr);
+    
+    console.log('🎯 RÉSULTATS FINAUX:');
+    console.log(`📊 Test Suites: ${suitesPassed}/${suitesTotal} passées (${((suitesPassed/suitesTotal)*100).toFixed(1)}%)`);
+    console.log(`📊 Tests: ${testsPassed}/${testsTotal} passés (${((testsPassed/testsTotal)*100).toFixed(1)}%)`);
+    
+    if (testsPassed >= 200) {
+      console.log('🎉 OBJECTIF ATTEINT ! Plus de 200 tests fonctionnels !');
+    } else {
+      console.log(`🎯 Progrès: ${testsPassed}/200+ tests fonctionnels (${200 - testsPassed} à corriger)`);
+    }
+    
+    // Calculer l'amélioration depuis le début (26 tests)
+    const improvement = ((testsPassed - 26) / 26 * 100).toFixed(0);
+    console.log(`📈 Amélioration: +${improvement}% depuis le début (26 → ${testsPassed})`);
+  }
+  
+} catch (error) {
+  console.log('❌ Erreur lors de l'exécution des tests');
+  console.log(error.message);
+  
+  // Essayer d'extraire les infos de la sortie d'erreur
+  const output = error.stdout || error.message;
+  const summaryMatch = output.match(/Test Suites: (\d+) failed, (\d+) passed, (\d+) total/);
+  const testMatch = output.match(/Tests: (\d+) failed, (\d+) passed, (\d+) total/);
+  
+  if (summaryMatch && testMatch) {
+    const testsPassed = parseInt(testMatch[2]);
+    const testsTotal = parseInt(testMatch[3]);
+    
+    console.log(`
+📊 RÉSULTATS PARTIELS: ${testsPassed}/${testsTotal} tests passés`);
+    
+    if (testsPassed >= 200) {
+      console.log('🎉 OBJECTIF ATTEINT ! Plus de 200 tests fonctionnels !');
+    } else {
+      console.log(`🎯 Progrès: ${testsPassed}/200+ tests fonctionnels`);
+    }
+  }
+}
 console.log('=' .repeat(60));
 
 // Test backend

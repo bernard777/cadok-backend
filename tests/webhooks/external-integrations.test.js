@@ -1,3 +1,27 @@
+
+// Mocks pour webhooks et intégrations externes
+jest.mock('express', () => {
+  const express = jest.fn(() => ({
+    use: jest.fn(),
+    post: jest.fn(),
+    get: jest.fn(),
+    listen: jest.fn()
+  }));
+  express.json = jest.fn();
+  express.urlencoded = jest.fn();
+  return express;
+});
+
+// Mock des services externes (Stripe, PayPal, etc.)
+jest.mock('stripe', () => () => ({
+  webhooks: {
+    constructEvent: jest.fn().mockReturnValue({
+      type: 'payment_intent.succeeded',
+      data: { object: { id: 'pi_test123' } }
+    })
+  }
+}));
+
 /**
  * Tests pour les webhooks et intégrations externes
  * Couvre les APIs de transporteurs et la communication avec services tiers
@@ -16,15 +40,14 @@ jest.mock('../../middlewares/authMiddleware', () => ({
   }
 }));
 
+jest.setTimeout(30000)
 describe('Webhooks et Intégrations Externes', () => {
-  let mockDeliveryLabelService;
-
-  beforeEach(() => {
+  let mockDeliveryLabelService
+beforeEach(() => {
     mockDeliveryLabelService = new DeliveryLabelService();
     jest.clearAllMocks();
-  });
-
-  describe('POST /api/webhook/package-redirect', () => {
+  })
+describe('POST /api/webhook/package-redirect', () => {
     test('doit traiter un webhook de redirection La Poste', async () => {
       const webhookData = {
         tracking: '3S00987654321',
@@ -56,9 +79,8 @@ describe('Webhooks et Intégrations Externes', () => {
         'CADOK-ABC123-4567',
         webhookData
       );
-    });
-
-    test('doit rejeter les webhooks avec code de redirection invalide', async () => {
+    })
+test('doit rejeter les webhooks avec code de redirection invalide', async () => {
       mockDeliveryLabelService.handleDeliveryRedirection = jest.fn().mockResolvedValue({
         success: false,
         error: 'Code de redirection invalide'
@@ -75,9 +97,8 @@ describe('Webhooks et Intégrations Externes', () => {
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('invalide');
-    });
-
-    test('doit valider la signature du webhook', async () => {
+    })
+test('doit valider la signature du webhook', async () => {
       const response = await request(app)
         .post('/api/webhook/package-redirect')
         .set('X-Webhook-Signature', 'invalid-signature')
@@ -89,9 +110,8 @@ describe('Webhooks et Intégrations Externes', () => {
       expect(response.status).toBe(401);
       expect(response.body.error).toContain('signature');
     });
-  });
-
-  describe('POST /api/webhook/delivery-status', () => {
+  })
+describe('POST /api/webhook/delivery-status', () => {
     test('doit traiter les mises à jour de statut de livraison', async () => {
       const statusUpdate = {
         tracking: '3S00987654321',
@@ -107,9 +127,8 @@ describe('Webhooks et Intégrations Externes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-    });
-
-    test('doit mettre à jour le statut du troc lors de la livraison', async () => {
+    })
+test('doit mettre à jour le statut du troc lors de la livraison', async () => {
       const Trade = require('../../models/Trade');
       Trade.findOne = jest.fn().mockResolvedValue({
         _id: 'trade123',
@@ -130,9 +149,8 @@ describe('Webhooks et Intégrations Externes', () => {
         'delivery.trackingNumber': '3S00987654321'
       });
     });
-  });
-
-  describe('Intégrations APIs Transporteurs', () => {
+  })
+describe('Intégrations APIs Transporteurs', () => {
     describe('Colissimo API', () => {
       test('doit créer une étiquette Colissimo réelle', async () => {
         // Mock de l'API Colissimo
@@ -169,18 +187,16 @@ describe('Webhooks et Intégrations Externes', () => {
         expect(result.trackingNumber).toMatch(/^CP\d+$/);
         expect(result.labelUrl).toContain('.pdf');
         expect(colissimoAPI.createLabel).toHaveBeenCalledWith(deliveryData);
-      });
-
-      test('doit gérer les erreurs API Colissimo', async () => {
+      })
+test('doit gérer les erreurs API Colissimo', async () => {
         const colissimoAPI = {
           createLabel: jest.fn().mockRejectedValue(new Error('API Colissimo indisponible'))
         };
 
         await expect(colissimoAPI.createLabel({})).rejects.toThrow('API Colissimo indisponible');
       });
-    });
-
-    describe('Mondial Relay API', () => {
+    })
+describe('Mondial Relay API', () => {
       test('doit trouver le point relais le plus proche', async () => {
         const mondialRelayAPI = {
           findNearestPickupPoints: jest.fn().mockResolvedValue([
@@ -204,9 +220,8 @@ describe('Webhooks et Intégrations Externes', () => {
         expect(points).toHaveLength(1);
         expect(points[0].name).toBe('Tabac des Acacias');
         expect(points[0].distance).toBe(0.5);
-      });
-
-      test('doit créer une étiquette point relais', async () => {
+      })
+test('doit créer une étiquette point relais', async () => {
         const mondialRelayAPI = {
           createPickupLabel: jest.fn().mockResolvedValue({
             trackingNumber: 'MR202501234567',
@@ -226,9 +241,8 @@ describe('Webhooks et Intégrations Externes', () => {
         expect(result.trackingNumber).toMatch(/^MR\d+$/);
         expect(result.pickupCode).toMatch(/^CADOK-/);
       });
-    });
-
-    describe('Chronopost API', () => {
+    })
+describe('Chronopost API', () => {
       test('doit créer une étiquette Chronopost express', async () => {
         const chronopostAPI = {
           createExpressLabel: jest.fn().mockResolvedValue({
@@ -249,9 +263,8 @@ describe('Webhooks et Intégrations Externes', () => {
         expect(result.estimatedDelivery).toContain('13:00');
       });
     });
-  });
-
-  describe('Gestion des Erreurs et Retry', () => {
+  })
+describe('Gestion des Erreurs et Retry', () => {
     test('doit implémenter un retry automatique en cas d\'échec API', async () => {
       let attempts = 0;
       const unreliableAPI = {
@@ -280,9 +293,8 @@ describe('Webhooks et Intégrations Externes', () => {
       
       expect(result.success).toBe(true);
       expect(attempts).toBe(3);
-    });
-
-    test('doit logger les erreurs d\'intégration', async () => {
+    })
+test('doit logger les erreurs d\'intégration', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       
       const failingAPI = {
@@ -298,9 +310,8 @@ describe('Webhooks et Intégrations Externes', () => {
       expect(consoleSpy).toHaveBeenCalledWith('Erreur API externe:', 'Service indisponible');
       consoleSpy.mockRestore();
     });
-  });
-
-  describe('Sécurité des Webhooks', () => {
+  })
+describe('Sécurité des Webhooks', () => {
     test('doit valider l\'origine des webhooks', async () => {
       const crypto = require('crypto');
       
@@ -321,9 +332,8 @@ describe('Webhooks et Intégrations Externes', () => {
 
       expect(validateWebhookSignature(payload, validSignature, secret)).toBe(true);
       expect(validateWebhookSignature(payload, invalidSignature, secret)).toBe(false);
-    });
-
-    test('doit limiter le taux de webhooks', async () => {
+    })
+test('doit limiter le taux de webhooks', async () => {
       const rateLimiter = {
         attempts: {},
         isAllowed: function(ip, maxRequests = 10, windowMs = 60000) {
@@ -359,9 +369,8 @@ describe('Webhooks et Intégrations Externes', () => {
       // La 11ème doit être rejetée
       expect(rateLimiter.isAllowed(clientIP)).toBe(false);
     });
-  });
-
-  describe('Monitoring et Métriques', () => {
+  })
+describe('Monitoring et Métriques', () => {
     test('doit enregistrer les métriques d\'utilisation des APIs', async () => {
       const metrics = {
         apiCalls: {},

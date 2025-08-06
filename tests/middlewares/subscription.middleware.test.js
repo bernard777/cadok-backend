@@ -76,8 +76,6 @@ jest.mock('../../models/Subscription', () => {
       }
       return Promise.resolve(this);
     });
-    
-    return this;
   };
   
   // Méthodes statiques
@@ -113,8 +111,6 @@ jest.mock('../../models/Subscription', () => {
       this.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       return Promise.resolve(this);
     });
-    
-    return this;
   };
   
   mockSubscription.findOne = jest.fn();
@@ -136,6 +132,7 @@ const Trade = require('../../models/Trade');
 let mongoServer;
 let req, res, next;
 
+jest.setTimeout(30000)
 describe('Subscription Middleware', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -146,9 +143,8 @@ describe('Subscription Middleware', () => {
   afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
-  });
-
-  beforeEach(async () => {
+  })
+beforeEach(async () => {
     await User.deleteMany({});
     await Subscription.deleteMany({});
     await Object.deleteMany({});
@@ -163,11 +159,10 @@ describe('Subscription Middleware', () => {
       json: jest.fn()
     };
     next = jest.fn();
-  });
-
-  describe('requirePremium', () => {
+  })
+describe('requirePremium', () => {
     it('should allow premium user', async () => {
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'premium',
         status: 'active',
@@ -180,10 +175,9 @@ describe('Subscription Middleware', () => {
       expect(next).toHaveBeenCalled();
       expect(req.subscription).toBeDefined();
       expect(req.subscription.plan).toBe('premium');
-    });
-
-    it('should reject free user', async () => {
-      const subscription = new Subscription({
+    })
+it('should reject free user', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'free'
       });
@@ -198,10 +192,9 @@ describe('Subscription Middleware', () => {
         upgradeUrl: '/api/subscriptions/plans'
       });
       expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should reject basic user', async () => {
-      const subscription = new Subscription({
+    })
+it('should reject basic user', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'basic',
         status: 'active',
@@ -218,10 +211,9 @@ describe('Subscription Middleware', () => {
         upgradeUrl: '/api/subscriptions/plans'
       });
       expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should reject expired premium user', async () => {
-      const subscription = new Subscription({
+    })
+it('should reject expired premium user', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'premium',
         status: 'active',
@@ -233,9 +225,8 @@ describe('Subscription Middleware', () => {
       
       expect(res.status).toHaveBeenCalledWith(403);
       expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should reject user without subscription', async () => {
+    })
+it('should reject user without subscription', async () => {
       await requirePremium(req, res, next);
       
       expect(res.status).toHaveBeenCalledWith(403);
@@ -245,9 +236,8 @@ describe('Subscription Middleware', () => {
         upgradeUrl: '/api/subscriptions/plans'
       });
       expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should handle database errors', async () => {
+    })
+it('should handle database errors', async () => {
       // Simuler une erreur de base de données
       jest.spyOn(Subscription, 'findOne').mockRejectedValue(new Error('DB Error'));
       
@@ -262,11 +252,10 @@ describe('Subscription Middleware', () => {
       // Restaurer le mock
       Subscription.findOne.mockRestore();
     });
-  });
-
-  describe('requireBasicOrHigher', () => {
+  })
+describe('requireBasicOrHigher', () => {
     it('should allow basic user', async () => {
-      const subscription = new Subscription({
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'basic',
         status: 'active',
@@ -279,10 +268,9 @@ describe('Subscription Middleware', () => {
       expect(next).toHaveBeenCalled();
       expect(req.subscription).toBeDefined();
       expect(req.subscription.plan).toBe('basic');
-    });
-
-    it('should allow premium user', async () => {
-      const subscription = new Subscription({
+    })
+it('should allow premium user', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'premium',
         status: 'active',
@@ -294,10 +282,9 @@ describe('Subscription Middleware', () => {
       
       expect(next).toHaveBeenCalled();
       expect(req.subscription.plan).toBe('premium');
-    });
-
-    it('should reject free user', async () => {
-      const subscription = new Subscription({
+    })
+it('should reject free user', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'free'
       });
@@ -312,10 +299,9 @@ describe('Subscription Middleware', () => {
         upgradeUrl: '/api/subscriptions/plans'
       });
       expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should reject expired basic user', async () => {
-      const subscription = new Subscription({
+    })
+it('should reject expired basic user', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'basic',
         status: 'active',
@@ -328,12 +314,11 @@ describe('Subscription Middleware', () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(next).not.toHaveBeenCalled();
     });
-  });
-
-  describe('checkUsageLimits', () => {
+  })
+describe('checkUsageLimits', () => {
     describe('Objects limit', () => {
       it('should allow free user within object limit', async () => {
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'free'
         });
@@ -350,10 +335,9 @@ describe('Subscription Middleware', () => {
         await middleware(req, res, next);
         
         expect(next).toHaveBeenCalled();
-      });
-
-      it('should reject free user exceeding object limit', async () => {
-        const subscription = new Subscription({
+      })
+it('should reject free user exceeding object limit', async () => {
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'free'
         });
@@ -377,10 +361,9 @@ describe('Subscription Middleware', () => {
           upgradeUrl: '/api/subscriptions/plans'
         });
         expect(next).not.toHaveBeenCalled();
-      });
-
-      it('should allow basic user within object limit', async () => {
-        const subscription = new Subscription({
+      })
+it('should allow basic user within object limit', async () => {
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'basic',
           status: 'active',
@@ -405,10 +388,9 @@ describe('Subscription Middleware', () => {
         await middleware(req, res, next);
         
         expect(next).toHaveBeenCalled();
-      });
-
-      it('should allow premium user with unlimited objects', async () => {
-        const subscription = new Subscription({
+      })
+it('should allow premium user with unlimited objects', async () => {
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'premium',
           status: 'active',
@@ -434,11 +416,10 @@ describe('Subscription Middleware', () => {
         
         expect(next).toHaveBeenCalled();
       });
-    });
-
-    describe('Trades limit', () => {
+    })
+describe('Trades limit', () => {
       it('should allow free user within trade limit', async () => {
-        const subscription = new Subscription({
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'free'
         });
@@ -455,10 +436,9 @@ describe('Subscription Middleware', () => {
         await middleware(req, res, next);
         
         expect(next).toHaveBeenCalled();
-      });
-
-      it('should reject free user exceeding trade limit', async () => {
-        const subscription = new Subscription({
+      })
+it('should reject free user exceeding trade limit', async () => {
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'free'
         });
@@ -482,10 +462,9 @@ describe('Subscription Middleware', () => {
           upgradeUrl: '/api/subscriptions/plans'
         });
         expect(next).not.toHaveBeenCalled();
-      });
-
-      it('should count trades as requester and receiver', async () => {
-        const subscription = new Subscription({
+      })
+it('should count trades as requester and receiver', async () => {
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'free'
         });
@@ -504,10 +483,9 @@ describe('Subscription Middleware', () => {
         
         expect(res.status).toHaveBeenCalledWith(403);
         expect(next).not.toHaveBeenCalled();
-      });
-
-      it('should allow premium user with unlimited trades', async () => {
-        const subscription = new Subscription({
+      })
+it('should allow premium user with unlimited trades', async () => {
+        const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
           user: req.user.id,
           plan: 'premium',
           status: 'active',
@@ -534,9 +512,8 @@ describe('Subscription Middleware', () => {
         
         expect(next).toHaveBeenCalled();
       });
-    });
-
-    it('should return 404 if no subscription found', async () => {
+    })
+it('should return 404 if no subscription found', async () => {
       const middleware = checkUsageLimits('objects');
       await middleware(req, res, next);
       
@@ -545,10 +522,9 @@ describe('Subscription Middleware', () => {
         message: 'Abonnement non trouvé'
       });
       expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should handle database errors', async () => {
-      const subscription = new Subscription({
+    })
+it('should handle database errors', async () => {
+      const subscription = new (jest.fn().mockImplementation(function(data) { Object.assign(this, data); this.save = jest.fn().mockResolvedValue(this); return this; }))({
         user: req.user.id,
         plan: 'free'
       });
@@ -571,3 +547,6 @@ describe('Subscription Middleware', () => {
     });
   });
 });
+
+
+module.exports = {});
