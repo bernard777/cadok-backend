@@ -3,3 +3,22 @@ node_modules/
 
 # Env variables
 .env
+
+# MongoDB binaries
+mongodb-binaries/
+
+# Test files
+*.log
+test-*.js
+auth-*.test.js
+diagnostic-*.js
+
+# Coverage reports
+coverage/
+
+# VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

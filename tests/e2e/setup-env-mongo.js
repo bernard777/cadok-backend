@@ -16,8 +16,8 @@ const uniqueDb = 'cadok_e2e_' + crypto.randomBytes(8).toString('hex');
 // OVERRIDE complet des variables d'environnement pour les tests
 process.env.MONGODB_URI = `mongodb://127.0.0.1:27017/${uniqueDb}`;
 process.env.NODE_ENV = 'test';
-process.env.STRIPE_SECRET_KEY = 'sk_test_51RrsfBAWWo4iq1n7nGd4qLi21YwqklOipVkL4s13nJ3cIWkIbFwXRKKvs4DlZcyVadP4ke57CVr1EWoE4okLHM9O00WbIz9PW7';
-process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_51RrsfBAWWo4iq1n7QsqN2mkRfR27pN3hWbOwLnBRLe5k46Qdu2dqIzzK7noajc93h3Q29HCPYK3In63RwvK8HLSJ00v4fPw6Mg';
+process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_PLACEHOLDER';
+process.env.STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_PLACEHOLDER';
 process.env.JWT_SECRET = 'cadok-jwt-secret-super-secure-2024';
 
 console.log('[SETUP] MONGODB_URI forcée:', process.env.MONGODB_URI);

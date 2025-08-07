@@ -7,7 +7,7 @@
 process.env.NODE_ENV = 'test';
 process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/cadok_test_ultime';
 process.env.JWT_SECRET = 'test-secret';
-process.env.STRIPE_SECRET_KEY = 'sk_test_51RrsfBAWWo4iq1n7nGd4qLi21YwqklOipVkL4s13nJ3cIWkIbFwXRKKvs4DlZcyVadP4ke57CVr1EWoE4okLHM9O00WbIz9PW7';
+process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_PLACEHOLDER';
 
 const request = require('supertest');
 const express = require('express');
