@@ -215,7 +215,50 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 📰 2.1. Récupérer le fil d'actualités
+// � Route de recherche pour les tests E2E
+router.get('/search', async (req, res) => {
+  try {
+    const { query, category, minValue, maxValue } = req.query;
+    
+    const filters = { status: 'available' };
+    
+    if (query) {
+      filters.$or = [
+        { title: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } }
+      ];
+    }
+    
+    if (category) {
+      filters.category = category;
+    }
+    
+    if (minValue) {
+      filters.estimatedValue = { ...filters.estimatedValue, $gte: parseInt(minValue) };
+    }
+    
+    if (maxValue) {
+      filters.estimatedValue = { ...filters.estimatedValue, $lte: parseInt(maxValue) };
+    }
+    
+    const objects = await ObjectModel.find(filters)
+      .populate('owner', 'pseudo city')
+      .limit(20)
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      objects
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur lors de la recherche' 
+    });
+  }
+});
+
+// �📰 2.1. Récupérer le fil d'actualités
 // GET /api/objects/feed
 router.get('/feed', auth, async (req, res) => {
   try {

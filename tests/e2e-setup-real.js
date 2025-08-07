@@ -47,7 +47,11 @@ beforeAll(async () => {
 
     // Vérifier la connexion
     testDatabase = mongoose.connection.db;
-    console.log('✅ MongoDB connecté, DB:', testDatabase.databaseName);
+    if (testDatabase) {
+      console.log('✅ MongoDB connecté, DB:', testDatabase.databaseName || 'cadok_e2e_test');
+    } else {
+      console.log('✅ MongoDB connecté (DB name non accessible)');
+    }
 
     // Créer les index nécessaires pour les tests
     await createTestIndexes();

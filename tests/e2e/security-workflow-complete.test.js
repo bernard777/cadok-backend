@@ -29,7 +29,7 @@ describe('🛡️ WORKFLOW E2E COMPLET - SÉCURITÉ ET PROTECTION', () => {
       .post('/api/auth/register')
       .send(userData);
     
-    userId = registerResponse.body.user.id;
+    userId = registerResponse.body.user._id;
     
     const loginResponse = await request(app)
       .post('/api/auth/login')

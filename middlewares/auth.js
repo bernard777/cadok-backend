@@ -10,13 +10,14 @@ function auth(req, res, next) {
     // Assurer que req.user.id est défini (gérer les différents formats de JWT)
     req.user = {
       id: verified.id || verified.userId || verified._id,
+      userId: verified.id || verified.userId || verified._id,
       ...verified
     };
     
     next();
   } catch (err) {
     console.error('❌ [AUTH] Erreur token:', err.message);
-    res.status(400).json({ message: 'Token invalide' });
+    res.status(401).json({ message: 'Token invalide' });
   }
 }
 

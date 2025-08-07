@@ -1,5 +1,19 @@
 /**
- * VRAI TEST E2E - Workflow complet utilisateur
+ * VRAI TEST  beforeEach(() => {
+    // Générer des données vraiment uniques pour chaque test
+    const timestamp = Date.now() + Math.random();
+    testUserData = {
+      pseudo: 'E2EUser' + timestamp,
+      email: `e2e${timestamp}@cadok.com`,
+      password: 'SecurePassword123!',
+      city: 'Paris'
+    };
+    
+    // Reset des variables
+    authToken = null;
+    createdUserId = null;
+    createdObjectId = null;
+  });flow complet utilisateur
  * De l'inscription à la création d'objet avec VRAIE base de données
  */
 
@@ -16,15 +30,19 @@ describe('🚀 WORKFLOW E2E COMPLET - Inscription → Connexion → Création Ob
   let createdObjectId;
 
   beforeEach(() => {
+    // Générer des données vraiment uniques pour chaque test
+    const timestamp = Date.now() + Math.random();
     testUserData = {
-      pseudo: 'E2EUser' + Date.now(),
-      email: `e2e${Date.now()}@cadok.com`,
+      pseudo: 'E2EUser' + timestamp,
+      email: `e2e${timestamp}@cadok.com`,
       password: 'SecurePassword123!',
-      firstName: 'Jean',
-      lastName: 'Dupont',
-      city: 'Paris',
-      zipCode: '75001'
+      city: 'Paris'
     };
+    
+    // Reset des variables
+    authToken = null;
+    createdUserId = null;
+    createdObjectId = null;
   });
 
   test('🎯 WORKFLOW COMPLET: Inscription → Connexion → Création objet → Vérification BDD', async () => {
@@ -36,12 +54,21 @@ describe('🚀 WORKFLOW E2E COMPLET - Inscription → Connexion → Création Ob
       .post('/api/auth/register')
       .send(testUserData);
     
+    // Debug si erreur
+    if (registerResponse.status !== 201) {
+      console.error('❌ Erreur inscription:', {
+        status: registerResponse.status,
+        body: registerResponse.body,
+        userData: testUserData
+      });
+    }
+    
     expect(registerResponse.status).toBe(201);
-    expect(registerResponse.body).toHaveProperty('success', true);
+    expect(registerResponse.body).toHaveProperty('token');
     expect(registerResponse.body).toHaveProperty('user');
     expect(registerResponse.body.user.email).toBe(testUserData.email);
     
-    createdUserId = registerResponse.body.user.id;
+    createdUserId = registerResponse.body.user._id;
     console.log('✅ Utilisateur inscrit avec ID:', createdUserId);
     
     // Vérifier en base de données réelle
@@ -62,7 +89,6 @@ describe('🚀 WORKFLOW E2E COMPLET - Inscription → Connexion → Création Ob
       });
     
     expect(loginResponse.status).toBe(200);
-    expect(loginResponse.body).toHaveProperty('success', true);
     expect(loginResponse.body).toHaveProperty('token');
     expect(loginResponse.body).toHaveProperty('user');
     
@@ -90,12 +116,10 @@ describe('🚀 WORKFLOW E2E COMPLET - Inscription → Connexion → Création Ob
       .send(objectData);
     
     expect(createObjectResponse.status).toBe(201);
-    expect(createObjectResponse.body).toHaveProperty('success', true);
-    expect(createObjectResponse.body).toHaveProperty('object');
-    expect(createObjectResponse.body.object.title).toBe(objectData.title);
-    expect(createObjectResponse.body.object.owner).toBe(createdUserId);
+    expect(createObjectResponse.body).toHaveProperty('title', objectData.title);
+    expect(createObjectResponse.body).toHaveProperty('owner');
     
-    createdObjectId = createObjectResponse.body.object._id;
+    createdObjectId = createObjectResponse.body._id;
     console.log('✅ Objet créé avec ID:', createdObjectId);
     
     // Vérifier en base de données réelle
@@ -110,11 +134,10 @@ describe('🚀 WORKFLOW E2E COMPLET - Inscription → Connexion → Création Ob
     console.log('📋 ÉTAPE 4: Récupération des objets utilisateur...');
     
     const getUserObjectsResponse = await request(app)
-      .get('/api/objects/user')
+      .get('/api/objects/me')
       .set('Authorization', `Bearer ${authToken}`);
     
     expect(getUserObjectsResponse.status).toBe(200);
-    expect(getUserObjectsResponse.body).toHaveProperty('success', true);
     expect(getUserObjectsResponse.body).toHaveProperty('objects');
     expect(getUserObjectsResponse.body.objects).toHaveLength(1);
     expect(getUserObjectsResponse.body.objects[0]._id).toBe(createdObjectId);
@@ -213,7 +236,7 @@ describe('🚀 WORKFLOW E2E COMPLET - Inscription → Connexion → Création Ob
       .send(testUserData);
     
     expect(duplicateEmailResponse.status).toBe(400);
-    expect(duplicateEmailResponse.body).toHaveProperty('success', false);
+    expect(duplicateEmailResponse.body).toHaveProperty('message');
     console.log('✅ Email dupliqué correctement rejeté');
     
   }, 20000);

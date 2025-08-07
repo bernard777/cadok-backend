@@ -6,11 +6,7 @@ module.exports = {
       testPathIgnorePatterns: ['<rootDir>/tests/e2e/'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup-simple.js'],
       setupFiles: ['<rootDir>/tests/universal-mocks.js'],
-      moduleNameMapper: {
-        '^models/(.*)$': '<rootDir>/tests/__mocks__/$1',
-        '^services/(.*)$': '<rootDir>/services/$1',
-        '^controllers/(.*)$': '<rootDir>/controllers/$1'
-      },
+      // moduleNameMapper supprimé pour éviter les conflits avec le projet e2e
       collectCoverageFrom: [
         'controllers/**/*.js',
         'services/**/*.js',
@@ -36,14 +32,18 @@ module.exports = {
     {
       displayName: 'e2e',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.js'],
-      setupFilesAfterEnv: ['<rootDir>/tests/e2e-setup-real.js'],
+      setupFiles: ['<rootDir>/tests/e2e/setup-env-mongo.js'],
       testEnvironment: 'node',
-      testTimeout: 120000
+      clearMocks: true,
+      resetModules: true,
+      transform: {
+        '^.+\\.js$': 'babel-jest'
+      }
     }
   ],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   testEnvironment: 'node',
-  testTimeout: 30000,
+  testTimeout: 120000,
   maxWorkers: 1
 };

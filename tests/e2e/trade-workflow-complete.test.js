@@ -51,7 +51,7 @@ describe('🔄 WORKFLOW E2E COMPLET - SYSTÈME DE TROC', () => {
       .send(user1Data);
     
     expect(register1Response.status).toBe(201);
-    user1Id = register1Response.body.user.id;
+    user1Id = register1Response.body.user._id;
     
     // Connexion User 1
     const login1Response = await request(app)
@@ -70,7 +70,7 @@ describe('🔄 WORKFLOW E2E COMPLET - SYSTÈME DE TROC', () => {
       .send(user2Data);
     
     expect(register2Response.status).toBe(201);
-    user2Id = register2Response.body.user.id;
+    user2Id = register2Response.body.user._id;
     
     // Connexion User 2
     const login2Response = await request(app)
