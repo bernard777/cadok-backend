@@ -6,6 +6,7 @@ node_modules/
 
 # MongoDB binaries
 mongodb-binaries/
+*.exe
 
 # Test files
 *.log

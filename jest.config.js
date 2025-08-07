@@ -32,13 +32,14 @@ module.exports = {
     {
       displayName: 'e2e',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.js'],
-      setupFiles: ['<rootDir>/tests/e2e/setup-env-mongo.js'],
+      setupFilesAfterEnv: ['<rootDir>/tests/e2e/setup-optimized.js'],
       testEnvironment: 'node',
       clearMocks: true,
-      resetModules: true,
-      transform: {
-        '^.+\\.js$': 'babel-jest'
-      }
+      resetModules: false,
+      transform: {},
+      testTimeout: 30000,
+      detectOpenHandles: true,
+      forceExit: true
     }
   ],
   collectCoverage: true,

@@ -1,0 +1,6 @@
+{
+  "testMatch": ["<rootDir>/test-auth-isolé.test.js"],
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": [],
+  "setupFiles": []
+}
