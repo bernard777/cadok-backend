@@ -76,11 +76,15 @@ const validateAndProcessImages = (images) => {
   return { processedImages };
 };
 
-// Limiteur de taux pour la création d'objets
+// Limiteur de taux pour la création d'objets - adapté selon l'environnement
 const createObjectLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // max 5 objets par 15 min
-  message: 'Trop de créations d\'objets, réessayez plus tard.'
+  max: process.env.NODE_ENV === 'test' ? 100 : 5, // 100 objets en test, 5 en prod
+  message: 'Trop de créations d\'objets, réessayez plus tard.',
+  skip: (req) => {
+    // Désactiver complètement en mode test pour éviter les conflits
+    return process.env.NODE_ENV === 'test';
+  }
 });
 
 // 🔼 1. Ajouter un objet
@@ -98,6 +102,11 @@ router.post('/', createObjectLimiter, auth, async (req, res) => {
     return res.status(400).json({ error: 'Les champs title, description et category sont requis et ne peuvent pas être vides.' });
   }
 
+  // Validate estimatedValue (no negative values)
+  if (req.body.estimatedValue && req.body.estimatedValue < 0) {
+    return res.status(400).json({ error: 'La valeur estimée ne peut pas être négative.' });
+  }
+
   // Validate title and description length
   if (title.trim().length > 100) {
     return res.status(400).json({ error: 'Le titre ne peut pas dépasser 100 caractères.' });
@@ -105,6 +114,14 @@ router.post('/', createObjectLimiter, auth, async (req, res) => {
   
   if (description.trim().length > 1000) {
     return res.status(400).json({ error: 'La description ne peut pas dépasser 1000 caractères.' });
+  }
+
+  // Validate estimatedValue (ne doit pas être négatif)
+  if (req.body.estimatedValue !== undefined) {
+    const estimatedValue = parseFloat(req.body.estimatedValue);
+    if (isNaN(estimatedValue) || estimatedValue < 0) {
+      return res.status(400).json({ error: 'La valeur estimée doit être un nombre positif ou nul.' });
+    }
   }
 
   // Validate imageUrl format if provided (pour compatibilité descendante)
@@ -130,10 +147,11 @@ router.post('/', createObjectLimiter, auth, async (req, res) => {
       imageUrl,
       images: processedImages,
       owner: req.user.id,
-      attributes: attributes || {}
+      attributes: attributes || {},
+      estimatedValue: req.body.estimatedValue || 0
     });
     const saved = await newObject.save();
-    res.status(201).json(saved);
+    res.status(201).json({ success: true, object: saved });
   } catch (err) {
     console.error('Erreur POST /api/objects:', err); // Ajoute ce log
     res.status(500).json({ error: 'Une erreur interne est survenue.' });
@@ -435,7 +453,7 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
     const updated = await ObjectModel.findByIdAndUpdate(req.params.id, updates, { new: true });
-    res.json(updated);
+    res.json({ success: true, object: updated });
   } catch (err) {
     console.error('Erreur PUT /api/objects/:id:', err);
     res.status(500).json({ error: 'Une erreur interne est survenue.' });

@@ -32,7 +32,10 @@ module.exports = {
     {
       displayName: 'e2e',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.js'],
-      setupFilesAfterEnv: ['<rootDir>/tests/e2e/setup-optimized.js'],
+      setupFilesAfterEnv: [
+        '<rootDir>/tests/e2e/setup-optimized.js'
+        // '<rootDir>/tests/e2e/setup-global.js'  // TEMPORAIREMENT DÉSACTIVÉ - Cause des conflits de connexion
+      ],
       testEnvironment: 'node',
       clearMocks: true,
       resetModules: false,

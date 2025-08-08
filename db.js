@@ -29,7 +29,11 @@ const connectToDatabase = async (uri = null) => {
     
     isConnected = true;
     currentUri = targetUri;
-    console.log(`[DB] ✅ Connecté à: ${mongoose.connection.name}`);
+    
+    // Attendre que la connexion soit complètement prête et obtenir le nom réel
+    await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai pour la stabilisation
+    const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'inconnue';
+    console.log(`[DB] ✅ Connecté à: ${dbName}`);
     
   } catch (error) {
     isConnected = false;

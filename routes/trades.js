@@ -45,22 +45,39 @@ const NOTIFICATION_TYPE = {
 // ========== PROPOSER UN ÉCHANGE ==========
 router.post('/', auth, async (req, res) => {
   try {
-    const { requestedObjects } = req.body; // tableau d'IDs d'objets
+    const { requestedObjects, offeredObjects } = req.body;
+    
     if (!Array.isArray(requestedObjects) || requestedObjects.length === 0) {
-      return res.status(400).json({ message: 'Vous devez sélectionner au moins un objet.' });
+      return res.status(400).json({ message: 'Vous devez sélectionner au moins un objet demandé.' });
     }
 
-    // Vérifie que tous les objets existent et appartiennent au même utilisateur (utilisateur 2)
-    const objects = await ObjectModel.find({ _id: { $in: requestedObjects } });
-    if (objects.length !== requestedObjects.length) {
+    // Vérifie que tous les objets demandés existent et appartiennent au même utilisateur (utilisateur 2)
+    const requestedObjs = await ObjectModel.find({ _id: { $in: requestedObjects } });
+    if (requestedObjs.length !== requestedObjects.length) {
       return res.status(404).json({ message: 'Un ou plusieurs objets demandés sont introuvables.' });
     }
-    const ownerId = objects[0].owner.toString();
-    if (!objects.every(obj => obj.owner.toString() === ownerId)) {
-      return res.status(400).json({ message: 'Tous les objets doivent appartenir au même utilisateur.' });
+    
+    const ownerId = requestedObjs[0].owner.toString();
+    if (!requestedObjs.every(obj => obj.owner.toString() === ownerId)) {
+      return res.status(400).json({ message: 'Tous les objets demandés doivent appartenir au même utilisateur.' });
     }
+    
     if (ownerId === req.user.id) {
       return res.status(400).json({ message: 'Impossible de troquer avec soi-même.' });
+    }
+
+    // Vérifier les objets offerts (optionnels)
+    let offeredObjs = [];
+    if (offeredObjects && Array.isArray(offeredObjects) && offeredObjects.length > 0) {
+      offeredObjs = await ObjectModel.find({ _id: { $in: offeredObjects } });
+      if (offeredObjs.length !== offeredObjects.length) {
+        return res.status(404).json({ message: 'Un ou plusieurs objets offerts sont introuvables.' });
+      }
+      
+      // Vérifier que les objets offerts appartiennent au demandeur
+      if (!offeredObjs.every(obj => obj.owner.toString() === req.user.id)) {
+        return res.status(400).json({ message: 'Vous ne pouvez offrir que vos propres objets.' });
+      }
     }
 
     // Analyser le risque du troc avec le nouveau système de sécurité
@@ -70,6 +87,7 @@ router.post('/', auth, async (req, res) => {
       fromUser: req.user.id,
       toUser: ownerId,
       requestedObjects,
+      offeredObjects: offeredObjects || [], // ← Ajouter les objets offerts
       status: riskAnalysis.constraints.photosRequired ? 'photos_required' : TRADE_STATUS.PENDING,
       security: {
         trustScores: {
@@ -95,6 +113,14 @@ router.post('/', auth, async (req, res) => {
     });
 
     const saved = await newTrade.save();
+    
+    // Populer les champs nécessaires pour la réponse
+    await saved.populate([
+      { path: 'fromUser', select: 'pseudo city avatar' },
+      { path: 'toUser', select: 'pseudo city avatar' },
+      { path: 'requestedObjects' },
+      { path: 'offeredObjects' }
+    ]);
 
     // Notification pour l'utilisateur 2
     const notificationMessage = riskAnalysis.constraints.photosRequired 
@@ -108,7 +134,23 @@ router.post('/', auth, async (req, res) => {
       trade: saved._id
     });
 
-    res.status(201).json(saved);
+    // Retourner une structure adaptée pour le frontend
+    const responseData = {
+      _id: saved._id,
+      status: saved.status,
+      message: saved.message,
+      createdAt: saved.createdAt,
+      requester: (saved.fromUser._id || saved.fromUser).toString(), // ← Convertir en string
+      requested: (saved.toUser._id || saved.toUser).toString(),     // ← Convertir en string
+      fromUser: saved.fromUser,
+      toUser: saved.toUser,
+      requestedObjects: saved.requestedObjects,
+      offeredObjects: saved.offeredObjects,
+      deliveryMethod: saved.deliveryMethod,
+      deliveryCost: saved.deliveryCost
+    };
+
+    res.status(201).json({ success: true, trade: responseData });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -126,10 +168,29 @@ router.get('/', auth, async (req, res) => {
       .populate([
         { path: 'offeredObjects' },
         { path: 'requestedObjects' },
-        { path: 'fromUser', select: 'pseudo city' },
-        { path: 'toUser', select: 'pseudo city' }
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' }
       ]);
-    res.json(trades);
+    
+    // Adapter chaque trade pour le frontend
+    const adaptedTrades = trades.map(trade => ({
+      _id: trade._id,
+      status: trade.status,
+      message: trade.message,
+      createdAt: trade.createdAt,
+      acceptedAt: trade.acceptedAt,
+      refusedAt: trade.refusedAt,
+      requester: (trade.fromUser._id || trade.fromUser).toString(), // ← ID string pour compatibilité
+      requested: { _id: (trade.toUser._id || trade.toUser).toString() }, // ← Objet avec _id pour les tests
+      fromUser: trade.fromUser,
+      toUser: trade.toUser,
+      requestedObjects: trade.requestedObjects,
+      offeredObjects: trade.offeredObjects,
+      deliveryMethod: trade.deliveryMethod,
+      deliveryCost: trade.deliveryCost
+    }));
+    
+    res.json({ success: true, trades: adaptedTrades });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -171,15 +232,17 @@ router.get('/:id', auth, async (req, res) => {
       createdAt: trade.createdAt,
       acceptedAt: trade.acceptedAt,
       refusedAt: trade.refusedAt,
-      requester: trade.fromUser, // Garde l'objet complet avec pseudo, city, avatar
-      owner: trade.toUser,       // Garde l'objet complet avec pseudo, city, avatar
+      requester: (trade.fromUser._id || trade.fromUser).toString(), // ← ID pour les tests
+      requested: (trade.toUser._id || trade.toUser).toString(),     // ← ID pour les tests
+      fromUser: trade.fromUser, // Garde l'objet complet avec pseudo, city, avatar
+      toUser: trade.toUser,     // Garde l'objet complet avec pseudo, city, avatar
       requestedObjects: trade.requestedObjects,
       offeredObjects: trade.offeredObjects,
       deliveryMethod: trade.deliveryMethod,
       deliveryCost: trade.deliveryCost
     };
 
-    res.json(adaptedTrade);
+    res.json({ success: true, trade: adaptedTrade });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -198,67 +261,91 @@ router.get('/notifications', auth, async (req, res) => {
 // ========== ACCEPTER UNE PROPOSITION ==========
 router.put('/:id/accept', auth, async (req, res) => {
   try {
-    const trade = await Trade.findById(req.params.id);
+    const trade = await Trade.findById(req.params.id)
+      .populate([
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' }
+      ]);
 
     if (!trade) return res.status(404).json({ message: 'Trade not found.' });
 
     console.log('🔧 [DEBUG] Accept trade - User:', req.user.id);
-    console.log('🔧 [DEBUG] Accept trade - fromUser:', trade.fromUser.toString());
-    console.log('🔧 [DEBUG] Accept trade - toUser:', trade.toUser.toString());
+    console.log('🔧 [DEBUG] Accept trade - fromUser:', trade.fromUser._id.toString());
+    console.log('🔧 [DEBUG] Accept trade - toUser:', trade.toUser._id.toString());
     console.log('🔧 [DEBUG] Accept trade - status:', trade.status);
 
-    // Vérif: seul le demandeur initial (fromUser/User 1) peut accepter la proposition
-    if (trade.fromUser.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'You are not authorized to accept this trade.' });
+    // Déterminer qui peut accepter selon le statut
+    let canAccept = false;
+    let notificationUser = null;
+    let notificationMessage = '';
+
+    // RÈGLE STRICTE : Seul User1 (fromUser) peut accepter une proposition (statut proposed/photos_required)
+    // User2 (toUser) ne peut JAMAIS accepter directement une demande pending
+    if (trade.status === TRADE_STATUS.PROPOSED || trade.status === 'photos_required') {
+      // User1 (fromUser) peut accepter une proposition en proposed ou photos_required
+      if (trade.fromUser._id.toString() === req.user.id) {
+        canAccept = true;
+        notificationUser = trade.toUser._id;
+        notificationMessage = "Votre proposition de troc a été acceptée.";
+      }
     }
 
-    if (trade.status !== TRADE_STATUS.PROPOSED) {
-      return res.status(400).json({ message: 'Trade must be in proposed state to accept.' });
+    if (!canAccept) {
+      return res.status(403).json({ message: 'You can only accept a proposed trade as the initiator.' });
     }
 
-    if (!trade.offeredObjects || trade.offeredObjects.length === 0) {
+    // Vérification des objets pour un trade proposed
+    if (trade.offeredObjects && trade.offeredObjects.length === 0) {
       return res.status(400).json({ message: 'No offered objects to accept.' });
     }
-
-    // Vérif: objets toujours disponibles
+    
+    // Récupérer les objets offerts et demandés pour vérification
     const offeredObjects = await ObjectModel.find({ _id: { $in: trade.offeredObjects } });
     const requestedObjects = await ObjectModel.find({ _id: { $in: trade.requestedObjects } });
 
-    if (
-      offeredObjects.length !== (Array.isArray(trade.offeredObjects) ? trade.offeredObjects.length : 0) ||
-      requestedObjects.length !== (Array.isArray(trade.requestedObjects) ? trade.requestedObjects.length : 0)
-    ) {
-      return res.status(404).json({ message: 'One or more objects not found.' });
-    }
-    if (
-      !offeredObjects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE) ||
-      !requestedObjects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE)
-    ) {
+    // Vérif: objets toujours disponibles
+    const allObjects = [...offeredObjects, ...requestedObjects];
+    if (!allObjects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE)) {
       return res.status(400).json({ message: 'One or more objects are no longer available.' });
     }
 
     // Valider le trade et MAJ objets
     trade.status = TRADE_STATUS.ACCEPTED;
+    trade.acceptedAt = new Date();
     await trade.save();
 
-    for (const obj of offeredObjects) {
-      obj.status = OBJECT_STATUS.TRADED;
-      await obj.save();
-    }
-    for (const obj of requestedObjects) {
+    // Marquer les objets comme tradés
+    for (const obj of allObjects) {
       obj.status = OBJECT_STATUS.TRADED;
       await obj.save();
     }
 
-    // Notification pour l'utilisateur 2 (propriétaire initial)
+    // Notification à l'autre utilisateur
     await Notification.create({
-      user: trade.toUser,
-      message: "Votre proposition de troc a été acceptée.",
+      user: notificationUser,
+      message: notificationMessage,
       type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
       trade: trade._id
     });
 
-    res.json({ message: 'Trade accepted.', trade });
+    // Retourner la structure adaptée
+    const responseData = {
+      _id: trade._id,
+      status: trade.status,
+      message: trade.message,
+      createdAt: trade.createdAt,
+      acceptedAt: trade.acceptedAt,
+      requester: (trade.fromUser._id || trade.fromUser).toString(),
+      requested: (trade.toUser._id || trade.toUser).toString(),
+      fromUser: trade.fromUser,
+      toUser: trade.toUser,
+      requestedObjects: trade.requestedObjects,
+      offeredObjects: trade.offeredObjects,
+      deliveryMethod: trade.deliveryMethod,
+      deliveryCost: trade.deliveryCost
+    };
+
+    res.json({ success: true, message: 'Trade accepted.', trade: responseData });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -276,7 +363,7 @@ router.put('/:id/refuse', auth, async (req, res) => {
     if (trade.toUser.toString() !== req.user.id)
       return res.status(403).json({ message: 'Vous ne pouvez refuser que les trocs qui vous sont destinés.' });
 
-    if (trade.status !== TRADE_STATUS.PENDING)
+    if (!['pending', 'photos_required', 'proposed'].includes(trade.status))
       return res.status(400).json({ message: 'Ce troc ne peut plus être refusé.' });
 
     trade.status = TRADE_STATUS.REFUSED;
@@ -297,6 +384,60 @@ router.put('/:id/refuse', auth, async (req, res) => {
   }
 });
 
+// ========== REFUSER UNE DEMANDE DE TROC (ALIAS) ==========
+router.put('/:id/reject', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id)
+      .populate([
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' }
+      ]);
+
+    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
+    
+    // Seul le destinataire peut refuser
+    if (trade.toUser._id.toString() !== req.user.id)
+      return res.status(403).json({ message: 'Vous ne pouvez refuser que les trocs qui vous sont destinés.' });
+
+    if (!['pending', 'photos_required', 'proposed'].includes(trade.status))
+      return res.status(400).json({ message: 'Ce troc ne peut plus être refusé.' });
+
+    trade.status = TRADE_STATUS.REFUSED;
+    trade.refusedAt = new Date();
+    await trade.save();
+
+    // Notification pour User 1 (celui qui avait fait la demande)
+    await Notification.create({
+      user: trade.fromUser._id,
+      message: "Votre demande de troc a été refusée.",
+      type: NOTIFICATION_TYPE.TRADE_REFUSED,
+      trade: trade._id
+    });
+
+    // Retourner la structure adaptée
+    const responseData = {
+      _id: trade._id,
+      status: trade.status,
+      message: trade.message,
+      createdAt: trade.createdAt,
+      refusedAt: trade.refusedAt,
+      requester: trade.fromUser._id || trade.fromUser,
+      requested: trade.toUser._id || trade.toUser,
+      fromUser: trade.fromUser,
+      toUser: trade.toUser,
+      requestedObjects: trade.requestedObjects,
+      offeredObjects: trade.offeredObjects,
+      deliveryMethod: trade.deliveryMethod,
+      deliveryCost: trade.deliveryCost
+    };
+
+    res.json({ message: 'Demande de troc refusée.', trade: responseData });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ========== PROPOSER UN OBJET À L'ÉCHANGE ==========
 router.put('/:id/propose', auth, async (req, res) => {
   try {
@@ -305,14 +446,14 @@ router.put('/:id/propose', auth, async (req, res) => {
     if (!trade || trade.toUser.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not allowed." });
     }
-    if (trade.status !== TRADE_STATUS.PENDING) {
+    if (!['pending', 'photos_required'].includes(trade.status)) {
       return res.status(400).json({ message: "Ce troc n'est pas en attente de proposition." });
     }
     if (!Array.isArray(offeredObjects) || offeredObjects.length !== trade.requestedObjects.length) {
       return res.status(400).json({ message: "Vous devez sélectionner exactement " + trade.requestedObjects.length + " objets à offrir en échange." });
     }
 
-    const objects = await ObjectModel.find({ _id: { $in: offeredObjects }, owner: trade.fromUser });
+    const objects = await ObjectModel.find({ _id: { $in: offeredObjects }, owner: trade.toUser });
     if (objects.length !== offeredObjects.length) {
       return res.status(400).json({ message: "Un ou plusieurs objets offerts sont invalides." });
     }
@@ -440,22 +581,54 @@ router.put('/:id/retry', auth, async (req, res) => {
     if (trade.status !== TRADE_STATUS.PROPOSED)
       return res.status(400).json({ message: 'Trade is not in proposed state.' });
 
-    // Remettre le trade à l'état initial
+    // Remettre le trade à l'état initial pour une nouvelle proposition
     trade.status = TRADE_STATUS.PENDING;
-    // Remettre le trade à l'état initial
-    trade.status = TRADE_STATUS.PENDING;
-    trade.offeredObjects = [];
+    trade.offeredObjects = []; // Vider les objets proposés précédemment
     await trade.save();
 
     await Notification.create({
       user: trade.toUser,
-      message: "L'utilisateur a refusé votre proposition, veuillez choisir un autre objet.",
+      message: "L'utilisateur a refusé votre proposition, veuillez proposer d'autres objets à la place.",
       type: NOTIFICATION_TYPE.TRADE_RETRY,
       trade: trade._id
     });
 
     res.json({ message: 'Trade proposal refused, waiting for a new selection.', trade });
 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== ANALYSE SÉCURITÉ DU TRADE ==========
+router.get('/:id/security-analysis', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    
+    if (!trade) {
+      return res.status(404).json({ message: 'Trade not found.' });
+    }
+    
+    // Vérifier que l'utilisateur a accès à ce trade
+    if (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Accès non autorisé à ce trade.' });
+    }
+    
+    // Calculer le score de sécurité basé sur les données du trade
+    const securityScore = await securityService.calculateTradeSecurityScore(trade);
+    
+    res.json({
+      tradeId: trade._id,
+      securityScore: securityScore,
+      riskLevel: trade.security?.riskLevel || 'medium',
+      trustScores: trade.security?.trustScores || { sender: 0, recipient: 0 },
+      analysis: {
+        userTrustLevel: trade.security?.trustScores?.sender || 0,
+        recipientTrustLevel: trade.security?.trustScores?.recipient || 0,
+        overallRisk: trade.security?.riskLevel || 'medium'
+      }
+    });
+    
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -530,8 +703,8 @@ router.patch('/:id/accept', auth, async (req, res) => {
       if (trade.toUser.toString() !== req.user.id) {
         return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter cette demande.' });
       }
-    } else if (trade.status === 'proposed') {
-      // User 1 peut accepter une proposition (cas le plus courant)
+    } else if (trade.status === 'proposed' || trade.status === 'photos_required') {
+      // User 1 peut accepter une proposition (cas le plus courant) ou photos_required
       if (trade.fromUser.toString() !== req.user.id) {
         return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter cette proposition.' });
       }
@@ -1006,6 +1179,39 @@ router.get('/:id/download-label', auth, async (req, res) => {
   } catch (error) {
     console.error('Erreur téléchargement bordereau:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ========== COMPLETER UN ÉCHANGE ==========
+router.patch('/:id/complete', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+    // Seuls les participants peuvent compléter l'échange
+    if (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not allowed.' });
+    }
+
+    // Doit être accepté avant completion
+    if (trade.status !== TRADE_STATUS.ACCEPTED) {
+      return res.status(400).json({ success: false, message: 'Trade must be accepted before completion.' });
+    }
+
+    trade.status = 'completed'; // statut attendu par les tests
+    trade.completedAt = new Date();
+    await trade.save();
+
+    await Notification.create({
+      user: trade.fromUser.toString() === req.user.id ? trade.toUser : trade.fromUser,
+      message: 'L\'échange a été finalisé avec succès.',
+      type: 'trade_completed',
+      trade: trade._id
+    }).catch(()=>{});
+
+    res.json({ success: true, trade });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

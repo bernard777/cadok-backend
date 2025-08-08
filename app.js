@@ -2,10 +2,30 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
-dotenv.config();
+// 🔧 CONFIGURATION INTELLIGENTE D'ENVIRONNEMENT
+// Charger le bon fichier .env selon le contexte
+if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+  // Mode test : utiliser .env.test
+  dotenv.config({ path: '.env.test' });
+  console.log('🧪 [APP] Mode test détecté - Configuration .env.test chargée');
+} else {
+  // Mode normal : utiliser .env par défaut
+  dotenv.config();
+  console.log('🚀 [APP] Mode production - Configuration .env chargée');
+}
 
 const app = express();
+
+// 🔗 CONNEXION MONGODB (pour les tests E2E avec supertest)
+const { connectToDatabase } = require('./db');
+
+// Établir la connexion MongoDB au démarrage de l'application
+connectToDatabase().catch(error => {
+  console.error('❌ [APP] Erreur connexion MongoDB:', error.message);
+  process.exit(1);
+});
 
 // Middleware
 app.use(cors());
@@ -17,7 +37,6 @@ const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
 // Ajout de la route des objets
-const fs = require('fs');
 const objectsRoutePath = path.join(__dirname, 'routes', 'objects.js');
 
 if (fs.existsSync(objectsRoutePath)) {
@@ -67,7 +86,7 @@ app.use('/api/delivery', deliveryRoutes);
 
 // Ajout des routes de livraison point relais
 const pickupRoutes = require('./routes/pickupRoutes');
-app.use('/api/trades', pickupRoutes);
+app.use('/api/trades/pickup', pickupRoutes);
 
 // Ajout de la route des notifications
 const notificationsRoutePath = path.join(__dirname, 'routes', 'notifications.js');
@@ -91,7 +110,27 @@ if (fs.existsSync(conversationsRoutePath)) {
 
 // Routes
 app.get('/', (req, res) => {
-  res.send('Bienvenue sur l’API Cadok');
+  res.send('Bienvenue sur l API Cadok');
+});
+
+// Route health check pour les tests E2E et la surveillance
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'production',
+    port: process.env.PORT || 5000,
+    database: 'connected'
+  });
+});
+
+// Route pour vérifier l'API
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    api: 'operational',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = app;

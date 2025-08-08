@@ -1,0 +1,8 @@
+=== TEST ULTRA-SIMPLE ===
+URI environnement: mongodb://localhost:27017/cadok_test
+État initial: 1
+Connexion à: mongodb://localhost:27017/cadok_test
+Connecté ! Base: undefined
+Users dans base: 0
+Déconnecté avec succès
+=== FIN TEST ===

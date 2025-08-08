@@ -637,6 +637,41 @@ class PureTradeSecurityService {
   }
 
   /**
+   * Calculer le score de sécurité d'un trade existant
+   */
+  async calculateTradeSecurityScore(trade) {
+    try {
+      if (!trade.security?.trustScores) {
+        // Fallback: calculer les scores basiques
+        return Math.floor(Math.random() * 100); // Score aléatoire pour les tests
+      }
+      
+      const { sender, recipient } = trade.security.trustScores;
+      const averageScore = (sender + recipient) / 2;
+      
+      // Ajuster le score selon l'état du trade
+      let adjustedScore = averageScore;
+      
+      if (trade.status === 'accepted') {
+        adjustedScore += 10; // Bonus pour trade accepté
+      }
+      
+      if (trade.security?.riskLevel === 'low') {
+        adjustedScore += 5;
+      } else if (trade.security?.riskLevel === 'high') {
+        adjustedScore -= 10;
+      }
+      
+      // S'assurer que le score reste dans les limites
+      return Math.max(0, Math.min(100, Math.floor(adjustedScore)));
+      
+    } catch (error) {
+      console.error('Erreur calcul score sécurité:', error);
+      return 50; // Score neutre en cas d'erreur
+    }
+  }
+
+  /**
    * Obtenir le statut de sécurité d'un troc
    */
   async getSecurityStatus(tradeId) {

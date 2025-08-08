@@ -16,37 +16,26 @@ class MongoDBTestHelper {
    */
   getMongoConfig() {
     return {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 10000,
-      maxPoolSize: 5,
-      minPoolSize: 1,
-      maxIdleTimeMS: 30000,
       bufferCommands: false,
       bufferMaxEntries: 0
     };
   }
 
   /**
-   * Créer une base de données de test unique
+   * Créer un nom de DB de test statique
    */
   createTestDbName() {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    return `cadok_e2e_${timestamp}_${random}`;
+    // Utiliser une base de test statique au lieu d'une base dynamique
+    return 'cadok_test';
   }
 
   /**
-   * Connexion MongoDB pour tests E2E
+   * Connexion pour les tests E2E
    */
   async connectForTests() {
-    if (this.isSetup && mongoose.connection.readyState === 1) {
-      console.log('🔄 Connexion MongoDB existante réutilisée');
-      return mongoose.connection;
-    }
-
     try {
-      // Fermer toute connexion existante
       if (mongoose.connection.readyState !== 0) {
         await mongoose.disconnect();
       }
@@ -74,7 +63,7 @@ class MongoDBTestHelper {
    */
   async cleanupTestDb() {
     try {
-      if (mongoose.connection.readyState === 1) {
+      if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
         const dbName = mongoose.connection.db.databaseName;
         console.log('🧹 Nettoyage DB test:', dbName);
         
@@ -113,13 +102,15 @@ class MongoDBTestHelper {
    */
   async isMongoDBAvailable() {
     try {
-      const testConnection = mongoose.createConnection();
-      await testConnection.openUri('mongodb://127.0.0.1:27017/test_ping', {
-        serverSelectionTimeoutMS: 3000,
-        connectTimeoutMS: 3000
+      // Approche simplifiée - utiliser directement mongoose.connect pour le test
+      const testUri = 'mongodb://127.0.0.1:27017/ping_test';
+      const connection = await mongoose.connect(testUri, {
+        serverSelectionTimeoutMS: 2000,
+        connectTimeoutMS: 2000
       });
       
-      await testConnection.close();
+      // Fermer la connexion de test
+      await mongoose.disconnect();
       return true;
     } catch (error) {
       console.warn('⚠️ MongoDB indisponible:', error.message);
@@ -135,30 +126,25 @@ class MongoDBTestHelper {
     
     const available = await this.isMongoDBAvailable();
     
-    if (!available) {
+    if (available) {
+      await this.connectForTests();
+      console.log('✅ Setup global terminé - mode réel activé');
+      return true;
+    } else {
       console.log('📱 MongoDB indisponible - mode mock forcé');
-      global.isDbConnected = () => false;
       return false;
     }
-
-    await this.connectForTests();
-    global.isDbConnected = () => mongoose.connection.readyState === 1;
-    
-    console.log('✅ Setup global terminé - mode réel activé');
-    return true;
   }
 
   /**
-   * Teardown global
+   * Teardown global après tous les tests E2E
    */
   async teardownGlobalTests() {
     console.log('🔚 Teardown global MongoDB E2E...');
     await this.disconnect();
-    global.isDbConnected = () => false;
   }
 }
 
-// Instance singleton
+// Export singleton
 const mongoHelper = new MongoDBTestHelper();
-
 module.exports = mongoHelper;

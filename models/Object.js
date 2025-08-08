@@ -11,6 +11,7 @@ const ObjectSchema = new mongoose.Schema({
     isPrimary: { type: Boolean, default: false }
   }],
   attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
+  estimatedValue: { type: Number, default: 0, min: 0 }, // Valeur estimée (positive)
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: {
     type: String,

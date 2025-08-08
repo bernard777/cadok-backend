@@ -17,11 +17,15 @@ const fs = require('fs');
 
 const router = express.Router();
 
-// Limiteur de requêtes pour le login (5 tentatives par 15 minutes)
+// Limiteur de requêtes pour le login - adapté selon l'environnement
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Trop de tentatives, réessayez plus tard.'
+  max: process.env.NODE_ENV === 'test' ? 100 : 5, // 100 en test, 5 en prod
+  message: 'Trop de tentatives, réessayez plus tard.',
+  skip: (req) => {
+    // Plus souple en mode test
+    return process.env.NODE_ENV === 'test';
+  }
 });
 
 // Configure le stockage des fichiers
@@ -77,10 +81,19 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
     const { email, password, pseudo, city } = req.body;
+    
+    console.log('🔍 [DEBUG REGISTER] Début inscription pour:', email);
+    console.log('🔍 [DEBUG REGISTER] NODE_ENV:', process.env.NODE_ENV);
+    
     try {
+      console.log('🔍 [DEBUG REGISTER] Vérification utilisateur existant...');
       const existing = await User.findOne({ email });
-      if (existing) return res.status(400).json({ message: 'Email déjà utilisé' });
+      if (existing) {
+        console.log('❌ [DEBUG REGISTER] Email déjà utilisé');
+        return res.status(400).json({ message: 'Email déjà utilisé' });
+      }
 
+      console.log('🔍 [DEBUG REGISTER] Hash du mot de passe...');
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Ajoute l'avatar si présent
@@ -89,18 +102,27 @@ router.post(
         avatarUrl = `/uploads/avatars/${req.file.filename}`;
       }
 
+      console.log('🔍 [DEBUG REGISTER] Création de l\'utilisateur...');
       const newUser = new User({ email, password: hashedPassword, pseudo, city, avatar: avatarUrl });
       await newUser.save();
 
+      console.log('🔍 [DEBUG REGISTER] Génération du token...');
       const token = jwt.sign(
         { id: newUser._id },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
+      
+      console.log('🔍 [DEBUG REGISTER] Récupération utilisateur pour réponse...');
       let userToReturn = await User.findById(newUser._id).select('-password').lean();
       userToReturn.avatar = getFullUrl(req, userToReturn.avatar);
+      
+      console.log('✅ [DEBUG REGISTER] Inscription réussie pour:', email);
       res.status(201).json({ token, user: userToReturn });
     } catch (err) {
+      console.error('❌ [DEBUG REGISTER] Erreur complète:', err);
+      console.error('❌ [DEBUG REGISTER] Message:', err.message);
+      console.error('❌ [DEBUG REGISTER] Stack:', err.stack);
       res.status(500).json({ error: err.message });
     }
   }
