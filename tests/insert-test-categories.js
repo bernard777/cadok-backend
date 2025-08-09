@@ -55,14 +55,13 @@ const insertTestCategories = async () => {
 
     for (const categoryData of testCategories) {
       try {
-        // Tentative d'insertion avec upsert
-        const result = await Category.updateOne(
-          { _id: categoryData._id },
-          categoryData,
-          { upsert: true }
-        );
-
-        if (result.upsertedCount > 0) {
+        // Vérifier si la catégorie existe déjà
+        const existingCategory = await Category.findById(categoryData._id);
+        
+        if (!existingCategory) {
+          // Créer nouvelle catégorie
+          const newCategory = new Category(categoryData);
+          await newCategory.save();
           console.log(`✅ Catégorie insérée: ${categoryData.name}`);
           inserted++;
         } else {

@@ -15,18 +15,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// 🛡️ IMPORTATION MIDDLEWARE DE SÉCURITÉ
+const SecurityMiddleware = require('../middleware/security');
+
 const router = express.Router();
 
-// Limiteur de requêtes pour le login - adapté selon l'environnement
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 100 : 5, // 100 en test, 5 en prod
-  message: 'Trop de tentatives, réessayez plus tard.',
-  skip: (req) => {
-    // Plus souple en mode test
-    return process.env.NODE_ENV === 'test';
-  }
-});
+// 🛡️ LIMITEUR DE REQUÊTES POUR L'AUTHENTIFICATION - SÉCURISÉ
+const authLimiter = SecurityMiddleware.createAuthRateLimit();
 
 // Configure le stockage des fichiers
 const avatarDir = path.join(__dirname, '../uploads/avatars');
@@ -67,34 +62,33 @@ const upload = multer({
 });
 
 // Register
+// 🛡️ INSCRIPTION SÉCURISÉE
 router.post(
   '/register',
+  authLimiter, // Rate limiting pour inscription
   upload.single('avatar'),
-  [
-    body('email').isEmail().withMessage('Email invalide'),
-    body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères'),
-    body('pseudo').isLength({ min: 3 }).withMessage('Le pseudo doit contenir au moins 3 caractères')
-  ],
+  SecurityMiddleware.validateUserRegistration(), // Validation sécurisée
+  SecurityMiddleware.handleValidationErrors(), // Gestion des erreurs
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    const { email, password, pseudo, city } = req.body;
+    const { email, password, pseudo, city, firstName, lastName } = req.body;
     
-    console.log('🔍 [DEBUG REGISTER] Début inscription pour:', email);
-    console.log('🔍 [DEBUG REGISTER] NODE_ENV:', process.env.NODE_ENV);
+    console.log('🔍 [SECURE REGISTER] Début inscription sécurisée pour:', email);
+    console.log('🔍 [SECURE REGISTER] NODE_ENV:', process.env.NODE_ENV);
     
     try {
-      console.log('🔍 [DEBUG REGISTER] Vérification utilisateur existant...');
+      console.log('🔍 [SECURE REGISTER] Vérification utilisateur existant...');
       const existing = await User.findOne({ email });
       if (existing) {
-        console.log('❌ [DEBUG REGISTER] Email déjà utilisé');
-        return res.status(400).json({ message: 'Email déjà utilisé' });
+        console.log('❌ [SECURE REGISTER] Email déjà utilisé');
+        return res.status(400).json({ 
+          success: false,
+          error: 'Email déjà utilisé',
+          code: 'EMAIL_ALREADY_EXISTS'
+        });
       }
 
-      console.log('🔍 [DEBUG REGISTER] Hash du mot de passe...');
-      const hashedPassword = await bcrypt.hash(password, 10);
+      console.log('🔍 [SECURE REGISTER] Hash du mot de passe sécurisé...');
+      const hashedPassword = await bcrypt.hash(password, 12); // Salt rounds augmenté pour plus de sécurité
 
       // Ajoute l'avatar si présent
       let avatarUrl = '';
@@ -102,22 +96,30 @@ router.post(
         avatarUrl = `/uploads/avatars/${req.file.filename}`;
       }
 
-      console.log('🔍 [DEBUG REGISTER] Création de l\'utilisateur...');
-      const newUser = new User({ email, password: hashedPassword, pseudo, city, avatar: avatarUrl });
+      console.log('🔍 [SECURE REGISTER] Création de l\'utilisateur...');
+      const newUser = new User({ 
+        email, 
+        password: hashedPassword, 
+        pseudo, 
+        city, 
+        firstName,
+        lastName,
+        avatar: avatarUrl 
+      });
       await newUser.save();
 
-      console.log('🔍 [DEBUG REGISTER] Génération du token...');
+      console.log('🔍 [SECURE REGISTER] Génération du token...');
       const token = jwt.sign(
         { id: newUser._id },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
       
-      console.log('🔍 [DEBUG REGISTER] Récupération utilisateur pour réponse...');
+      console.log('🔍 [SECURE REGISTER] Récupération utilisateur pour réponse...');
       let userToReturn = await User.findById(newUser._id).select('-password').lean();
       userToReturn.avatar = getFullUrl(req, userToReturn.avatar);
       
-      console.log('✅ [DEBUG REGISTER] Inscription réussie pour:', email);
+      console.log('✅ [SECURE REGISTER] Inscription sécurisée réussie pour:', email);
       res.status(201).json({ token, user: userToReturn });
     } catch (err) {
       console.error('❌ [DEBUG REGISTER] Erreur complète:', err);
@@ -128,32 +130,66 @@ router.post(
   }
 );
 
-// Login
+// 🛡️ CONNEXION SÉCURISÉE
 router.post(
   '/login',
-  loginLimiter,
+  authLimiter, // Rate limiting sécurisé
   [
-    body('email').isEmail().withMessage('Email invalide'),
+    body('email').isEmail().withMessage('Email invalide').normalizeEmail(),
     body('password').notEmpty().withMessage('Mot de passe requis')
+      .isLength({ min: 1, max: 128 }).withMessage('Mot de passe invalide')
   ],
+  SecurityMiddleware.handleValidationErrors(), // Gestion des erreurs sécurisée
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
     const { email, password } = req.body;
+    
+    console.log('🔐 [SECURE LOGIN] Tentative connexion sécurisée pour:', email);
+    
     try {
       const user = await User.findOne({ email });
-      // Dummy hash for timing attack mitigation (bcrypt hash for 'invalidpassword')
-      const dummyHash = '$2a$10$7a8b9c0d1e2f3g4h5i6j7u8v9w0x1y2z3a4b5c6d7e8f9g0h1i2j3k';
+      
+      // Hash factice pour éviter les attaques temporelles
+      const dummyHash = '$2a$12$7a8b9c0d1e2f3g4h5i6j7u8v9w0x1y2z3a4b5c6d7e8f9g0h1i2j3k';
+      
       if (!user) {
-        // Perform dummy bcrypt compare to normalize timing
+        // Effectuer une comparaison factice pour normaliser le temps
         await bcrypt.compare(password, dummyHash);
-        return res.status(400).json({ message: 'Identifiants invalides' });
+        console.warn('⚠️ [SECURE LOGIN] Tentative de connexion avec email inexistant:', email);
+        
+        // Log de sécurité
+        SecurityMiddleware.logSecurityEvent('LOGIN_INVALID_EMAIL', {
+          email,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
+        return res.status(400).json({ 
+          success: false,
+          error: 'Identifiants invalides',
+          code: 'INVALID_CREDENTIALS'
+        });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Identifiants invalides' });
+      if (!isMatch) {
+        console.warn('⚠️ [SECURE LOGIN] Tentative avec mauvais mot de passe:', email);
+        
+        // Log de sécurité
+        SecurityMiddleware.logSecurityEvent('LOGIN_INVALID_PASSWORD', {
+          email,
+          userId: user._id,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
+        return res.status(400).json({ 
+          success: false,
+          error: 'Identifiants invalides',
+          code: 'INVALID_CREDENTIALS'
+        });
+      }
+
+      console.log('✅ [SECURE LOGIN] Connexion sécurisée réussie pour:', email);
 
       const token = jwt.sign(
         { id: user._id },
@@ -266,5 +302,101 @@ router.get('/profile', auth, async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 });
+
+// 🔑 CHANGEMENT DE MOT DE PASSE SÉCURISÉ
+router.post(
+  '/change-password',
+  auth,
+  authLimiter, // Rate limiting pour éviter les attaques par force brute
+  [
+    body('currentPassword').notEmpty().withMessage('Mot de passe actuel requis')
+      .isLength({ min: 1, max: 128 }).withMessage('Mot de passe actuel invalide'),
+    body('newPassword').isLength({ min: 8 }).withMessage('Le nouveau mot de passe doit faire au moins 8 caractères')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+      .withMessage('Le nouveau mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial')
+  ],
+  SecurityMiddleware.handleValidationErrors(),
+  async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    
+    console.log('🔑 [SECURE CHANGE PASSWORD] Début changement mot de passe pour utilisateur:', req.user.id);
+    
+    try {
+      // Récupérer l'utilisateur avec son mot de passe
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        console.log('❌ [SECURE CHANGE PASSWORD] Utilisateur non trouvé');
+        return res.status(404).json({ 
+          success: false,
+          error: 'Utilisateur non trouvé',
+          code: 'USER_NOT_FOUND'
+        });
+      }
+
+      // Vérifier le mot de passe actuel
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        console.warn('⚠️ [SECURE CHANGE PASSWORD] Tentative avec mauvais mot de passe actuel');
+        
+        // Log de sécurité
+        SecurityMiddleware.logSecurityEvent('CHANGE_PASSWORD_INVALID_CURRENT', {
+          userId: user._id,
+          email: user.email,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
+        return res.status(400).json({ 
+          success: false,
+          error: 'Mot de passe actuel incorrect',
+          code: 'INVALID_CURRENT_PASSWORD'
+        });
+      }
+
+      // Vérifier que le nouveau mot de passe est différent de l'ancien
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        console.warn('⚠️ [SECURE CHANGE PASSWORD] Tentative de réutilisation du même mot de passe');
+        return res.status(400).json({ 
+          success: false,
+          error: 'Le nouveau mot de passe doit être différent de l\'ancien',
+          code: 'SAME_PASSWORD'
+        });
+      }
+
+      // Hash du nouveau mot de passe avec salt élevé pour la sécurité
+      console.log('🔍 [SECURE CHANGE PASSWORD] Hash du nouveau mot de passe...');
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+      // Mettre à jour le mot de passe
+      await User.findByIdAndUpdate(req.user.id, { 
+        password: hashedNewPassword 
+      });
+
+      console.log('✅ [SECURE CHANGE PASSWORD] Mot de passe changé avec succès');
+      
+      // Log de sécurité pour changement réussi
+      SecurityMiddleware.logSecurityEvent('CHANGE_PASSWORD_SUCCESS', {
+        userId: user._id,
+        email: user.email,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.status(200).json({ 
+        success: true,
+        message: 'Mot de passe changé avec succès'
+      });
+
+    } catch (err) {
+      console.error('❌ [SECURE CHANGE PASSWORD] Erreur:', err);
+      res.status(500).json({ 
+        success: false,
+        error: 'Erreur serveur lors du changement de mot de passe',
+        code: 'SERVER_ERROR'
+      });
+    }
+  }
+);
 
 module.exports = router;

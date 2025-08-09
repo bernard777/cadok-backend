@@ -12,6 +12,9 @@ describe('📦 FEATURE E2E - GESTION D\'OBJETS', () => {
 
   // Utilisateur dédié pour cette feature
   beforeEach(async () => {
+    // Nettoyage avant création
+    await E2EHelpers.cleanupTestData();
+    
     const result = await E2EHelpers.registerUser();
     expect(result.success).toBe(true);
     testUser = result;

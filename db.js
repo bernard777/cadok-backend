@@ -33,7 +33,10 @@ const connectToDatabase = async (uri = null) => {
     // Attendre que la connexion soit complètement prête et obtenir le nom réel
     await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai pour la stabilisation
     const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'inconnue';
-    console.log(`[DB] ✅ Connecté à: ${dbName}`);
+    // Log seulement si on n'est pas en mode test ou si les tests ne sont pas terminés
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[DB] ✅ Connecté à: ${dbName}`);
+    }
     
   } catch (error) {
     isConnected = false;

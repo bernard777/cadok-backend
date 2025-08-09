@@ -1,18 +1,30 @@
 /**
  * HELPERS E2E - Utilitaires partagés pour tous les tests
  * Version robuste avec support fallback sans base de données
+ * UTILISE SERVEUR EXTERNE (localhost:5000) au lieu de supertest(app)
  */
 
-const supertest = require('supertest');
+const axios = require('axios');
 const { mongoose } = require('../../../db');
 
-// Import de l'application pour les tests réels
-let app;
-try {
-  app = require('../../../app');
-} catch (error) {
-  console.warn('⚠️ App non disponible pour tests E2E:', error.message);
-}
+// Configuration pour serveur externe
+const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:5000';
+
+// Configuration axios avec timeout
+const api = axios.create({
+  baseURL: SERVER_URL,
+  timeout: 10000,
+  validateStatus: (status) => status < 500 // Accepter toutes les réponses < 500
+});
+
+// ✅ Catégories de test prédéfinies (ObjectId fixes)
+const TEST_CATEGORIES = {
+  'Électronique': '675bb9c5e7e10c614e5e8e01',
+  'Multimédia': '675bb9c5e7e10c614e5e8e02', 
+  'Mode & Accessoires': '675bb9c5e7e10c614e5e8e03',
+  'Maison & Jardin': '675bb9c5e7e10c614e5e8e04',
+  'Sports & Loisirs': '675bb9c5e7e10c614e5e8e05'
+};
 
 class E2EHelpers {
   
@@ -79,38 +91,35 @@ class E2EHelpers {
       };
     }
 
-    // Mode réel : appel API
+    // Mode réel : appel HTTP externe
     try {
-      console.log('🌐 Mode réel actif pour registerUser');
-      const app = require('../../../app');
-      const response = await supertest(app)
-        .post('/api/auth/register')
-        .send(user);
+      console.log('🌐 Mode réel actif pour registerUser (serveur externe)');
+      const response = await api.post('/api/auth/register', user);
 
-      console.log(`📡 Réponse API register: status=${response.status}, body=`, response.body);
+      console.log(`📡 Réponse API register: status=${response.status}, data=`, response.data);
 
       if (response.status === 201) {
         return {
           success: true,
-          user: response.body.user,
-          token: response.body.token,
+          user: response.data.user,
+          token: response.data.token,
           userData: user
         };
       } else {
         // Mode silencieux - pas de logs d'erreur pour les tests de validation
         return {
           success: false,
-          error: response.body,
+          error: response.data,
           status: response.status,
           userData: user
         };
       }
     } catch (error) {
-      console.error('❌ Erreur réseau registerUser:', error.message);
+      console.error('❌ Erreur HTTP registerUser:', error.response?.data || error.message);
       return {
         success: false,
-        error: error.message,
-        status: 500,
+        error: error.response?.data || error.message,
+        status: error.response?.status || 500,
         userData: user
       };
     }
@@ -137,32 +146,29 @@ class E2EHelpers {
       };
     }
 
-    // Mode réel
+    // Mode réel : appel HTTP externe
     try {
-      console.log('🌐 Mode réel actif pour loginUser');
-      const app = require('../../../app');
-      const response = await supertest(app)
-        .post('/api/auth/login')
-        .send({ email, password });
+      console.log('🌐 Mode réel actif pour loginUser (serveur externe)');
+      const response = await api.post('/api/auth/login', { email, password });
 
       if (response.status === 200) {
         return {
           success: true,
-          token: response.body.token,
-          user: response.body.user
+          token: response.data.token,
+          user: response.data.user
         };
       } else {
         return {
           success: false,
           status: response.status,
-          error: response.body
+          error: response.data
         };
       }
     } catch (error) {
       return {
         success: false,
-        status: 500,
-        error: error.message
+        status: error.response?.status || 500,
+        error: error.response?.data || error.message
       };
     }
   }
@@ -187,31 +193,30 @@ class E2EHelpers {
       };
     }
 
-    // Mode réel
+    // Mode réel : appel HTTP externe
     try {
-      console.log('🌐 Mode réel actif pour getUserObjects');
-      const app = require('../../../app');
-      const response = await supertest(app)
-        .get('/api/objects')
-        .set('Authorization', `Bearer ${token}`);
+      console.log('🌐 Mode réel actif pour getUserObjects (serveur externe)');
+      const response = await api.get('/api/objects', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       if (response.status === 200) {
         return {
           success: true,
-          objects: response.body
+          objects: response.data
         };
       } else {
         return {
           success: false,
           status: response.status,
-          error: response.body
+          error: response.data
         };
       }
     } catch (error) {
       return {
         success: false,
-        status: 500,
-        error: error.message
+        status: error.response?.status || 500,
+        error: error.response?.data || error.message
       };
     }
   }
@@ -223,12 +228,41 @@ class E2EHelpers {
     const defaultObject = {
       title: `Objet Test ${Date.now()}`,
       description: 'Description de test',
-      category: 'electronique',
+      category: TEST_CATEGORIES['Électronique'], // ✅ Utiliser une vraie catégorie
       condition: 'bon',
       images: []
     };
 
     const object = objectData || defaultObject;
+
+    // ✅ FIX: Mapper les champs du test vers les champs de l'API + utiliser vraies catégories
+    if (object.nom) {
+      object.title = object.nom;
+      delete object.nom;
+    }
+    if (object.categorie) {
+      // Mapper les noms de catégories françaises vers les ObjectId réels
+      const categoryName = object.categorie;
+      if (categoryName === 'Électronique' || categoryName === 'electronique') {
+        object.category = TEST_CATEGORIES['Électronique'];
+      } else if (categoryName === 'Multimédia' || categoryName === 'multimedia') {
+        object.category = TEST_CATEGORIES['Multimédia'];
+      } else if (categoryName === 'Mode' || categoryName === 'mode') {
+        object.category = TEST_CATEGORIES['Mode & Accessoires'];
+      } else if (categoryName === 'Maison' || categoryName === 'maison') {
+        object.category = TEST_CATEGORIES['Maison & Jardin'];
+      } else if (categoryName === 'Sports' || categoryName === 'sports') {
+        object.category = TEST_CATEGORIES['Sports & Loisirs'];
+      } else {
+        // Par défaut, utiliser Électronique
+        object.category = TEST_CATEGORIES['Électronique'];
+      }
+      delete object.categorie;
+    }
+    if (object.etat) {
+      object.condition = object.etat.toLowerCase();
+      delete object.etat;
+    }
 
     // Mode mock
     if (this.isMockMode()) {
@@ -250,32 +284,34 @@ class E2EHelpers {
       };
     }
 
-    // Mode réel
+    // Mode réel : appel HTTP externe
     try {
-      console.log('🌐 Mode réel actif pour createObject');
-      const app = require('../../../app');
-      const response = await supertest(app)
-        .post('/api/objects')
-        .set('Authorization', `Bearer ${token}`)
-        .send(object);
+      console.log('🌐 Mode réel actif pour createObject (serveur externe)');
+      console.log('📨 Données envoyées:', object);
+      const response = await api.post('/api/objects', object, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log(`📡 Réponse API createObject: status=${response.status}, data=`, response.data);
 
       if (response.status === 201) {
         return {
           success: true,
-          object: response.body
+          object: response.data.object || response.data // Support des deux formats
         };
       } else {
         return {
           success: false,
           status: response.status,
-          error: response.body
+          error: response.data
         };
       }
     } catch (error) {
+      console.error('❌ Erreur HTTP createObject:', error.response?.data || error.message);
       return {
         success: false,
-        status: 500,
-        error: error.message
+        status: error.response?.status || 500,
+        error: error.response?.data || error.message
       };
     }
   }
@@ -285,6 +321,55 @@ class E2EHelpers {
    */
   static async wait(ms = 100) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Récupérer les catégories disponibles
+   */
+  static async getCategories() {
+    // Mode mock
+    if (this.isMockMode()) {
+      console.log('🤖 Mode mock actif pour getCategories');
+      return {
+        success: true,
+        categories: Object.keys(TEST_CATEGORIES).map(name => ({
+          _id: TEST_CATEGORIES[name],
+          name: name
+        }))
+      };
+    }
+
+    // Mode réel : appel HTTP externe
+    try {
+      console.log('🌐 Mode réel actif pour getCategories (serveur externe)');
+      const response = await api.get('/api/categories');
+
+      if (response.status === 200) {
+        return {
+          success: true,
+          categories: response.data
+        };
+      } else {
+        return {
+          success: false,
+          status: response.status,
+          error: response.data
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        status: error.response?.status || 500,
+        error: error.response?.data || error.message
+      };
+    }
+  }
+
+  /**
+   * Obtenir l'ObjectId d'une catégorie par son nom
+   */
+  static getCategoryId(categoryName) {
+    return TEST_CATEGORIES[categoryName] || TEST_CATEGORIES['Électronique'];
   }
 
   /**
@@ -478,15 +563,17 @@ class E2EHelpers {
       // Utiliser mongoose directement pour nettoyer
       const mongoose = require('mongoose');
       
-      // Supprimer tous les utilisateurs de test (contenant "test" dans l'email)
-      if (mongoose.connection.readyState === 1) {
+      // Supprimer tous les utilisateurs de test (contenant "test" ou "payment_" dans l'email)
+      if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
         await mongoose.connection.db.collection('users').deleteMany({
-          email: { $regex: /test.*@example\.com/ }
+          email: { $regex: /(test|payment_|e2e_).*@(example\.com|test-cadok\.com|cadok\.com)/ }
         });
         await mongoose.connection.db.collection('objects').deleteMany({});
         await mongoose.connection.db.collection('trades').deleteMany({});
         await mongoose.connection.db.collection('categories').deleteMany({});
         console.log('🗑️ Données de test supprimées');
+      } else {
+        console.log('⚠️ Connexion MongoDB non disponible pour le nettoyage');
       }
       
       return { success: true };
@@ -876,21 +963,29 @@ class E2EHelpers {
       };
     }
 
-    // Mode réel
+    // Mode réel : appel HTTP externe
     try {
-      const app = require('../../../app');
-      const response = await supertest(app)
-        .post('/api/trades')
-        .set('Authorization', `Bearer ${token}`)
-        .send(tradeData);
+      console.log('🌐 Mode réel actif pour createTrade (serveur externe)');
+      const response = await api.post('/api/trades', tradeData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       if (response.status === 201) {
-        return { success: true, trade: response.body };
+        // ✅ FIX: S'adapter au nouveau format de réponse API
+        if (response.data.success && response.data.trade) {
+          return { success: true, trade: response.data.trade };
+        } else {
+          return { success: true, trade: response.data };
+        }
       } else {
-        return { success: false, status: response.status, error: response.body };
+        return { success: false, status: response.status, error: response.data };
       }
     } catch (error) {
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        status: error.response?.status || 500,
+        error: error.response?.data || error.message 
+      };
     }
   }
 
@@ -1071,20 +1166,29 @@ class E2EHelpers {
       };
     }
 
-    // Mode réel
+    // Mode réel : appel HTTP externe
     try {
-      const app = require('../../../app');
-      const response = await supertest(app)
-        .get('/api/trades')
-        .set('Authorization', `Bearer ${token}`);
+      console.log('🌐 Mode réel actif pour getUserTrades (serveur externe)');
+      const response = await api.get('/api/trades', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       if (response.status === 200) {
-        return { success: true, trades: response.body };
+        // ✅ FIX: S'adapter au nouveau format de réponse API
+        if (response.data.success && response.data.trades) {
+          return { success: true, trades: response.data.trades };
+        } else {
+          return { success: true, trades: Array.isArray(response.data) ? response.data : [] };
+        }
       } else {
-        return { success: false, status: response.status, error: response.body };
+        return { success: false, status: response.status, error: response.data };
       }
     } catch (error) {
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        status: error.response?.status || 500,
+        error: error.response?.data || error.message 
+      };
     }
   }
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const ObjectModel = require('../models/Object');
+const Category = require('../models/Category');
 const User = require('../models/User');
 const auth = require('../middlewares/auth');
 const mongoose = require('mongoose');
@@ -7,6 +8,9 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+
+// 🛡️ IMPORTATION MIDDLEWARE DE SÉCURITÉ
+const SecurityMiddleware = require('../middleware/security');
 
 const router = express.Router();
 
@@ -87,24 +91,25 @@ const createObjectLimiter = rateLimit({
   }
 });
 
-// 🔼 1. Ajouter un objet
+// �️ CRÉATION D'OBJET SÉCURISÉE
 // POST /api/objects
-router.post('/', createObjectLimiter, auth, async (req, res) => {
+router.post('/', 
+  createObjectLimiter, 
+  auth, 
+  SecurityMiddleware.validateObjectCreation(), // Validation sécurisée
+  SecurityMiddleware.handleValidationErrors(), // Gestion des erreurs
+  async (req, res) => {
   const { title, description, category, imageUrl, images, attributes } = req.body;
-  console.log('POST /api/objects', req.body);
+  console.log('🛡️ POST /api/objects SÉCURISÉ', req.body);
 
-  // Validate required fields
-  if (
-    !title || typeof title !== 'string' || title.trim().length === 0 ||
-    !description || typeof description !== 'string' || description.trim().length === 0 ||
-    !category || typeof category !== 'string' || category.trim().length === 0
-  ) {
-    return res.status(400).json({ error: 'Les champs title, description et category sont requis et ne peuvent pas être vides.' });
-  }
-
-  // Validate estimatedValue (no negative values)
+  // Les validations de base sont maintenant gérées par le middleware de sécurité
+  // Validation supplémentaire pour estimatedValue
   if (req.body.estimatedValue && req.body.estimatedValue < 0) {
-    return res.status(400).json({ error: 'La valeur estimée ne peut pas être négative.' });
+    return res.status(400).json({ 
+      success: false,
+      error: 'La valeur estimée ne peut pas être négative.',
+      code: 'NEGATIVE_VALUE'
+    });
   }
 
   // Validate title and description length
@@ -139,17 +144,53 @@ router.post('/', createObjectLimiter, auth, async (req, res) => {
     processedImages = imageValidation.processedImages;
   }
 
+  // Convert category name to ObjectId
+  let categoryId = category;
+  console.log('📋 Conversion catégorie - input:', category, typeof category);
+  
+  if (category && typeof category === 'string') {
+    try {
+      console.log('🔍 Recherche catégorie par nom:', category);
+      const categoryDoc = await Category.findOne({ name: category });
+      console.log('📄 Catégorie trouvée:', categoryDoc);
+      
+      if (!categoryDoc) {
+        console.error('❌ Catégorie non trouvée:', category);
+        return res.status(400).json({ 
+          error: 'Catégorie non trouvée',
+          category: category
+        });
+      }
+      categoryId = categoryDoc._id;
+      console.log('✅ Conversion catégorie réussie:', category, '-> ObjectId:', categoryId);
+    } catch (err) {
+      console.error('❌ Erreur lors de la recherche de catégorie:', err);
+      return res.status(500).json({ error: 'Erreur lors de la recherche de catégorie' });
+    }
+  }
+
+  console.log('📦 Données pour nouveau ObjectModel:', {
+    title,
+    description,
+    category: categoryId,
+    imageUrl,
+    images: processedImages?.length || 0,
+    owner: req.user.id,
+    estimatedValue: req.body.estimatedValue || 0
+  });
+
   try {
     const newObject = new ObjectModel({
       title,
       description,
-      category,
+      category: categoryId, // Utilise l'ObjectId de la catégorie
       imageUrl,
       images: processedImages,
       owner: req.user.id,
       attributes: attributes || {},
       estimatedValue: req.body.estimatedValue || 0
     });
+    console.log('📋 ObjectModel créé, tentative de sauvegarde...');
     const saved = await newObject.save();
     res.status(201).json({ success: true, object: saved });
   } catch (err) {

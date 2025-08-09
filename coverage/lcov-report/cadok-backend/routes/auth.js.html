@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">25% </span>
+                <span class="strong">17.14% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>35/140</span>
+                <span class='fraction'>24/140</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">8.69% </span>
+                <span class="strong">4.34% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/46</span>
+                <span class='fraction'>2/46</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">8.33% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/12</span>
+                <span class='fraction'>0/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">26.71% </span>
+                <span class="strong">18.32% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>35/131</span>
+                <span class='fraction'>24/131</span>
             </div>
         
             
@@ -411,21 +411,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -680,22 +680,22 @@ router.post(
     body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères'),
     body('pseudo').isLength({ min: 3 }).withMessage('Le pseudo doit contenir au moins 3 caractères')
   ],
-  async (req, res) =&gt; {
-    const errors = validationResult(req);
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!errors.isEmpty()) {
+<span class="fstat-no" title="function not covered" >  as</span>ync (req, res) =&gt; {
+    const errors = <span class="cstat-no" title="statement not covered" >validationResult(req);</span>
+<span class="cstat-no" title="statement not covered" >    if (!errors.isEmpty()) {</span>
 <span class="cstat-no" title="statement not covered" >      return res.status(400).json({ errors: errors.array() });</span>
     }
-    const { email, password, pseudo, city } = req.body;
+    const { email, password, pseudo, city } = <span class="cstat-no" title="statement not covered" >req.body;</span>
     
-    console.log('🔍 [DEBUG REGISTER] Début inscription pour:', email);
-    console.log('🔍 [DEBUG REGISTER] NODE_ENV:', process.env.NODE_ENV);
+<span class="cstat-no" title="statement not covered" >    console.log('🔍 [DEBUG REGISTER] Début inscription pour:', email);</span>
+<span class="cstat-no" title="statement not covered" >    console.log('🔍 [DEBUG REGISTER] NODE_ENV:', process.env.NODE_ENV);</span>
     
-    try {
-      console.log('🔍 [DEBUG REGISTER] Vérification utilisateur existant...');
-      const existing = await User.findOne({ email });
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (existing) {
-        console.log('❌ [DEBUG REGISTER] Email déjà utilisé');
-        return res.status(400).json({ message: 'Email déjà utilisé' });
+<span class="cstat-no" title="statement not covered" >    try {</span>
+<span class="cstat-no" title="statement not covered" >      console.log('🔍 [DEBUG REGISTER] Vérification utilisateur existant...');</span>
+      const existing = <span class="cstat-no" title="statement not covered" >await User.findOne({ email });</span>
+<span class="cstat-no" title="statement not covered" >      if (existing) {</span>
+<span class="cstat-no" title="statement not covered" >        console.log('❌ [DEBUG REGISTER] Email déjà utilisé');</span>
+<span class="cstat-no" title="statement not covered" >        return res.status(400).json({ message: 'Email déjà utilisé' });</span>
       }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      console.log('🔍 [DEBUG REGISTER] Hash du mot de passe...');</span>
@@ -880,7 +880,7 @@ module.exports = router;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-08T15:46:43.887Z
+                at 2025-08-09T03:51:31.049Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -1,6 +1,6 @@
 /**
  * 🔧 SETUP ULTRA-MINIMALISTE
- * PLUS AUCUNE CONNEXION - SEULEMENT CONFIGURATION
+ * PLUS AUCUNE CONNEXION - SEULEMENT CONFIGURATION + CATÉGORIES DE TEST
  */
 
 // FORCER le chargement immédiat de .env.test AVANT tout
@@ -20,6 +20,17 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'cadok-jwt-secret-super-secur
 process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_MOCK_KEY_FOR_TESTS';
 process.env.STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_MOCK_KEY_FOR_TESTS';
 
-// PLUS AUCUN SETUP beforeAll/afterAll - Laisser app.js gérer complètement
+// ✅ SETUP global pour catégories de test
+beforeAll(async () => {
+  try {
+    console.log('📂 [E2E SETUP] Initialisation catégories de test...');
+    const { insertTestCategories } = require('../insert-test-categories');
+    await insertTestCategories();
+    console.log('✅ [E2E SETUP] Catégories de test prêtes');
+  } catch (error) {
+    console.error('❌ [E2E SETUP] Erreur catégories:', error.message);
+    // Ne pas faire échouer les tests pour les catégories
+  }
+}, 30000);
 
 console.log('✅ [E2E SETUP] Configuration ultra-minimaliste chargée');

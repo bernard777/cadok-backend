@@ -4,7 +4,10 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
-// 🔧 CONFIGURATION INTELLIGENTE D'ENVIRONNEMENT
+// �️ IMPORTATION MIDDLEWARE DE SÉCURITÉ
+const SecurityMiddleware = require('./middleware/security');
+
+// �🔧 CONFIGURATION INTELLIGENTE D'ENVIRONNEMENT
 // Charger le bon fichier .env selon le contexte
 if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
   // Mode test : utiliser .env.test
@@ -18,16 +21,39 @@ if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
 
 const app = express();
 
-// 🔗 CONNEXION MONGODB (pour les tests E2E avec supertest)
+// 🔗 CONNEXION MONGODB (pour production uniquement)
 const { connectToDatabase } = require('./db');
 
-// Établir la connexion MongoDB au démarrage de l'application
-connectToDatabase().catch(error => {
-  console.error('❌ [APP] Erreur connexion MongoDB:', error.message);
-  process.exit(1);
-});
+// Établir la connexion MongoDB SEULEMENT en mode production ou développement
+// En mode test, les tests gèrent leur propre connexion
+if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
+  connectToDatabase().catch(error => {
+    console.error('❌ [APP] Erreur connexion MongoDB:', error.message);
+    process.exit(1);
+  });
+  console.log('🔗 [APP] Connexion MongoDB initialisée pour mode production');
+} else {
+  console.log('🧪 [APP] Mode test - Connexion MongoDB gérée par les tests');
+}
 
-// Middleware
+// 🛡️ MIDDLEWARE DE SÉCURITÉ (APPLIQUÉS EN PREMIER)
+console.log('🛡️ [APP] Configuration des middlewares de sécurité...');
+
+// Headers sécurisés avec Helmet
+app.use(SecurityMiddleware.setupHelmet());
+
+// Rate limiting global
+app.use(SecurityMiddleware.createGlobalRateLimit());
+
+// Sanitisation des entrées (appliqué AVANT les autres middlewares)
+app.use(SecurityMiddleware.sanitizeInput());
+
+// Détection d'injections SQL
+app.use(SecurityMiddleware.detectSQLInjection());
+
+console.log('✅ [APP] Middlewares de sécurité configurés');
+
+// Middleware standards (APRÈS la sécurité)
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
