@@ -3,7 +3,6 @@ if (process.env.NODE_ENV !== 'test') {
   require('dotenv').config();
 }
 const { connectToDatabase } = require('./db');
-const { initializeCategories } = require('./utils/initCategories');
 const app = require('./app');
 
 const PORT = process.env.PORT || 5000;
