@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "nodemon server.js",
     "dev:prod": "cross-env NODE_ENV=production MONGODB_URI=mongodb://localhost:27017/cadok nodemon server.js",
     "dev:test": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/cadok_test nodemon server.js", 
     "dev:dev": "cross-env NODE_ENV=development MONGODB_URI=mongodb://localhost:27017/cadok_dev nodemon server.js",
