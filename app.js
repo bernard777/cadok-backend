@@ -136,6 +136,16 @@ if (fs.existsSync(conversationsRoutePath)) {
 
 // 🚀 NOUVELLES FONCTIONNALITÉS AVANCÉES
 
+// Ajout des routes Features (gestion des toggles)
+const featuresRoutePath = path.join(__dirname, 'routes', 'features.js');
+if (fs.existsSync(featuresRoutePath)) {
+  const featuresRoutes = require('./routes/features');
+  app.use('/api/features', featuresRoutes);
+  console.log('✅ [APP] Routes /api/features enregistrées avec succès');
+} else {
+  console.warn("Warning: './routes/features.js' not found. '/api/features' route not registered.");
+}
+
 // Ajout des routes Analytics
 const analyticsRoutePath = path.join(__dirname, 'routes', 'analytics.js');
 if (fs.existsSync(analyticsRoutePath)) {

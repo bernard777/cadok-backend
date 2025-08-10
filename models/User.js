@@ -92,6 +92,14 @@ const userSchema = new mongoose.Schema({
       comment: String,
       createdAt: { type: Date, default: Date.now }
     }]
+  },
+
+  // 🚀 NOUVELLES FONCTIONNALITÉS AVANCÉES - Préférences utilisateur
+  featurePreferences: {
+    analytics: { type: Boolean, default: true },
+    notifications: { type: Boolean, default: true },
+    eco: { type: Boolean, default: true },
+    gaming: { type: Boolean, default: true }
   }
 }, { timestamps: true });
 
