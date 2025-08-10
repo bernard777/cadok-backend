@@ -1,7 +1,62 @@
+/**
+ * 🔔 ROUTES NOTIFICATIONS - CADOK
+ * API pour les notifications intelligentes
+ */
+
 const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const authMiddleware = require('../middlewares/auth'); // Assuming you have auth middleware
+const SmartNotificationService = require('../services/smartNotificationService');
+
+const notificationService = new SmartNotificationService();
+
+/**
+ * POST /api/notifications/send-contextual
+ * Envoie des notifications contextuelles
+ */
+router.post('/send-contextual', authMiddleware, async (req, res) => {
+  try {
+    const result = await notificationService.sendContextualNotifications();
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur notifications contextuelles:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/notifications/send-location-based
+ * Notifications basées sur la géolocalisation
+ */
+router.post('/send-location-based', authMiddleware, async (req, res) => {
+  try {
+    const result = await notificationService.sendLocationBasedNotifications();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('❌ Erreur notifications géolocalisées:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/notifications/personalized/:type
+ * Notification personnalisée
+ */
+router.post('/personalized/:type', authMiddleware, async (req, res) => {
+  try {
+    const { type } = req.params;
+    const result = await notificationService.sendPersonalizedNotification(
+      req.user.id, 
+      type, 
+      req.body
+    );
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur notification personnalisée:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
 
 // GET /notifications - Récupérer toutes les notifications de l'utilisateur connecté
 router.get('/', authMiddleware, async (req, res) => {
@@ -15,6 +70,42 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la récupération des notifications:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des notifications' });
+  }
+});
+
+/**
+ * GET /api/notifications/user
+ * Récupérer les notifications d'un utilisateur avec pagination
+ */
+router.get('/user', authMiddleware, async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    
+    const notifications = await Notification.find({ user: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+
+    const total = await Notification.countDocuments({ user: req.user.id });
+    const unreadCount = await Notification.countDocuments({ 
+      user: req.user.id, 
+      read: false 
+    });
+
+    res.json({
+      success: true,
+      notifications,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        unreadCount
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération notifications:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
 
@@ -53,6 +144,31 @@ router.patch('/mark-all-read', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * PATCH /api/notifications/read-all
+ * Marquer toutes les notifications comme lues (nouvelle version)
+ */
+router.patch('/read-all', authMiddleware, async (req, res) => {
+  try {
+    const result = await Notification.updateMany(
+      { user: req.user.id, read: false },
+      { 
+        read: true,
+        isRead: true,
+        readAt: new Date()
+      }
+    );
+
+    res.json({ 
+      success: true, 
+      updatedCount: result.modifiedCount 
+    });
+  } catch (error) {
+    console.error('❌ Erreur marquage toutes lues:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 // GET /notifications/unread-count - Compter les notifications non lues
 router.get('/unread-count', authMiddleware, async (req, res) => {
   try {
@@ -87,6 +203,39 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/notifications/stats
+ * Statistiques des notifications
+ */
+router.get('/stats', authMiddleware, async (req, res) => {
+  try {
+    const [total, unread, byType] = await Promise.all([
+      Notification.countDocuments({ user: req.user.id }),
+      Notification.countDocuments({ user: req.user.id, read: false }),
+      Notification.aggregate([
+        { $match: { user: req.user.id } },
+        { $group: { _id: '$type', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ])
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        total,
+        unread,
+        byType: byType.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {})
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur stats notifications:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 // Fonction utilitaire pour créer une notification
 const createNotification = async (userId, message, type, tradeId = null) => {
   try {
@@ -105,6 +254,28 @@ const createNotification = async (userId, message, type, tradeId = null) => {
     throw error;
   }
 };
+
+/**
+ * GET /api/notifications/smart
+ * Récupère les notifications intelligentes pour l'utilisateur
+ */
+router.get('/smart', authMiddleware, async (req, res) => {
+  try {
+    const notifications = await notificationService.getSmartNotifications(req.user.id);
+    
+    res.json({
+      success: true,
+      notifications: notifications || [],
+      message: 'Notifications intelligentes récupérées avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur récupération notifications intelligentes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des notifications intelligentes'
+    });
+  }
+});
 
 module.exports = router;
 module.exports.createNotification = createNotification;

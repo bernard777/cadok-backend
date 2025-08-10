@@ -1,0 +1,51 @@
+{
+  "displayName": "CADOK E2E - Nouvelles Fonctionnalités Isolées",
+  "testEnvironment": "node",
+  "testTimeout": 30000,
+  "setupFilesAfterEnv": [
+    "<rootDir>/tests/e2e/setup-nouvelles-fonctionnalites.js"
+  ],
+  "testMatch": [
+    "**/tests/e2e/*nouvelles*.test.js",
+    "**/tests/e2e/admin-system-complete.test.js",
+    "**/tests/e2e/gamification-features.test.js",
+    "**/tests/e2e/mobile-interfaces.test.js",
+    "**/tests/e2e/master-suite.test.js"
+  ],
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "/coverage/",
+    "/tests/(?!e2e/.*nouvelles|e2e/admin-system|e2e/gamification|e2e/mobile-interfaces|e2e/master-suite)",
+    "/tests/e2e/(?!.*nouvelles|admin-system-complete|gamification-features|mobile-interfaces|master-suite)"
+  ],
+  "collectCoverageFrom": [
+    "routes/admin/**/*.js",
+    "middlewares/adminAuth.js",
+    "services/gamificationService.js",
+    "models/User.js",
+    "scripts/init-super-admin.js",
+    "!**/__tests__/**",
+    "!**/node_modules/**"
+  ],
+  "coverageDirectory": "coverage/e2e-nouvelles-fonctionnalites",
+  "coverageReporters": [
+    "text",
+    "lcov",
+    "html"
+  ],
+  "verbose": true,
+  "detectOpenHandles": true,
+  "forceExit": true,
+  "maxWorkers": 1,
+  "reporters": [
+    "default"
+  ],
+  "moduleFileExtensions": [
+    "js",
+    "json"
+  ],
+  "transform": {},
+  "clearMocks": true,
+  "resetMocks": true,
+  "restoreMocks": true
+}

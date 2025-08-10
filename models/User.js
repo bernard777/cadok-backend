@@ -22,6 +22,25 @@ const userSchema = new mongoose.Schema({
   stripeCustomerId: { type: String, default: null },
   stripeSubscriptionId: { type: String, default: null },
   lastPaymentDate: { type: Date, default: null },
+  
+  // 🛡️ SYSTÈME D'ADMINISTRATION
+  role: { 
+    type: String, 
+    enum: ['user', 'moderator', 'admin', 'super_admin'], 
+    default: 'user' 
+  },
+  isAdmin: { type: Boolean, default: false },
+  adminPermissions: {
+    manageEvents: { type: Boolean, default: false },
+    manageUsers: { type: Boolean, default: false },
+    moderateContent: { type: Boolean, default: false },
+    viewAnalytics: { type: Boolean, default: false },
+    systemConfig: { type: Boolean, default: false }
+  },
+  adminActivatedAt: { type: Date, default: null },
+  adminActivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  adminNotes: { type: String, default: '' },
+  
   // Méthodes de paiement
   paymentMethods: [{
     stripePaymentMethodId: { type: String, required: true },

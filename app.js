@@ -134,6 +134,65 @@ if (fs.existsSync(conversationsRoutePath)) {
   console.warn("Warning: './routes/conversations.js' not found. '/api/conversations' route not registered.");
 }
 
+// 🚀 NOUVELLES FONCTIONNALITÉS AVANCÉES
+
+// Ajout des routes Analytics
+const analyticsRoutePath = path.join(__dirname, 'routes', 'analytics.js');
+if (fs.existsSync(analyticsRoutePath)) {
+  const analyticsRoutes = require('./routes/analytics');
+  app.use('/api/analytics', analyticsRoutes);
+} else {
+  console.warn("Warning: './routes/analytics.js' not found. '/api/analytics' route not registered.");
+}
+
+// Ajout des routes Eco-Impact
+const ecoRoutePath = path.join(__dirname, 'routes', 'eco.js');
+if (fs.existsSync(ecoRoutePath)) {
+  const ecoRoutes = require('./routes/eco');
+  app.use('/api/eco', ecoRoutes);
+} else {
+  console.warn("Warning: './routes/eco.js' not found. '/api/eco' route not registered.");
+}
+
+// Ajout des routes Gamification
+const gamificationRoutePath = path.join(__dirname, 'routes', 'gamification.js');
+if (fs.existsSync(gamificationRoutePath)) {
+  const gamificationRoutes = require('./routes/gamification');
+  app.use('/api/gamification', gamificationRoutes);
+} else {
+  console.warn("Warning: './routes/gamification.js' not found. '/api/gamification' route not registered.");
+}
+
+// Ajout des routes Admin Événements
+const adminEventsRoutePath = path.join(__dirname, 'routes', 'admin', 'events.js');
+if (fs.existsSync(adminEventsRoutePath)) {
+  const adminEventsRoutes = require('./routes/admin/events');
+  app.use('/api/admin/events', adminEventsRoutes);
+  console.log('✅ Admin Events routes registered: /api/admin/events');
+} else {
+  console.warn("Warning: './routes/admin/events.js' not found. '/api/admin/events' route not registered.");
+}
+
+// Ajout des routes Admin Statistiques
+const adminStatsRoutePath = path.join(__dirname, 'routes', 'admin', 'stats.js');
+if (fs.existsSync(adminStatsRoutePath)) {
+  const adminStatsRoutes = require('./routes/admin/stats');
+  app.use('/api/admin', adminStatsRoutes);
+  console.log('✅ Admin Stats routes registered: /api/admin/stats');
+} else {
+  console.warn("Warning: './routes/admin/stats.js' not found. '/api/admin/stats' route not registered.");
+}
+
+// Ajout des routes Admin Utilisateurs
+const adminUsersRoutePath = path.join(__dirname, 'routes', 'admin', 'users.js');
+if (fs.existsSync(adminUsersRoutePath)) {
+  const adminUsersRoutes = require('./routes/admin/users');
+  app.use('/api/admin/users', adminUsersRoutes);
+  console.log('✅ Admin Users routes registered: /api/admin/users');
+} else {
+  console.warn("Warning: './routes/admin/users.js' not found. '/api/admin/users' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');
