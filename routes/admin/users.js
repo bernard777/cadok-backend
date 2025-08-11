@@ -54,7 +54,7 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select('pseudo email role isAdmin adminPermissions adminActivatedAt city createdAt')
+      .select('pseudo email role isAdmin adminPermissions adminActivatedAt city createdAt status bannedAt bannedUntil banReason suspendedAt suspendedUntil suspendReason')
       .populate('adminActivatedBy', 'pseudo email')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -213,25 +213,56 @@ router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [
       totalUsers,
-      adminCount,
-      moderatorCount,
+      activeUsers,
+      pendingUsers,
+      inactiveUsers,
+      suspendedUsers,
+      bannedUsers,
+      regularUsers,
+      moderators,
+      admins,
+      superAdmins,
       recentUsers
     ] = await Promise.all([
       User.countDocuments(),
-      User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ status: 'active' }),
+      User.countDocuments({ status: 'pending' }),
+      User.countDocuments({ status: 'inactive' }),
+      User.countDocuments({ status: 'suspended' }),
+      User.countDocuments({ status: 'banned' }),
+      User.countDocuments({ $or: [{ role: 'user' }, { role: { $exists: false } }] }),
       User.countDocuments({ role: 'moderator' }),
+      User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ role: 'super_admin' }),
       User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
     ]);
 
     res.json({
       success: true,
       stats: {
+        // Totaux
         totalUsers,
-        adminCount,
-        moderatorCount,
-        regularUsers: totalUsers - adminCount - moderatorCount,
         recentUsers,
-        adminPercentage: Math.round((adminCount / totalUsers) * 100 * 10) / 10
+        
+        // Par statut
+        activeUsers,
+        pendingUsers,
+        inactiveUsers,
+        suspendedUsers,
+        bannedUsers,
+        
+        // Par rôle
+        regularUsers,
+        moderators,
+        admins,
+        superAdmins,
+        
+        // Statistiques dérivées
+        adminPercentage: Math.round(((moderators + admins + superAdmins) / totalUsers) * 100 * 10) / 10,
+        activePercentage: Math.round((activeUsers / totalUsers) * 100 * 10) / 10,
+        
+        // Métadonnées
+        lastUpdated: new Date()
       }
     });
   } catch (error) {
@@ -295,6 +326,311 @@ router.post('/create-admin', authMiddleware, superAdminMiddleware, async (req, r
     });
   } catch (error) {
     console.error('❌ Erreur création admin:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/ban
+ * Bannir un utilisateur (suspendre définitivement)
+ */
+router.post('/:userId/ban', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason = 'Violation des conditions d\'utilisation', duration = null } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    // Empêcher de bannir les admins (sauf pour super admin)
+    if (user.isAdmin && req.user.role !== 'super_admin') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Seuls les super admins peuvent bannir des administrateurs' 
+      });
+    }
+
+    // Calculer la date d'expiration du ban
+    let bannedUntil = null;
+    if (duration) {
+      const durationMs = duration * 24 * 60 * 60 * 1000; // durée en jours
+      bannedUntil = new Date(Date.now() + durationMs);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      status: 'banned',
+      bannedAt: new Date(),
+      bannedUntil: bannedUntil,
+      banReason: reason,
+      bannedBy: req.user.id,
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] BANNI par ${req.user.pseudo}: ${reason}${duration ? ` (${duration} jours)` : ' (définitif)'}`
+    }, { new: true });
+
+    console.log(`🚫 BAN: ${user.pseudo} banni par ${req.user.pseudo} - Raison: ${reason}${duration ? ` (${duration} jours)` : ' (définitif)'}`);
+
+    res.json({
+      success: true,
+      message: `Utilisateur banni ${duration ? 'temporairement' : 'définitivement'}`,
+      user: {
+        id: updatedUser._id,
+        pseudo: updatedUser.pseudo,
+        email: updatedUser.email,
+        status: updatedUser.status,
+        bannedUntil: updatedUser.bannedUntil,
+        banReason: updatedUser.banReason
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur bannissement:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/unban
+ * Débannir un utilisateur banni ou désuspendre un utilisateur suspendu
+ */
+router.post('/:userId/unban', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason = 'Révision du ban' } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    if (user.status !== 'banned' && user.status !== 'suspended') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Utilisateur non banni ou suspendu' 
+      });
+    }
+
+    // Déterminer les champs à nettoyer selon le statut actuel
+    const fieldsToReset = {
+      status: 'active',
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] DÉBANNI/DÉSUSPENDU par ${req.user.pseudo}: ${reason}`
+    };
+
+    if (user.status === 'banned') {
+      fieldsToReset.bannedAt = null;
+      fieldsToReset.bannedUntil = null;
+      fieldsToReset.banReason = null;
+      fieldsToReset.bannedBy = null;
+    } else if (user.status === 'suspended') {
+      fieldsToReset.suspendedAt = null;
+      fieldsToReset.suspendedUntil = null;
+      fieldsToReset.suspendReason = null;
+      fieldsToReset.suspendedBy = null;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, fieldsToReset, { new: true });
+
+    console.log(`✅ UNBAN/UNSUSPEND: ${user.pseudo} ${user.status === 'banned' ? 'débanni' : 'désuspendu'} par ${req.user.pseudo} - Raison: ${reason}`);
+
+    res.json({
+      success: true,
+      message: user.status === 'banned' ? 'Utilisateur débanni avec succès' : 'Utilisateur désuspendu avec succès',
+      user: {
+        id: updatedUser._id,
+        pseudo: updatedUser.pseudo,
+        email: updatedUser.email,
+        status: updatedUser.status
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur débannissement:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/suspend
+ * Suspendre temporairement un utilisateur
+ */
+router.post('/:userId/suspend', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason = 'Vérification en cours', duration = 7 } = req.body; // 7 jours par défaut
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    const suspendedUntil = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
+
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      status: 'suspended',
+      suspendedAt: new Date(),
+      suspendedUntil: suspendedUntil,
+      suspendReason: reason,
+      suspendedBy: req.user.id,
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] SUSPENDU par ${req.user.pseudo}: ${reason} (${duration} jours)`
+    }, { new: true });
+
+    console.log(`⏸️ SUSPEND: ${user.pseudo} suspendu par ${req.user.pseudo} pour ${duration} jours - Raison: ${reason}`);
+
+    res.json({
+      success: true,
+      message: `Utilisateur suspendu pour ${duration} jours`,
+      user: {
+        id: updatedUser._id,
+        pseudo: updatedUser.pseudo,
+        email: updatedUser.email,
+        status: updatedUser.status,
+        suspendedUntil: updatedUser.suspendedUntil,
+        suspendReason: updatedUser.suspendReason
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur suspension:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/verify
+ * Vérifier manuellement un utilisateur (admin)
+ */
+router.post('/:userId/verify', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason = 'Vérification manuelle par admin' } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      verified: true,
+      emailVerified: true, // Considéré comme vérifié par admin
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] VÉRIFIÉ MANUELLEMENT par ${req.user.pseudo}: ${reason}`
+    }, { new: true });
+
+    console.log(`✅ VERIFY: ${user.pseudo} vérifié manuellement par ${req.user.pseudo}`);
+
+    res.json({
+      success: true,
+      message: 'Utilisateur vérifié avec succès',
+      user: {
+        id: updatedUser._id,
+        pseudo: updatedUser.pseudo,
+        email: updatedUser.email,
+        verified: updatedUser.verified,
+        emailVerified: updatedUser.emailVerified
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur vérification manuelle:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/activate
+ * Activer un compte en attente (pending → active)
+ */
+router.post('/:userId/activate', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    if (user.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Seuls les comptes en attente peuvent être activés'
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      status: 'active',
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] ACTIVÉ par ${req.user.pseudo}`
+    }, { new: true });
+
+    console.log(`✅ ACTIVATE: ${user.pseudo} activé par ${req.user.pseudo}`);
+
+    res.json({
+      success: true,
+      message: 'Compte activé avec succès',
+      user: {
+        id: updatedUser._id,
+        pseudo: updatedUser.pseudo,
+        email: updatedUser.email,
+        status: updatedUser.status
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur activation:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/reactivate
+ * Réactiver un compte inactif (inactive → active)
+ */
+router.post('/:userId/reactivate', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    if (user.status !== 'inactive') {
+      return res.status(400).json({
+        success: false,
+        error: 'Seuls les comptes inactifs peuvent être réactivés'
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      status: 'active',
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] RÉACTIVÉ par ${req.user.pseudo}`
+    }, { new: true });
+
+    console.log(`🔄 REACTIVATE: ${user.pseudo} réactivé par ${req.user.pseudo}`);
+
+    res.json({
+      success: true,
+      message: 'Compte réactivé avec succès',
+      user: {
+        id: updatedUser._id,
+        pseudo: updatedUser.pseudo,
+        email: updatedUser.email,
+        status: updatedUser.status
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur réactivation:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });

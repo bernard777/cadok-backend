@@ -7,6 +7,19 @@ const userSchema = new mongoose.Schema({
   pseudo: { type: String, required: true },
   avatar: { type: String, default: '' },
   city: { type: String, required: true },
+  phone: { type: String, required: false }, // Numéro de téléphone pour SMS
+  
+  // 🔐 SYSTÈME DE VÉRIFICATION EMAIL + SMS
+  verified: { type: Boolean, default: false }, // Vérification globale (email ET SMS)
+  emailVerified: { type: Boolean, default: false },
+  phoneVerified: { type: Boolean, default: false },
+  emailVerificationToken: { type: String, default: null },
+  emailVerificationExpires: { type: Date, default: null },
+  phoneVerificationCode: { type: String, default: null },
+  phoneVerificationExpires: { type: Date, default: null },
+  phoneVerificationAttempts: { type: Number, default: 0 },
+  lastPhoneVerificationSent: { type: Date, default: null },
+  
   favoriteCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
   notificationPreferences: {
     notifications_push: { type: Boolean, default: true },
@@ -40,6 +53,23 @@ const userSchema = new mongoose.Schema({
   adminActivatedAt: { type: Date, default: null },
   adminActivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   adminNotes: { type: String, default: '' },
+  
+  // 🚫 SYSTÈME DE BANNISSEMENT ET STATUTS
+  status: { 
+    type: String, 
+    enum: ['active', 'inactive', 'pending', 'suspended', 'banned'], 
+    default: 'active' 
+  },
+  // Champs pour les bans
+  bannedAt: { type: Date, default: null },
+  bannedUntil: { type: Date, default: null }, // null = ban définitif
+  banReason: { type: String, default: null },
+  bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  // Champs pour les suspensions
+  suspendedAt: { type: Date, default: null },
+  suspendedUntil: { type: Date, default: null },
+  suspendReason: { type: String, default: null },
+  suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   
   // Méthodes de paiement
   paymentMethods: [{
@@ -102,5 +132,33 @@ const userSchema = new mongoose.Schema({
     gaming: { type: Boolean, default: true }
   }
 }, { timestamps: true });
+
+// 🔐 MÉTHODE POUR CALCULER LA VÉRIFICATION GLOBALE
+userSchema.pre('save', function(next) {
+  // Mise à jour automatique du statut verified
+  this.verified = this.emailVerified && this.phoneVerified;
+  next();
+});
+
+// 🔐 MÉTHODES DE VÉRIFICATION
+userSchema.methods.isFullyVerified = function() {
+  return this.emailVerified && this.phoneVerified;
+};
+
+userSchema.methods.canReceivePhoneCode = function() {
+  const now = new Date();
+  const lastSent = this.lastPhoneVerificationSent;
+  
+  // Limite: 1 SMS par minute, max 5 tentatives par heure
+  if (lastSent && now - lastSent < 60000) { // 1 minute
+    return false;
+  }
+  
+  if (this.phoneVerificationAttempts >= 5) { // Max 5 tentatives
+    return false;
+  }
+  
+  return true;
+};
 
 module.exports = mongoose.model('User', userSchema);

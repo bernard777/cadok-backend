@@ -62,6 +62,16 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+// Ajout des routes de vérification
+const verificationRoutePath = path.join(__dirname, 'routes', 'verificationSystem.js');
+if (fs.existsSync(verificationRoutePath)) {
+  const verificationRoutes = require('./routes/verificationSystem');
+  app.use('/api/verification', verificationRoutes);
+  console.log('✅ [APP] Routes /api/verification enregistrées avec succès');
+} else {
+  console.warn("Warning: './routes/verificationSystem.js' not found. '/api/verification' route not registered.");
+}
+
 // Ajout de la route des objets
 const objectsRoutePath = path.join(__dirname, 'routes', 'objects.js');
 

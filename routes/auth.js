@@ -104,13 +104,20 @@ router.post(
         city, 
         firstName,
         lastName,
-        avatar: avatarUrl 
+        avatar: avatarUrl,
+        status: 'pending', // Utilisateur en attente de vérification
+        verificationStatus: 'not_verified'
       });
       await newUser.save();
 
       console.log('🔍 [SECURE REGISTER] Génération du token...');
       const token = jwt.sign(
-        { id: newUser._id },
+        { 
+          id: newUser._id,
+          email: newUser.email,
+          role: newUser.role || 'user',
+          isAdmin: newUser.isAdmin || false
+        },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -119,8 +126,25 @@ router.post(
       let userToReturn = await User.findById(newUser._id).select('-password').lean();
       userToReturn.avatar = getFullUrl(req, userToReturn.avatar);
       
+      console.log('📧 [SECURE REGISTER] Envoi de l\'email de vérification...');
+      
+      // Envoi de l'email de vérification
+      try {
+        const EmailVerificationService = require('../services/EmailVerificationService');
+        const emailService = new EmailVerificationService();
+        await emailService.sendVerificationEmail(newUser._id);
+        console.log('✅ Email de vérification envoyé à:', email);
+      } catch (emailError) {
+        console.error('⚠️ Erreur envoi email de vérification:', emailError.message);
+        // On ne fait pas échouer l'inscription pour un problème d'email
+      }
+      
       console.log('✅ [SECURE REGISTER] Inscription sécurisée réussie pour:', email);
-      res.status(201).json({ token, user: userToReturn });
+      res.status(201).json({ 
+        token, 
+        user: userToReturn,
+        message: "Inscription réussie. Veuillez vérifier votre email pour activer votre compte."
+      });
     } catch (err) {
       console.error('❌ [DEBUG REGISTER] Erreur complète:', err);
       console.error('❌ [DEBUG REGISTER] Message:', err.message);
@@ -192,7 +216,12 @@ router.post(
       console.log('✅ [SECURE LOGIN] Connexion sécurisée réussie pour:', email);
 
       const token = jwt.sign(
-        { id: user._id },
+        { 
+          id: user._id,
+          email: user.email,
+          role: user.role || 'user',
+          isAdmin: user.isAdmin || false
+        },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
