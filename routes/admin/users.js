@@ -54,7 +54,7 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select('pseudo email role isAdmin adminPermissions adminActivatedAt city createdAt status bannedAt bannedUntil banReason suspendedAt suspendedUntil suspendReason')
+      .select('pseudo email role isAdmin adminPermissions adminActivatedAt city createdAt status verified emailVerified bannedAt bannedUntil banReason suspendedAt suspendedUntil suspendReason')
       .populate('adminActivatedBy', 'pseudo email')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -518,13 +518,21 @@ router.post('/:userId/verify', authMiddleware, adminMiddleware, async (req, res)
       });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(userId, {
+    // Mettre à jour les champs de vérification ET le statut
+    const updateFields = {
       verified: true,
       emailVerified: true, // Considéré comme vérifié par admin
       adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] VÉRIFIÉ MANUELLEMENT par ${req.user.pseudo}: ${reason}`
-    }, { new: true });
+    };
 
-    console.log(`✅ VERIFY: ${user.pseudo} vérifié manuellement par ${req.user.pseudo}`);
+    // Si le statut est 'pending', le passer à 'active' lors de la vérification
+    if (user.status === 'pending') {
+      updateFields.status = 'active';
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, { new: true });
+
+    console.log(`✅ VERIFY: ${user.pseudo} vérifié manuellement par ${req.user.pseudo}${user.status === 'pending' ? ' et activé' : ''}`);
 
     res.json({
       success: true,
@@ -534,7 +542,8 @@ router.post('/:userId/verify', authMiddleware, adminMiddleware, async (req, res)
         pseudo: updatedUser.pseudo,
         email: updatedUser.email,
         verified: updatedUser.verified,
-        emailVerified: updatedUser.emailVerified
+        emailVerified: updatedUser.emailVerified,
+        status: updatedUser.status
       }
     });
   } catch (error) {
