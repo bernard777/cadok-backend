@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth');
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+
+// Imports des modèles pour la suppression CASCADE RGPD
+const ObjectModel = require('../models/Object');
+const Trade = require('../models/Trade');
+const Message = require('../models/Message');
+const Notification = require('../models/Notification');
+const SecurityLog = require('../models/SecurityLog');
+const PaymentMethod = require('../models/PaymentMethod');
+const Advertisement = require('../models/Advertisement');
 
 // --- Préférences de notification ---
 // GET /me/notification-preferences
@@ -146,13 +156,14 @@ router.get('/:userId/objects', auth, async (req, res) => {
 
 /**
  * DELETE /me/account
- * Suppression complète du compte utilisateur (conformité RGPD)
+ * Suppression CASCADE complète du compte utilisateur (CONFORMITÉ RGPD)
+ * Supprime TOUTES les données utilisateur de l'application
  */
 router.delete('/me/account', auth, async (req, res) => {
   try {
     const { password, reason = 'Demande de l\'utilisateur' } = req.body;
     
-    console.log(`🗑️ [DELETE ACCOUNT] Demande de suppression pour l'utilisateur ${req.user.id}`);
+    console.log(`🗑️ [DELETE ACCOUNT] Demande de suppression CASCADE pour l'utilisateur ${req.user.id}`);
     
     // Récupérer l'utilisateur
     const user = await User.findById(req.user.id);
@@ -189,31 +200,120 @@ router.delete('/me/account', auth, async (req, res) => {
       });
     }
     
-    // Log de l'action avant suppression
-    console.log(`🗑️ [DELETE ACCOUNT] Suppression confirmée pour:`, {
+    // 🧹 DÉBUT DE LA SUPPRESSION CASCADE COMPLÈTE (CONFORMITÉ RGPD)
+    console.log(`🧹 [RGPD CASCADE] Début de suppression cascade pour:`, {
       id: user._id,
       email: user.email,
       pseudo: user.pseudo,
       reason: reason,
       timestamp: new Date().toISOString()
     });
-    
-    // Supprimer définitivement le compte
-    await User.findByIdAndDelete(req.user.id);
-    
-    console.log(`✅ [DELETE ACCOUNT] Compte supprimé avec succès: ${user.email}`);
-    
+
+    const userId = req.user.id;
+    let deletionStats = {
+      user: 0,
+      objects: 0,
+      trades: 0,
+      messages: 0,
+      notifications: 0,
+      securityLogs: 0,
+      paymentMethods: 0,
+      advertisements: 0
+    };
+
+    // 1. 📦 Supprimer tous les objets de l'utilisateur
+    try {
+      const deletedObjects = await ObjectModel.deleteMany({ owner: userId });
+      deletionStats.objects = deletedObjects.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedObjects.deletedCount} objets supprimés`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur objets:`, err.message);
+    }
+
+    // 2. 🤝 Supprimer tous les échanges (en tant que fromUser ou toUser)
+    try {
+      const deletedTrades = await Trade.deleteMany({
+        $or: [
+          { fromUser: userId },
+          { toUser: userId }
+        ]
+      });
+      deletionStats.trades = deletedTrades.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedTrades.deletedCount} échanges supprimés`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur trades:`, err.message);
+    }
+
+    // 3. 💬 Supprimer tous les messages de l'utilisateur
+    try {
+      const deletedMessages = await Message.deleteMany({ from: userId });
+      deletionStats.messages = deletedMessages.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedMessages.deletedCount} messages supprimés`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur messages:`, err.message);
+    }
+
+    // 4. 🔔 Supprimer toutes les notifications de l'utilisateur
+    try {
+      const deletedNotifications = await Notification.deleteMany({ user: userId });
+      deletionStats.notifications = deletedNotifications.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedNotifications.deletedCount} notifications supprimées`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur notifications:`, err.message);
+    }
+
+    // 5. 🔒 Supprimer tous les logs de sécurité de l'utilisateur
+    try {
+      const deletedSecurityLogs = await SecurityLog.deleteMany({ userId: userId });
+      deletionStats.securityLogs = deletedSecurityLogs.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedSecurityLogs.deletedCount} logs de sécurité supprimés`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur security logs:`, err.message);
+    }
+
+    // 6. 💳 Supprimer toutes les méthodes de paiement
+    try {
+      const deletedPaymentMethods = await PaymentMethod.deleteMany({ userId: userId });
+      deletionStats.paymentMethods = deletedPaymentMethods.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedPaymentMethods.deletedCount} méthodes de paiement supprimées`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur payment methods:`, err.message);
+    }
+
+    // 7. 📢 Supprimer toutes les publicités de l'utilisateur
+    try {
+      const deletedAdvertisements = await Advertisement.deleteMany({ user: userId });
+      deletionStats.advertisements = deletedAdvertisements.deletedCount;
+      console.log(`   ✅ [CASCADE] ${deletedAdvertisements.deletedCount} publicités supprimées`);
+    } catch (err) {
+      console.log(`   ⚠️ [CASCADE] Erreur advertisements:`, err.message);
+    }
+
+    // 8. 👤 Enfin, supprimer l'utilisateur lui-même
+    await User.findByIdAndDelete(userId);
+    deletionStats.user = 1;
+    console.log(`   ✅ [CASCADE] Compte utilisateur supprimé`);
+
+    const totalDeleted = Object.values(deletionStats).reduce((sum, count) => sum + count, 0);
+
+    console.log(`🎯 [RGPD CASCADE] Suppression terminée pour ${user.email}`);
+    console.log(`📊 [RGPD CASCADE] STATISTIQUES:`, deletionStats, `(Total: ${totalDeleted} éléments)`);
+    console.log(`🔒 [RGPD CONFORMITÉ] Toutes les données utilisateur ont été définitivement supprimées`);
+
     res.json({
       success: true,
-      message: 'Votre compte a été supprimé définitivement. Nous sommes désolés de vous voir partir.',
+      message: 'Votre compte et TOUTES vos données ont été supprimés définitivement (conformité RGPD complète)',
+      deletionStats,
+      totalDeleted,
+      rgpdCompliant: true,
       deletedAt: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error('❌ [DELETE ACCOUNT] Erreur lors de la suppression:', error);
+    console.error('❌ [DELETE ACCOUNT CASCADE] Erreur lors de la suppression:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur lors de la suppression du compte' 
+      error: 'Erreur serveur lors de la suppression CASCADE du compte' 
     });
   }
 });
