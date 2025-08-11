@@ -50,7 +50,6 @@ router.put('/me/notification-preferences', auth, async (req, res) => {
   }
 });
 const Category = require('../models/Category'); // Assurez-vous d'importer le modèle Category
-const bcrypt = require('bcryptjs');
 
 const MIN_CATEGORY_COUNT = 4;
 const MAX_CATEGORY_COUNT = 8; // Modifiez ce nombre selon la limite souhaitée

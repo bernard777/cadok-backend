@@ -40,7 +40,8 @@ async function auth(req, res, next) {
       }
     }
     
-    // Permettre l'accès aux utilisateurs inactifs pour les endpoints de suppression/désactivation
+    // Permettre l'accès aux utilisateurs inactifs seulement pour la gestion de compte
+    // La réactivation se fait automatiquement lors de la connexion
     const isAccountManagement = req.path.includes('/me/account');
     if (user.status === 'inactive' && !isAccountManagement) {
       return res.status(403).json({ 

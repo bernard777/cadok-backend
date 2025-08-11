@@ -247,6 +247,23 @@ router.post(
         });
       }
 
+      // Réactiver automatiquement les comptes inactifs lors de la connexion
+      console.log(`🔍 [DEBUG] Statut utilisateur avant réactivation: ${user.status}`);
+      if (user.status === 'inactive') {
+        console.log(`🔄 [DEBUG] DÉBUT de la réactivation pour: ${email}`);
+        
+        user = await User.findByIdAndUpdate(user._id, {
+          status: 'active',
+          deactivatedAt: null,
+          deactivationReason: null,
+          adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] RÉACTIVÉ automatiquement par connexion`
+        }, { new: true });
+        
+        console.log(`🔄 [SECURE LOGIN] Compte inactif réactivé automatiquement: ${email}`);
+        console.log(`📊 [SECURE LOGIN] Nouveau statut: ${user.status}`);
+        console.log(`✅ [DEBUG] FIN de la réactivation - utilisateur mis à jour`);
+      }
+
       console.log('✅ [SECURE LOGIN] Connexion sécurisée réussie pour:', email);
 
       const token = jwt.sign(
