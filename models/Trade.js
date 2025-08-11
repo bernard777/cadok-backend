@@ -5,6 +5,7 @@ const TRADE_STATUS = {
   PROPOSED: 'proposed', // Objet proposé par toUser, en attente de validation par fromUser
   ACCEPTED: 'accepted',
   REFUSED: 'refused',
+  DISPUTED: 'disputed', // En litige
   SECURED: 'secured', // Avec dépôt de garantie
   // Nouveaux statuts pour le système de sécurité pur
   SECURITY_PENDING: 'security_pending', // En attente des preuves de sécurité
@@ -172,6 +173,23 @@ const tradeSchema = new mongoose.Schema({
       comment: String,
       submittedAt: Date
     }
+  },
+
+  // Dates importantes
+  createdAt: Date,
+  acceptedAt: Date, // Date d'acceptation de l'échange
+  refusedAt: Date, // Date de refus de l'échange
+  completedAt: Date, // Date de finalisation
+
+  // Gestion admin
+  adminNotes: String, // Notes administratives
+  disputeReason: String, // Raison du litige si status = 'disputed'
+  disputeResolution: {
+    resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    resolvedAt: Date,
+    resolution: String,
+    action: String, // 'approve', 'cancel'
+    reason: String
   },
 
   // Système de livraison (point relais, etc.)

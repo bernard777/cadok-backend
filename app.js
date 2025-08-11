@@ -213,6 +213,16 @@ if (fs.existsSync(adminUsersRoutePath)) {
   console.warn("Warning: './routes/admin/users.js' not found. '/api/admin/users' route not registered.");
 }
 
+// Ajout des routes Admin Trades
+const adminTradesRoutePath = path.join(__dirname, 'routes', 'admin', 'trades.js');
+if (fs.existsSync(adminTradesRoutePath)) {
+  const adminTradesRoutes = require('./routes/admin/trades');
+  app.use('/api/admin/trades', adminTradesRoutes);
+  console.log('✅ Admin Trades routes registered: /api/admin/trades');
+} else {
+  console.warn("Warning: './routes/admin/trades.js' not found. '/api/admin/trades' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');
