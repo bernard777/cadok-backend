@@ -144,4 +144,147 @@ router.get('/:userId/objects', auth, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /me/account
+ * Suppression complète du compte utilisateur (conformité RGPD)
+ */
+router.delete('/me/account', auth, async (req, res) => {
+  try {
+    const { password, reason = 'Demande de l\'utilisateur' } = req.body;
+    
+    console.log(`🗑️ [DELETE ACCOUNT] Demande de suppression pour l'utilisateur ${req.user.id}`);
+    
+    // Récupérer l'utilisateur
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+    
+    // Vérifier le mot de passe pour sécurité
+    if (!password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Mot de passe requis pour la suppression du compte' 
+      });
+    }
+    
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      console.log(`❌ [DELETE ACCOUNT] Mot de passe incorrect pour ${user.email}`);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Mot de passe incorrect' 
+      });
+    }
+    
+    // Empêcher la suppression des comptes admin (sécurité)
+    if (user.isAdmin || ['admin', 'super_admin', 'moderator'].includes(user.role)) {
+      console.log(`🚫 [DELETE ACCOUNT] Tentative de suppression d'un compte admin: ${user.email}`);
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Les comptes administrateurs ne peuvent pas être supprimés. Contactez un super administrateur.' 
+      });
+    }
+    
+    // Log de l'action avant suppression
+    console.log(`🗑️ [DELETE ACCOUNT] Suppression confirmée pour:`, {
+      id: user._id,
+      email: user.email,
+      pseudo: user.pseudo,
+      reason: reason,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Supprimer définitivement le compte
+    await User.findByIdAndDelete(req.user.id);
+    
+    console.log(`✅ [DELETE ACCOUNT] Compte supprimé avec succès: ${user.email}`);
+    
+    res.json({
+      success: true,
+      message: 'Votre compte a été supprimé définitivement. Nous sommes désolés de vous voir partir.',
+      deletedAt: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ [DELETE ACCOUNT] Erreur lors de la suppression:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur serveur lors de la suppression du compte' 
+    });
+  }
+});
+
+/**
+ * POST /me/account/deactivate
+ * Désactivation temporaire du compte (alternative à la suppression)
+ */
+router.post('/me/account/deactivate', auth, async (req, res) => {
+  try {
+    const { password, reason = 'Désactivation volontaire' } = req.body;
+    
+    console.log(`⏸️ [DEACTIVATE ACCOUNT] Demande de désactivation pour l'utilisateur ${req.user.id}`);
+    
+    // Récupérer l'utilisateur
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+    
+    // Vérifier le mot de passe
+    if (!password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Mot de passe requis pour la désactivation du compte' 
+      });
+    }
+    
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Mot de passe incorrect' 
+      });
+    }
+    
+    // Empêcher la désactivation des comptes admin
+    if (user.isAdmin || ['admin', 'super_admin', 'moderator'].includes(user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Les comptes administrateurs ne peuvent pas être désactivés.' 
+      });
+    }
+    
+    // Désactiver le compte
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, {
+      status: 'inactive',
+      deactivatedAt: new Date(),
+      deactivationReason: reason,
+      adminNotes: `${user.adminNotes || ''}\n[${new Date().toISOString()}] DÉSACTIVÉ par l'utilisateur: ${reason}`
+    }, { new: true });
+    
+    console.log(`⏸️ [DEACTIVATE ACCOUNT] Compte désactivé: ${user.email}`);
+    
+    res.json({
+      success: true,
+      message: 'Votre compte a été désactivé. Vous pouvez le réactiver en vous reconnectant.',
+      status: updatedUser.status,
+      deactivatedAt: updatedUser.deactivatedAt
+    });
+    
+  } catch (error) {
+    console.error('❌ [DEACTIVATE ACCOUNT] Erreur lors de la désactivation:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur serveur lors de la désactivation du compte' 
+    });
+  }
+});
+
 module.exports = router;

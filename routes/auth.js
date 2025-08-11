@@ -84,6 +84,26 @@ router.post(
         ]
       });
       if (existing) {
+        // Vérifier si l'utilisateur est banni définitivement
+        if (existing.status === 'banned' && !existing.bannedUntil) {
+          console.log('🚫 [SECURE REGISTER] Tentative d\'inscription d\'un utilisateur banni définitivement:', email);
+          return res.status(403).json({ 
+            success: false,
+            error: 'Impossible de créer un compte. Contactez l\'administration si vous pensez qu\'il s\'agit d\'une erreur.',
+            code: 'BANNED_USER_REGISTRATION_DENIED'
+          });
+        }
+        
+        // Vérifier si l'utilisateur est banni temporairement et que le ban est encore actif
+        if (existing.status === 'banned' && existing.bannedUntil && new Date() < existing.bannedUntil) {
+          console.log('🚫 [SECURE REGISTER] Tentative d\'inscription d\'un utilisateur banni temporairement:', email);
+          return res.status(403).json({ 
+            success: false,
+            error: `Votre compte est suspendu jusqu'au ${existing.bannedUntil.toLocaleDateString()}. Contactez l\'administration pour plus d\'informations.`,
+            code: 'TEMP_BANNED_USER_REGISTRATION_DENIED'
+          });
+        }
+        
         const field = existing.email === email ? 'Email' : 'Numéro de téléphone';
         console.log('❌ [SECURE REGISTER]', field, 'déjà utilisé');
         return res.status(400).json({ 
