@@ -5,6 +5,7 @@
  */
 
 const axios = require('axios');
+const UserDataGenerator = require('../helpers/user-data-generator');
 
 // Configuration axios pour tests HTTP-Pure
 const api = axios.create({
@@ -238,13 +239,12 @@ describe('🛡️ WORKFLOW E2E COMPLET - SÉCURITÉ ET PROTECTION HTTP-Pure', ()
   });
 
   beforeEach(async () => {
-    // Créer un utilisateur normal pour les tests
-    const userData = {
+    // Créer un utilisateur normal pour les tests avec données complètes
+    const userData = UserDataGenerator.generateCompleteUserData({
       pseudo: 'SecurityUser_' + Date.now(),
       email: `security_${Date.now()}@cadok.com`,
-      password: 'SecurePassword123!',
       city: 'Paris'
-    };
+    });
 
     const registerResult = await SecurityHelpers.registerUser(userData);
     expect(registerResult.success).toBe(true);
@@ -259,13 +259,21 @@ describe('🛡️ WORKFLOW E2E COMPLET - SÉCURITÉ ET PROTECTION HTTP-Pure', ()
     expect(loginResult.success).toBe(true);
     testToken = loginResult.token;
 
-    // Créer un utilisateur malveillant
-    const maliciousData = {
+    // Créer un utilisateur malveillant avec données complètes
+    const maliciousData = UserDataGenerator.generateCompleteUserData({
       pseudo: 'MaliciousUser_' + Date.now(),
       email: `malicious_${Date.now()}@cadok.com`,
-      password: 'MaliciousPass123!',
-      city: 'Darkness'
-    };
+      firstName: 'Malicious',
+      lastName: 'Hacker',
+      city: 'Darkness',
+      address: {
+        street: '666 rue des Ténèbres',
+        zipCode: '66666',
+        city: 'Darkness',
+        country: 'France',
+        additionalInfo: 'Repaire secret'
+      }
+    });
 
     const maliciousRegisterResult = await SecurityHelpers.registerUser(maliciousData);
     expect(maliciousRegisterResult.success).toBe(true);

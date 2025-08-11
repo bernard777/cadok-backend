@@ -200,18 +200,72 @@ class SecurityMiddleware {
         .withMessage('Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial'),
       
       body('firstName')
-        .optional()
+        .notEmpty()
+        .withMessage('Le prénom est obligatoire')
         .trim()
-        .isLength({ max: 50 })
+        .isLength({ min: 1, max: 50 })
+        .withMessage('Le prénom doit contenir entre 1 et 50 caractères')
         .matches(/^[a-zA-ZÀ-ÿ\s\-\']+$/)
         .withMessage('Le prénom contient des caractères non autorisés'),
       
       body('lastName')
-        .optional()
+        .notEmpty()
+        .withMessage('Le nom est obligatoire')
         .trim()
-        .isLength({ max: 50 })
+        .isLength({ min: 1, max: 50 })
+        .withMessage('Le nom doit contenir entre 1 et 50 caractères')
         .matches(/^[a-zA-ZÀ-ÿ\s\-\']+$/)
-        .withMessage('Le nom contient des caractères non autorisés')
+        .withMessage('Le nom contient des caractères non autorisés'),
+      
+      body('phoneNumber')
+        .notEmpty()
+        .withMessage('Le numéro de téléphone est obligatoire')
+        .matches(/^(\+33|0)[1-9](\d{8})$/)
+        .withMessage('Numéro de téléphone français invalide'),
+      
+      body('city')
+        .notEmpty()
+        .withMessage('La ville est obligatoire')
+        .trim()
+        .isLength({ min: 2, max: 100 })
+        .withMessage('La ville doit contenir entre 2 et 100 caractères')
+        .matches(/^[a-zA-ZÀ-ÿ\s\-\']+$/)
+        .withMessage('La ville contient des caractères non autorisés'),
+
+      body('address')
+        .optional()
+        .custom((value, { req }) => {
+          if (typeof value === 'string') {
+            try {
+              req.body.address = JSON.parse(value);
+            } catch (e) {
+              throw new Error('Format d\'adresse invalide');
+            }
+          }
+          
+          const address = req.body.address;
+          if (!address || typeof address !== 'object') {
+            throw new Error('L\'adresse est obligatoire');
+          }
+          
+          if (!address.street || address.street.trim().length < 5) {
+            throw new Error('L\'adresse doit contenir au moins 5 caractères');
+          }
+          
+          if (!address.zipCode || !/^\d{5}$/.test(address.zipCode)) {
+            throw new Error('Code postal invalide (5 chiffres requis)');
+          }
+          
+          if (!address.city || address.city.trim().length < 2) {
+            throw new Error('La ville dans l\'adresse est obligatoire');
+          }
+          
+          if (!address.country || address.country.trim().length < 2) {
+            throw new Error('Le pays est obligatoire');
+          }
+          
+          return true;
+        })
     ];
   }
 

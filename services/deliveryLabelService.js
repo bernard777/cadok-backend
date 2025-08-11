@@ -9,6 +9,7 @@ const QRCode = require('qrcode'); // npm install qrcode
 const PDFDocument = require('pdfkit'); // npm install pdfkit
 const fs = require('fs');
 const path = require('path');
+const PrivacyProtectionService = require('./PrivacyProtectionService');
 
 class DeliveryLabelService {
   constructor() {
@@ -21,6 +22,9 @@ class DeliveryLabelService {
       country: "France",
       phone: "+33 1 XX XX XX XX"
     };
+
+    // Initialiser le service de protection des données
+    this.privacyService = new PrivacyProtectionService();
   }
 
   /**
@@ -29,8 +33,8 @@ class DeliveryLabelService {
   async generateDeliveryLabel(tradeId, fromUserId) {
     try {
       const trade = await Trade.findById(tradeId)
-        .populate('fromUser', 'pseudo email city')
-        .populate('toUser', 'pseudo email city');
+        .populate('fromUser', 'pseudo email city firstName lastName phoneNumber address')
+        .populate('toUser', 'pseudo email city firstName lastName phoneNumber address');
         
       if (!trade) {
         throw new Error('Troc non trouvé');
@@ -295,25 +299,39 @@ class DeliveryLabelService {
   }
 
   /**
-   * Chiffrer l'adresse réelle de l'utilisateur
+   * Chiffrer l'adresse réelle de l'utilisateur avec PrivacyProtectionService
    */
   async encryptUserAddress(userId) {
     const user = await User.findById(userId);
     if (!user) throw new Error('Utilisateur non trouvé');
     
-    // Dans un vrai système, vous chiffreriez l'adresse complète
-    // Pour l'exemple, on simule :
+    // Vérifier que l'utilisateur a une adresse complète
+    if (!user.address || !user.address.street || !user.address.zipCode) {
+      throw new Error('Adresse utilisateur incomplète');
+    }
+    
+    // Construire l'objet adresse complète avec toutes les données sensibles
     const realAddress = {
-      // Ces données viendraient du profil utilisateur complet
-      name: user.pseudo,
-      street: "Adresse réelle chiffrée", // À récupérer du profil
-      city: user.city,
-      zipCode: "Code postal chiffré",
-      phone: "Téléphone chiffré"
+      // Informations personnelles
+      firstName: user.firstName,
+      lastName: user.lastName,
+      pseudo: user.pseudo,
+      phoneNumber: user.phoneNumber,
+      
+      // Adresse complète
+      street: user.address.street,
+      city: user.address.city,
+      zipCode: user.address.zipCode,
+      country: user.address.country,
+      additionalInfo: user.address.additionalInfo || '',
+      
+      // Métadonnées pour la livraison
+      userId: user._id.toString(),
+      timestamp: new Date().toISOString()
     };
     
-    // TODO: Chiffrement AES-256
-    return Buffer.from(JSON.stringify(realAddress)).toString('base64');
+    // Utiliser le PrivacyProtectionService pour chiffrer avec AES-256
+    return this.privacyService.encryptSensitiveData(realAddress);
   }
 
   /**
@@ -404,12 +422,45 @@ class DeliveryLabelService {
   }
 
   /**
-   * Déchiffrer une adresse
+   * Déchiffrer une adresse avec PrivacyProtectionService
    */
   async decryptUserAddress(encryptedAddress) {
-    // TODO: Déchiffrement AES-256
-    const decoded = JSON.parse(Buffer.from(encryptedAddress, 'base64').toString());
-    return decoded;
+    try {
+      // Utiliser le PrivacyProtectionService pour déchiffrer
+      const decryptedData = this.privacyService.decryptSensitiveData(encryptedAddress);
+      
+      // Vérifier que les données déchiffrées sont valides
+      if (decryptedData.error) {
+        throw new Error('Erreur lors du déchiffrement: ' + decryptedData.error);
+      }
+      
+      // Valider la structure des données déchiffrées
+      if (!decryptedData.street || !decryptedData.zipCode || !decryptedData.city) {
+        throw new Error('Données d\'adresse invalides après déchiffrement');
+      }
+      
+      return {
+        // Informations personnelles
+        firstName: decryptedData.firstName,
+        lastName: decryptedData.lastName,
+        pseudo: decryptedData.pseudo,
+        phoneNumber: this.privacyService.anonymizePhone(decryptedData.phoneNumber), // Anonymiser le téléphone pour affichage
+        
+        // Adresse
+        street: decryptedData.street,
+        city: decryptedData.city,
+        zipCode: decryptedData.zipCode,
+        country: decryptedData.country,
+        additionalInfo: decryptedData.additionalInfo,
+        
+        // Métadonnées
+        userId: decryptedData.userId,
+        timestamp: decryptedData.timestamp
+      };
+    } catch (error) {
+      console.error('Erreur déchiffrement adresse:', error.message);
+      throw new Error('Impossible de déchiffrer l\'adresse de livraison');
+    }
   }
 }
 

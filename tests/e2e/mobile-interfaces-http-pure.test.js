@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const UserDataGenerator = require('../helpers/user-data-generator');
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -14,15 +15,21 @@ jest.setTimeout(30000);
 class MobileHelpers {
   
   static async registerUser(customData = {}) {
-    const userData = {
+    const userData = UserDataGenerator.generateCompleteUserData({
       pseudo: `Mobile${Date.now().toString().slice(-8)}${Math.random().toString(36).substr(2, 3)}`,
       email: `mobile${Date.now()}${Math.random().toString(36).substr(2, 4)}@test.fr`,
-      password: 'MobilePass123!@',
-      city: 'Marseille',
       firstName: 'Test',
       lastName: 'Mobile',
+      city: 'Marseille',
+      address: {
+        street: '456 avenue des Tests',
+        zipCode: '13001',
+        city: 'Marseille',
+        country: 'France',
+        additionalInfo: 'Appartement test mobile'
+      },
       ...customData
-    };
+    });
     
     console.log('👤 Inscription utilisateur mobile:', userData.pseudo);
     

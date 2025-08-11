@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const UserDataGenerator = require('../helpers/user-data-generator');
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -14,15 +15,12 @@ jest.setTimeout(30000);
 class AdminHelpers {
   
   static async registerUser(customData = {}) {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substr(2, 9);
-    const userData = {
-      pseudo: `Admin${timestamp}${random}`,
-      email: `admin${timestamp}${random}@test.com`,
-      password: 'AuthObjPass123!',
+    const userData = UserDataGenerator.generateCompleteUserData({
+      pseudo: `Admin${Date.now()}${Math.random().toString(36).substr(2, 9)}`,
+      email: `admin${Date.now()}${Math.random().toString(36).substr(2, 9)}@test.com`,
       city: 'Lyon',
       ...customData
-    };
+    });
     
     console.log('👤 Inscription utilisateur admin:', userData.pseudo);
     

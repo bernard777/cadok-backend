@@ -7,7 +7,24 @@ const userSchema = new mongoose.Schema({
   pseudo: { type: String, required: true },
   avatar: { type: String, default: '' },
   city: { type: String, required: true },
-  phone: { type: String, required: false }, // Numéro de téléphone pour SMS
+  
+  // 📱 TÉLÉPHONE REQUIS (pour vérification SMS)
+  phoneNumber: { type: String, required: true }, // Numéro de téléphone obligatoire
+  
+  // 🏠 ADRESSE COMPLÈTE REQUISE (pour livraisons)
+  address: {
+    street: { type: String, required: true }, // Rue et numéro
+    zipCode: { type: String, required: true }, // Code postal
+    city: { type: String, required: true }, // Ville (peut être différente de la ville du profil)
+    country: { type: String, required: true, default: 'France' }, // Pays
+    additionalInfo: { type: String, default: '' }, // Informations supplémentaires (étage, etc.)
+    isDefault: { type: Boolean, default: true } // Adresse par défaut
+  },
+  
+  // 👤 INFORMATIONS PERSONNELLES COMPLÈTES
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  dateOfBirth: { type: Date, default: null }, // Pour vérifications d'âge si nécessaire
   
   // 🔐 SYSTÈME DE VÉRIFICATION EMAIL + SMS
   verified: { type: Boolean, default: false }, // Vérification globale (email ET SMS)

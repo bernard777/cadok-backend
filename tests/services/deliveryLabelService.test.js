@@ -37,18 +37,39 @@ describe('DeliveryLabelService - Système de Redirection', () => {
 beforeEach(() => {
     deliveryLabelService = new DeliveryLabelService();
     
+    // Données utilisateur complètes avec nouveau format
     mockFromUser = {
       _id: 'user1',
       pseudo: 'Marie',
       email: 'marie@test.com',
-      city: 'Paris'
+      firstName: 'Marie',
+      lastName: 'Dupont',
+      phoneNumber: '+33612345678',
+      city: 'Paris',
+      address: {
+        street: '123 Rue de la République',
+        city: 'Paris',
+        zipCode: '75001',
+        country: 'France',
+        additionalInfo: 'Bâtiment A, 3ème étage'
+      }
     };
 
     mockToUser = {
       _id: 'user2', 
       pseudo: 'Thomas',
       email: 'thomas@test.com',
-      city: 'Lyon'
+      firstName: 'Thomas',
+      lastName: 'Martin',
+      phoneNumber: '+33698765432',
+      city: 'Lyon',
+      address: {
+        street: '456 Avenue des Lyonnais',
+        city: 'Lyon',
+        zipCode: '69000',
+        country: 'France',
+        additionalInfo: 'Appartement 15'
+      }
     };
 
     mockTrade = {
@@ -275,27 +296,79 @@ test('doit calculer 3 jours pour villes éloignées', () => {
       expect(result).toBe(threeDaysLater.toISOString().split('T')[0]);
     });
   })
-describe('Chiffrement et Sécurité', () => {
-    test('doit chiffrer et déchiffrer une adresse utilisateur', async () => {
-      const originalAddress = {
-        name: 'Thomas Dorel',
-        street: '12 Rue des Acacias',
-        city: 'Lyon',
-        zipCode: '69001',
-        phone: '06 12 34 56 78'
+describe('Chiffrement et Sécurité avec PrivacyProtectionService', () => {
+    test('doit chiffrer et déchiffrer une adresse utilisateur complète', async () => {
+      // Données utilisateur complètes avec les nouveaux champs
+      const fullUserData = {
+        _id: 'user2',
+        pseudo: 'Thomas',
+        firstName: 'Thomas',
+        lastName: 'Martin',
+        phoneNumber: '+33698765432',
+        address: {
+          street: '456 Avenue des Lyonnais',
+          city: 'Lyon',
+          zipCode: '69000',
+          country: 'France',
+          additionalInfo: 'Appartement 15'
+        }
       };
 
-      // Mock des méthodes de chiffrement
-      deliveryLabelService.encryptUserAddress = jest.fn().mockResolvedValue('encrypted_data_base64');
-      deliveryLabelService.decryptUserAddress = jest.fn().mockResolvedValue(originalAddress);
+      // Mock User.findById pour retourner les données complètes
+      User.findById = jest.fn().mockResolvedValue(fullUserData);
 
+      // Test du chiffrement réel (pas de mock pour voir le comportement réel)
       const encrypted = await deliveryLabelService.encryptUserAddress('user2');
+      expect(encrypted).toBeTruthy();
+      expect(typeof encrypted).toBe('string');
+      expect(encrypted.length).toBeGreaterThan(50); // Le chiffré doit être substantiel
+
+      // Test du déchiffrement réel
       const decrypted = await deliveryLabelService.decryptUserAddress(encrypted);
       
-      expect(encrypted).toBe('encrypted_data_base64');
-      expect(decrypted).toEqual(originalAddress);
+      // Vérifications des données déchiffrées
+      expect(decrypted.firstName).toBe('Thomas');
+      expect(decrypted.lastName).toBe('Martin');
+      expect(decrypted.pseudo).toBe('Thomas');
+      expect(decrypted.street).toBe('456 Avenue des Lyonnais');
+      expect(decrypted.city).toBe('Lyon');
+      expect(decrypted.zipCode).toBe('69000');
+      expect(decrypted.country).toBe('France');
+      expect(decrypted.additionalInfo).toBe('Appartement 15');
+      expect(decrypted.userId).toBe('user2');
+      
+      // Vérifier que le téléphone est anonymisé pour l'affichage
+      expect(decrypted.phoneNumber).toMatch(/^\+33\*{6}\d{2}$/);
     });
-  })
+
+    test('doit gérer les erreurs si l\'utilisateur n\'a pas d\'adresse complète', async () => {
+      // Mock utilisateur sans adresse complète
+      const incompleteUser = {
+        _id: 'user3',
+        pseudo: 'IncompleteUser',
+        firstName: 'Jean',
+        lastName: 'Dupont',
+        phoneNumber: '+33612345678',
+        address: {
+          street: null, // Adresse incomplète
+          city: 'Paris',
+          zipCode: null
+        }
+      };
+
+      User.findById = jest.fn().mockResolvedValue(incompleteUser);
+
+      await expect(deliveryLabelService.encryptUserAddress('user3'))
+        .rejects.toThrow('Adresse utilisateur incomplète');
+    });
+
+    test('doit gérer les erreurs de déchiffrement', async () => {
+      const invalidEncryptedData = 'invalid_encrypted_data';
+
+      await expect(deliveryLabelService.decryptUserAddress(invalidEncryptedData))
+        .rejects.toThrow('Impossible de déchiffrer l\'adresse de livraison');
+    });
+  });
 describe('Intégration complète', () => {
     test('doit traiter un workflow complet de redirection', async () => {
       // Simuler toutes les étapes

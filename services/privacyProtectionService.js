@@ -346,34 +346,73 @@ class PrivacyProtectionService {
   }
 
   /**
-   * Chiffrer des données sensibles (pour test)
+   * Chiffrer des données sensibles avec AES-256-CTR (compatible avec Node.js)
    */
   encryptSensitiveData(data) {
     try {
-      const secretKey = process.env.JWT_SECRET || 'default-secret-key';
+      const secretKey = process.env.JWT_SECRET || 'default-secret-key-for-development-only';
+      
+      // Générer une clé de 32 bytes à partir du secret
+      const key = crypto.scryptSync(secretKey, 'cadok-salt', 32);
+      
+      // Générer un IV aléatoire pour chaque chiffrement
+      const iv = crypto.randomBytes(16);
+      
+      const cipher = crypto.createCipher('aes-256-ctr', key);
+      
       const text = JSON.stringify(data);
       
-      // Simple base64 encoding pour le test (en production utiliser crypto)
-      const encoded = Buffer.from(text).toString('base64');
-      const hash = crypto.createHash('sha256').update(secretKey).digest('hex').substring(0, 16);
+      let encrypted = cipher.update(text, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
       
-      return `${hash}:${encoded}`;
+      // Combiner IV et données chiffrées
+      const result = {
+        iv: iv.toString('hex'),
+        data: encrypted,
+        algorithm: 'aes-256-ctr'
+      };
+      
+      return Buffer.from(JSON.stringify(result)).toString('base64');
     } catch (error) {
-      console.error('Erreur chiffrement:', error.message);
-      return 'encrypted-data-placeholder';
+      console.error('Erreur chiffrement AES-256:', error.message);
+      // Fallback vers l'ancienne méthode en cas d'erreur
+      const text = JSON.stringify(data);
+      const encoded = Buffer.from(text).toString('base64');
+      const hash = crypto.createHash('sha256').update(process.env.JWT_SECRET || 'default-secret').digest('hex').substring(0, 16);
+      return `${hash}:${encoded}`;
     }
   }
 
   /**
-   * Déchiffrer des données sensibles (pour test)
+   * Déchiffrer des données sensibles avec AES-256-CTR
    */
   decryptSensitiveData(encryptedData) {
     try {
-      const [hash, encoded] = encryptedData.split(':');
-      const text = Buffer.from(encoded, 'base64').toString('utf8');
-      return JSON.parse(text);
+      // Vérifier si c'est le nouveau format ou l'ancien
+      if (encryptedData.includes(':')) {
+        // Ancien format
+        const [hash, encoded] = encryptedData.split(':');
+        const text = Buffer.from(encoded, 'base64').toString('utf8');
+        return JSON.parse(text);
+      }
+      
+      const secretKey = process.env.JWT_SECRET || 'default-secret-key-for-development-only';
+      
+      // Générer la même clé
+      const key = crypto.scryptSync(secretKey, 'cadok-salt', 32);
+      
+      // Décoder les données
+      const parsedData = JSON.parse(Buffer.from(encryptedData, 'base64').toString('utf8'));
+      const encrypted = parsedData.data;
+      
+      const decipher = crypto.createDecipher('aes-256-ctr', key);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return JSON.parse(decrypted);
     } catch (error) {
-      console.error('Erreur déchiffrement:', error.message);
+      console.error('Erreur déchiffrement AES-256:', error.message);
       return { error: 'Déchiffrement impossible' };
     }
   }

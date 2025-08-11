@@ -70,20 +70,26 @@ router.post(
   SecurityMiddleware.validateUserRegistration(), // Validation sécurisée
   SecurityMiddleware.handleValidationErrors(), // Gestion des erreurs
   async (req, res) => {
-    const { email, password, pseudo, city, firstName, lastName } = req.body;
+    const { email, password, pseudo, city, firstName, lastName, phoneNumber, address } = req.body;
     
     console.log('🔍 [SECURE REGISTER] Début inscription sécurisée pour:', email);
     console.log('🔍 [SECURE REGISTER] NODE_ENV:', process.env.NODE_ENV);
     
     try {
       console.log('🔍 [SECURE REGISTER] Vérification utilisateur existant...');
-      const existing = await User.findOne({ email });
+      const existing = await User.findOne({ 
+        $or: [
+          { email },
+          { phoneNumber }
+        ]
+      });
       if (existing) {
-        console.log('❌ [SECURE REGISTER] Email déjà utilisé');
+        const field = existing.email === email ? 'Email' : 'Numéro de téléphone';
+        console.log('❌ [SECURE REGISTER]', field, 'déjà utilisé');
         return res.status(400).json({ 
           success: false,
-          error: 'Email déjà utilisé',
-          code: 'EMAIL_ALREADY_EXISTS'
+          error: `${field} déjà utilisé`,
+          code: field === 'Email' ? 'EMAIL_ALREADY_EXISTS' : 'PHONE_ALREADY_EXISTS'
         });
       }
 
@@ -104,6 +110,14 @@ router.post(
         city, 
         firstName,
         lastName,
+        phoneNumber,
+        address: {
+          street: address.street,
+          zipCode: address.zipCode,
+          city: address.city,
+          country: address.country,
+          additionalInfo: address.additionalInfo || ''
+        },
         avatar: avatarUrl,
         status: 'pending', // Utilisateur en attente de vérification
         verificationStatus: 'not_verified'
