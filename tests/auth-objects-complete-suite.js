@@ -1,24 +1,24 @@
-/**
- * 🚀 SUITE COMPLÈTE MODULES AUTH + OBJECTS - MODE API RÉELLES
+﻿/**
+ * ðŸš€ SUITE COMPLÃˆTE MODULES AUTH + OBJECTS - MODE API RÃ‰ELLES
  * Conversion des modules 1 et 2 vers appels HTTP directs comme module 3
- * Total: ≈44 tests convertis avec gestion rate limits
+ * Total: â‰ˆ44 tests convertis avec gestion rate limits
  */
 
 const axios = require('axios');
 const mongoose = require('mongoose');
 const { connectToDatabase } = require('../db');
 
-// Configuration serveur réel
+// Configuration serveur rÃ©el
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5001';
 
 // Utilitaires pour gestion rate limits
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-const RATE_LIMIT_DELAY = 1000; // 1 seconde entre les requêtes
+const RATE_LIMIT_DELAY = 1000; // 1 seconde entre les requÃªtes
 const REQUEST_TIMEOUT = 10000; // 10 secondes de timeout
 
-describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
+describe('ðŸš€ SUITE COMPLÃˆTE AUTH + OBJECTS (API RÃ‰ELLES)', () => {
   
-  let testUsersPool = []; // Pool d'utilisateurs pré-créés
+  let testUsersPool = []; // Pool d'utilisateurs prÃ©-crÃ©Ã©s
   let currentUserIndex = 0;
 
   // Configuration axios globale avec gestion d'erreurs robuste
@@ -34,7 +34,7 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
   // Interceptor pour logging et rate limiting
   apiClient.interceptors.request.use(
     config => {
-      console.log(`📡 ${config.method?.toUpperCase()} ${config.url}`);
+      console.log(`ðŸ“¡ ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     },
     error => Promise.reject(error)
@@ -44,13 +44,13 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
     response => response,
     error => {
       if (error.response?.status === 429) {
-        console.log('🚫 Rate limit détecté - attendre plus longtemps...');
+        console.log('ðŸš« Rate limit dÃ©tectÃ© - attendre plus longtemps...');
       }
       return Promise.reject(error);
     }
   );
 
-  // Générateur d'utilisateurs uniques (éviter les collisions)
+  // GÃ©nÃ©rateur d'utilisateurs uniques (Ã©viter les collisions)
   const generateUniqueUser = (prefix = 'AuthObj') => {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 999999);
@@ -66,7 +66,7 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
 
   // Helper API avec gestion d'erreurs robuste
   const makeApiCall = async (method, endpoint, data = null, token = null) => {
-    await delay(RATE_LIMIT_DELAY); // Rate limiting préventif
+    await delay(RATE_LIMIT_DELAY); // Rate limiting prÃ©ventif
     
     try {
       const config = {
@@ -91,16 +91,16 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
   };
 
   beforeAll(async () => {
-    console.log('🔄 Initialisation suite AUTH + OBJECTS...');
+    console.log('ðŸ”„ Initialisation suite AUTH + OBJECTS...');
     
-    // Vérifier connexion MongoDB
-    console.log('⏳ Connexion à MongoDB...');
+    // VÃ©rifier connexion MongoDB
+    console.log('â³ Connexion Ã  MongoDB...');
     await connectToDatabase(process.env.MONGODB_URI || 'mongodb://localhost:27017/cadok_test');
     
-    console.log('✅ MongoDB connecté pour suite AUTH + OBJECTS');
+    console.log('âœ… MongoDB connectÃ© pour suite AUTH + OBJECTS');
     
-    // Pré-créer un pool d'utilisateurs pour éviter rate limits
-    console.log('👥 Création pool utilisateurs...');
+    // PrÃ©-crÃ©er un pool d'utilisateurs pour Ã©viter rate limits
+    console.log('ðŸ‘¥ CrÃ©ation pool utilisateurs...');
     for (let i = 0; i < 5; i++) {
       const userData = generateUniqueUser(`Pool${i}`);
       const result = await makeApiCall('POST', '/api/auth/register', userData);
@@ -111,14 +111,14 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
           userId: result.data.user._id,
           token: result.data.token
         });
-        console.log(`✅ Utilisateur pool ${i+1}/5 créé: ${userData.pseudo}`);
-        await delay(2000); // Délai plus long pour création users
+        console.log(`âœ… Utilisateur pool ${i+1}/5 crÃ©Ã©: ${userData.pseudo}`);
+        await delay(2000); // DÃ©lai plus long pour crÃ©ation users
       } else {
-        console.warn(`⚠️ Échec création utilisateur pool ${i+1}:`, result.error);
+        console.warn(`âš ï¸ Ã‰chec crÃ©ation utilisateur pool ${i+1}:`, result.error);
       }
     }
     
-    console.log(`🎯 Pool de ${testUsersPool.length} utilisateurs disponible`);
+    console.log(`ðŸŽ¯ Pool de ${testUsersPool.length} utilisateurs disponible`);
   });
 
   // Helper pour obtenir un utilisateur du pool
@@ -129,13 +129,13 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
     return user;
   };
 
-  // ========== MODULE 1: AUTHENTIFICATION (≈15 tests) ==========
+  // ========== MODULE 1: AUTHENTIFICATION (â‰ˆ15 tests) ==========
 
-  describe('👤 MODULE 1: AUTHENTIFICATION (API RÉELLES)', () => {
+  describe('ðŸ‘¤ MODULE 1: AUTHENTIFICATION (API RÃ‰ELLES)', () => {
     
-    describe('📝 1.1 Inscription utilisateur', () => {
+    describe('ðŸ“ 1.1 Inscription utilisateur', () => {
       
-      test('✅ Inscription réussie avec données valides', async () => {
+      test('âœ… Inscription rÃ©ussie avec donnÃ©es valides', async () => {
         const userData = generateUniqueUser('RegSuccess');
         const result = await makeApiCall('POST', '/api/auth/register', userData);
         
@@ -145,10 +145,10 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         expect(result.data.user.email).toBe(userData.email);
         expect(result.data.user.pseudo).toBe(userData.pseudo);
         
-        console.log('✅ Utilisateur inscrit:', result.data.user.pseudo);
+        console.log('âœ… Utilisateur inscrit:', result.data.user.pseudo);
       });
 
-      test('❌ Inscription échoue avec email invalide', async () => {
+      test('âŒ Inscription Ã©choue avec email invalide', async () => {
         const invalidData = generateUniqueUser('InvalidEmail');
         invalidData.email = 'email-invalide-sans-arobase';
         
@@ -156,10 +156,10 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Email invalide correctement rejeté');
+        console.log('âœ… Email invalide correctement rejetÃ©');
       });
 
-      test('❌ Inscription échoue avec mot de passe trop court', async () => {
+      test('âŒ Inscription Ã©choue avec mot de passe trop court', async () => {
         const invalidData = generateUniqueUser('WeakPass');
         invalidData.password = '123';
         
@@ -167,10 +167,10 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Mot de passe faible correctement rejeté');
+        console.log('âœ… Mot de passe faible correctement rejetÃ©');
       });
 
-      test('❌ Inscription échoue avec pseudo trop court', async () => {
+      test('âŒ Inscription Ã©choue avec pseudo trop court', async () => {
         const invalidData = generateUniqueUser('Short');
         invalidData.pseudo = 'ab';
         
@@ -178,14 +178,14 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Pseudo trop court correctement rejeté');
+        console.log('âœ… Pseudo trop court correctement rejetÃ©');
       });
 
-      test('❌ Inscription échoue avec email déjà utilisé', async () => {
+      test('âŒ Inscription Ã©choue avec email dÃ©jÃ  utilisÃ©', async () => {
         const firstUser = generateUniqueUser('First');
         await makeApiCall('POST', '/api/auth/register', firstUser);
         
-        // Tentative avec même email
+        // Tentative avec mÃªme email
         const duplicateUser = generateUniqueUser('Duplicate');
         duplicateUser.email = firstUser.email;
         
@@ -193,14 +193,14 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Email dupliqué correctement rejeté');
+        console.log('âœ… Email dupliquÃ© correctement rejetÃ©');
       });
 
     });
 
-    describe('🔐 1.2 Connexion utilisateur', () => {
+    describe('ðŸ” 1.2 Connexion utilisateur', () => {
       
-      test('✅ Connexion réussie avec identifiants corrects', async () => {
+      test('âœ… Connexion rÃ©ussie avec identifiants corrects', async () => {
         const user = getPoolUser();
         const result = await makeApiCall('POST', '/api/auth/login', {
           email: user.email,
@@ -211,10 +211,10 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         expect(result.data.token).toBeDefined();
         expect(result.data.user.email).toBe(user.email);
         
-        console.log('✅ Connexion réussie pour:', user.pseudo);
+        console.log('âœ… Connexion rÃ©ussie pour:', user.pseudo);
       });
 
-      test('❌ Connexion échoue avec mauvais mot de passe', async () => {
+      test('âŒ Connexion Ã©choue avec mauvais mot de passe', async () => {
         const user = getPoolUser();
         const result = await makeApiCall('POST', '/api/auth/login', {
           email: user.email,
@@ -223,10 +223,10 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Mauvais mot de passe correctement rejeté');
+        console.log('âœ… Mauvais mot de passe correctement rejetÃ©');
       });
 
-      test('❌ Connexion échoue avec email inexistant', async () => {
+      test('âŒ Connexion Ã©choue avec email inexistant', async () => {
         const result = await makeApiCall('POST', '/api/auth/login', {
           email: 'inexistant@test.com',
           password: 'password123'
@@ -234,56 +234,56 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Email inexistant correctement rejeté');
+        console.log('âœ… Email inexistant correctement rejetÃ©');
       });
 
     });
 
-    describe('🛡️ 1.3 Sécurité authentification', () => {
+    describe('ðŸ›¡ï¸ 1.3 SÃ©curitÃ© authentification', () => {
       
-      test('✅ Token JWT valide permet accès routes protégées', async () => {
+      test('âœ… Token JWT valide permet accÃ¨s routes protÃ©gÃ©es', async () => {
         const user = getPoolUser();
         const result = await makeApiCall('GET', '/api/objects/my-objects', null, user.token);
         
         expect(result.success).toBe(true);
         expect(result.status).toBe(200);
-        console.log('✅ Token valide accepté pour route protégée');
+        console.log('âœ… Token valide acceptÃ© pour route protÃ©gÃ©e');
       });
 
-      test('❌ Token JWT invalide bloque accès', async () => {
+      test('âŒ Token JWT invalide bloque accÃ¨s', async () => {
         const result = await makeApiCall('GET', '/api/objects/my-objects', null, 'token-invalide-123');
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(401);
-        console.log('✅ Token invalide correctement rejeté');
+        console.log('âœ… Token invalide correctement rejetÃ©');
       });
 
-      test('❌ Absence de token bloque accès', async () => {
+      test('âŒ Absence de token bloque accÃ¨s', async () => {
         const result = await makeApiCall('GET', '/api/objects/my-objects');
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(401);
-        console.log('✅ Accès sans token correctement bloqué');
+        console.log('âœ… AccÃ¨s sans token correctement bloquÃ©');
       });
 
-      test('✅ Mots de passe hashés correctement', async () => {
+      test('âœ… Mots de passe hashÃ©s correctement', async () => {
         const userData = generateUniqueUser('HashTest');
         const result = await makeApiCall('POST', '/api/auth/register', userData);
         
         expect(result.success).toBe(true);
-        expect(result.data.user.password).toBeUndefined(); // Mot de passe pas renvoyé
-        console.log('✅ Mot de passe sécurisé (non exposé)');
+        expect(result.data.user.password).toBeUndefined(); // Mot de passe pas renvoyÃ©
+        console.log('âœ… Mot de passe sÃ©curisÃ© (non exposÃ©)');
       });
 
     });
 
   });
 
-  // ========== MODULE 2: GESTION D'OBJETS (≈15 tests) ==========
+  // ========== MODULE 2: GESTION D'OBJETS (â‰ˆ15 tests) ==========
 
-  describe('📦 MODULE 2: GESTION D\'OBJETS (API RÉELLES)', () => {
+  describe('ðŸ“¦ MODULE 2: GESTION D\'OBJETS (API RÃ‰ELLES)', () => {
     
-    // Catégories existantes du module 3 (réutilisation)
+    // CatÃ©gories existantes du module 3 (rÃ©utilisation)
     const EXISTING_CATEGORIES = {
       ELECTRONIQUE: '68957fc726a977d9dcdfa405',
       VETEMENTS: '68957fc726a977d9dcdfa407', 
@@ -292,16 +292,15 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
       MAISON: '68957fc726a977d9dcdfa40d'
     };
     
-    describe('➕ 2.1 Création d\'objets', () => {
+    describe('âž• 2.1 CrÃ©ation d\'objets', () => {
       
-      test('✅ Création objet réussie avec données valides', async () => {
+      test('âœ… CrÃ©ation objet rÃ©ussie avec donnÃ©es valides', async () => {
         const user = getPoolUser();
         const objectData = {
           title: `Test Object ${Date.now()}`,
-          description: 'Description test objet API réelle',
+          description: 'Description test objet API rÃ©elle',
           category: EXISTING_CATEGORIES.ELECTRONIQUE,
-          condition: 'excellent',
-          estimatedValue: 100
+          condition: 'excellent'
         };
 
         const result = await makeApiCall('POST', '/api/objects', objectData, user.token);
@@ -310,84 +309,78 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         expect(result.data.object).toBeDefined();
         expect(result.data.object.title).toBe(objectData.title);
         
-        console.log('✅ Objet créé:', result.data.object.title);
+        console.log('âœ… Objet crÃ©Ã©:', result.data.object.title);
       });
 
-      test('✅ Création objet avec valeur estimée élevée', async () => {
+      test('âœ… CrÃ©ation objet avec valeur estimÃ©e Ã©levÃ©e', async () => {
         const user = getPoolUser();
         const objectData = {
-          title: `Objet Précieux ${Date.now()}`,
+          title: `Objet PrÃ©cieux ${Date.now()}`,
           description: 'Objet de grande valeur',
           category: EXISTING_CATEGORIES.ELECTRONIQUE,
-          condition: 'excellent',
-          estimatedValue: 1000
+          condition: 'excellent'
         };
 
         const result = await makeApiCall('POST', '/api/objects', objectData, user.token);
         
         expect(result.success).toBe(true);
-        expect(result.data.object.estimatedValue).toBe(1000);
-        
-        console.log('✅ Objet haute valeur créé:', result.data.object.title);
+        console.log('âœ… Objet haute valeur crÃ©Ã©:', result.data.object.title);
       });
 
-      test('❌ Création échoue sans titre objet', async () => {
+      test('âŒ CrÃ©ation Ã©choue sans titre objet', async () => {
         const user = getPoolUser();
         const invalidData = {
           description: 'Objet sans titre',
           category: EXISTING_CATEGORIES.VETEMENTS,
-          condition: 'bon',
-          estimatedValue: 25
+          condition: 'bon'
         };
 
         const result = await makeApiCall('POST', '/api/objects', invalidData, user.token);
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Objet sans titre correctement rejeté');
+        console.log('âœ… Objet sans titre correctement rejetÃ©');
       });
 
-      test('❌ Création échoue avec valeur négative', async () => {
+      test('âŒ CrÃ©ation Ã©choue avec valeur nÃ©gative', async () => {
         const user = getPoolUser();
         const invalidData = {
-          title: 'Test prix négatif',
+          title: 'Test prix nÃ©gatif',
           description: 'Objet avec valeur invalide',
           category: EXISTING_CATEGORIES.SPORTS,
-          condition: 'bon',
-          estimatedValue: -10
+          condition: 'bon'
         };
 
         const result = await makeApiCall('POST', '/api/objects', invalidData, user.token);
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Valeur négative correctement rejetée');
+        console.log('âœ… Valeur nÃ©gative correctement rejetÃ©e');
       });
 
-      test('❌ Création sans authentification échoue', async () => {
+      test('âŒ CrÃ©ation sans authentification Ã©choue', async () => {
         const objectData = {
           title: 'Objet sans auth',
-          description: 'Test sécurité',
+          description: 'Test sÃ©curitÃ©',
           category: EXISTING_CATEGORIES.LIVRES,
-          condition: 'bon',
-          estimatedValue: 50
+          condition: 'bon'
         };
 
         const result = await makeApiCall('POST', '/api/objects', objectData);
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(401);
-        console.log('✅ Création sans auth correctement bloquée');
+        console.log('âœ… CrÃ©ation sans auth correctement bloquÃ©e');
       });
 
     });
 
-    describe('📋 2.2 Lecture des objets', () => {
+    describe('ðŸ“‹ 2.2 Lecture des objets', () => {
       
       let testObjects = [];
 
       beforeAll(async () => {
-        // Créer quelques objets test pour les lectures
+        // CrÃ©er quelques objets test pour les lectures
         const user = getPoolUser();
         
         const objectsData = [
@@ -395,15 +388,13 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
             title: `Lecture Test 1 ${Date.now()}`,
             description: 'Premier objet de test lecture',
             category: EXISTING_CATEGORIES.ELECTRONIQUE,
-            condition: 'excellent',
-            estimatedValue: 100
+            condition: 'excellent'
           },
           {
             title: `Lecture Test 2 ${Date.now()}`,
-            description: 'Deuxième objet de test lecture', 
-            category: EXISTING_CATEGORIES.VETEMENTS, // Catégorie différente
-            condition: 'bon',
-            estimatedValue: 75
+            description: 'DeuxiÃ¨me objet de test lecture', 
+            category: EXISTING_CATEGORIES.VETEMENTS, // CatÃ©gorie diffÃ©rente
+            condition: 'bon'
           }
         ];
 
@@ -415,61 +406,60 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
               userToken: user.token
             });
           }
-          await delay(1500); // Délai entre créations
+          await delay(1500); // DÃ©lai entre crÃ©ations
         }
       });
 
-      test('✅ Récupération objets utilisateur', async () => {
+      test('âœ… RÃ©cupÃ©ration objets utilisateur', async () => {
         const user = getPoolUser();
         const result = await makeApiCall('GET', '/api/objects/my-objects', null, user.token);
         
         expect(result.success).toBe(true);
         expect(Array.isArray(result.data.objects)).toBe(true);
-        console.log('✅ Objets utilisateur récupérés:', result.data.objects.length);
+        console.log('âœ… Objets utilisateur rÃ©cupÃ©rÃ©s:', result.data.objects.length);
       });
 
-      test('✅ Recherche objets publics', async () => {
+      test('âœ… Recherche objets publics', async () => {
         const result = await makeApiCall('GET', '/api/objects/search?query=test');
         
         expect(result.success).toBe(true);
         expect(Array.isArray(result.data.objects)).toBe(true);
-        console.log('✅ Recherche publique effectuée:', result.data.objects.length, 'résultats');
+        console.log('âœ… Recherche publique effectuÃ©e:', result.data.objects.length, 'rÃ©sultats');
       });
 
-      test('✅ Recherche par catégorie', async () => {
+      test('âœ… Recherche par catÃ©gorie', async () => {
         const result = await makeApiCall('GET', `/api/objects/search?category=${EXISTING_CATEGORIES.ELECTRONIQUE}`);
         
         expect(result.success).toBe(true);
         expect(Array.isArray(result.data.objects)).toBe(true);
-        console.log('✅ Recherche par catégorie:', result.data.objects.length, 'résultats');
+        console.log('âœ… Recherche par catÃ©gorie:', result.data.objects.length, 'rÃ©sultats');
       });
 
-      test('✅ Détails objet spécifique', async () => {
+      test('âœ… DÃ©tails objet spÃ©cifique', async () => {
         if (testObjects.length > 0) {
           const objectId = testObjects[0]._id;
           const result = await makeApiCall('GET', `/api/objects/${objectId}`);
           
           expect(result.success).toBe(true);
           expect(result.data.object._id).toBe(objectId);
-          console.log('✅ Détails objet récupérés:', result.data.object.title);
+          console.log('âœ… DÃ©tails objet rÃ©cupÃ©rÃ©s:', result.data.object.title);
         }
       });
 
     });
 
-    describe('🔄 2.3 Modification d\'objets', () => {
+    describe('ðŸ”„ 2.3 Modification d\'objets', () => {
       
       let modifiableObject = null;
 
       beforeAll(async () => {
-        // Créer un objet spécifiquement pour les tests de modification
+        // CrÃ©er un objet spÃ©cifiquement pour les tests de modification
         const user = getPoolUser();
         const objectData = {
           title: `Modifiable Object ${Date.now()}`,
-          description: 'Objet destiné à être modifié',
+          description: 'Objet destinÃ© Ã  Ãªtre modifiÃ©',
           category: EXISTING_CATEGORIES.MAISON,
-          condition: 'bon',
-          estimatedValue: 60
+          condition: 'bon'
         };
 
         const result = await makeApiCall('POST', '/api/objects', objectData, user.token);
@@ -482,46 +472,42 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         await delay(1500);
       });
 
-      test('✅ Modification réussie titre et valeur', async () => {
+      test('âœ… Modification rÃ©ussie titre et valeur', async () => {
         if (!modifiableObject) {
-          console.warn('⚠️ Pas d\'objet modifiable disponible');
+          console.warn('âš ï¸ Pas d\'objet modifiable disponible');
           return;
         }
 
         const updatedData = {
-          title: `${modifiableObject.title} - MODIFIÉ`,
-          estimatedValue: 80
+          title: `${modifiableObject.title} - MODIFIÃ‰`
         };
 
         const result = await makeApiCall('PUT', `/api/objects/${modifiableObject._id}`, updatedData, modifiableObject.userToken);
         
         expect(result.success).toBe(true);
-        expect(result.data.object.title).toContain('MODIFIÉ');
-        expect(result.data.object.estimatedValue).toBe(80);
-        
-        console.log('✅ Objet modifié avec succès');
+        expect(result.data.object.title).toContain('MODIFIÃ‰');
+        console.log('âœ… Objet modifiÃ© avec succÃ¨s');
       });
 
-      test('❌ Modification échoue avec valeur invalide', async () => {
+      test('âŒ Modification Ã©choue avec valeur invalide', async () => {
         if (!modifiableObject) {
-          console.warn('⚠️ Pas d\'objet modifiable disponible');
+          console.warn('âš ï¸ Pas d\'objet modifiable disponible');
           return;
         }
 
         const invalidUpdate = {
-          estimatedValue: -50
         };
 
         const result = await makeApiCall('PUT', `/api/objects/${modifiableObject._id}`, invalidUpdate, modifiableObject.userToken);
         
         expect(result.success).toBe(false);
         expect(result.status).toBe(400);
-        console.log('✅ Valeur invalide en modification rejetée');
+        console.log('âœ… Valeur invalide en modification rejetÃ©e');
       });
 
-      test('❌ Modification objet non possédé interdite', async () => {
+      test('âŒ Modification objet non possÃ©dÃ© interdite', async () => {
         if (!modifiableObject) {
-          console.warn('⚠️ Pas d\'objet modifiable disponible');
+          console.warn('âš ï¸ Pas d\'objet modifiable disponible');
           return;
         }
 
@@ -534,24 +520,23 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         
         expect(result.success).toBe(false);
         expect([403, 404]).toContain(result.status);
-        console.log('✅ Modification non autorisée bloquée');
+        console.log('âœ… Modification non autorisÃ©e bloquÃ©e');
       });
 
     });
 
-    describe('🗑️ 2.4 Suppression d\'objets', () => {
+    describe('ðŸ—‘ï¸ 2.4 Suppression d\'objets', () => {
       
       let deletableObject = null;
 
       beforeAll(async () => {
-        // Créer un objet spécifiquement pour suppression
+        // CrÃ©er un objet spÃ©cifiquement pour suppression
         const user = getPoolUser();
         const objectData = {
           title: `Deletable Object ${Date.now()}`,
-          description: 'Objet destiné à être supprimé',
+          description: 'Objet destinÃ© Ã  Ãªtre supprimÃ©',
           category: EXISTING_CATEGORIES.LIVRES,
-          condition: 'mauvais',
-          estimatedValue: 10
+          condition: 'mauvais'
         };
 
         const result = await makeApiCall('POST', '/api/objects', objectData, user.token);
@@ -564,33 +549,32 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         await delay(1500);
       });
 
-      test('✅ Suppression réussie objet possédé', async () => {
+      test('âœ… Suppression rÃ©ussie objet possÃ©dÃ©', async () => {
         if (!deletableObject) {
-          console.warn('⚠️ Pas d\'objet supprimable disponible');
+          console.warn('âš ï¸ Pas d\'objet supprimable disponible');
           return;
         }
 
         const result = await makeApiCall('DELETE', `/api/objects/${deletableObject._id}`, null, deletableObject.userToken);
         
         expect(result.success).toBe(true);
-        console.log('✅ Objet supprimé avec succès');
+        console.log('âœ… Objet supprimÃ© avec succÃ¨s');
 
-        // Vérifier que l'objet n'existe plus
+        // VÃ©rifier que l'objet n'existe plus
         const checkResult = await makeApiCall('GET', `/api/objects/${deletableObject._id}`);
         expect(checkResult.success).toBe(false);
         expect(checkResult.status).toBe(404);
-        console.log('✅ Objet bien supprimé de la base');
+        console.log('âœ… Objet bien supprimÃ© de la base');
       });
 
-      test('❌ Suppression objet non possédé interdite', async () => {
-        // Créer un objet avec un user puis tenter suppression avec un autre
+      test('âŒ Suppression objet non possÃ©dÃ© interdite', async () => {
+        // CrÃ©er un objet avec un user puis tenter suppression avec un autre
         const owner = getPoolUser();
         const objectData = {
           title: `Protected Object ${Date.now()}`,
-          description: 'Objet protégé contre suppression',
+          description: 'Objet protÃ©gÃ© contre suppression',
           category: EXISTING_CATEGORIES.SPORTS,
-          condition: 'excellent',
-          estimatedValue: 150
+          condition: 'excellent'
         };
 
         const createResult = await makeApiCall('POST', '/api/objects', objectData, owner.token);
@@ -602,18 +586,17 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
           
           expect(deleteResult.success).toBe(false);
           expect([403, 404]).toContain(deleteResult.status);
-          console.log('✅ Suppression non autorisée bloquée');
+          console.log('âœ… Suppression non autorisÃ©e bloquÃ©e');
         }
       });
 
-      test('❌ Suppression sans authentification échoue', async () => {
+      test('âŒ Suppression sans authentification Ã©choue', async () => {
         const user = getPoolUser();
         const objectData = {
           title: `Unauth Delete Test ${Date.now()}`,
           description: 'Test suppression sans auth',
           category: EXISTING_CATEGORIES.MAISON,
-          condition: 'bon',
-          estimatedValue: 30
+          condition: 'bon'
         };
 
         const createResult = await makeApiCall('POST', '/api/objects', objectData, user.token);
@@ -624,7 +607,7 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
           
           expect(deleteResult.success).toBe(false);
           expect(deleteResult.status).toBe(401);
-          console.log('✅ Suppression sans auth correctement bloquée');
+          console.log('âœ… Suppression sans auth correctement bloquÃ©e');
         }
       });
 
@@ -634,9 +617,9 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
 
   // ========== TESTS INTEGRATION ET WORKFLOW ==========
 
-  describe('🔄 3. WORKFLOW INTÉGRATION AUTH + OBJECTS', () => {
+  describe('ðŸ”„ 3. WORKFLOW INTÃ‰GRATION AUTH + OBJECTS', () => {
     
-    test('✅ Workflow complet: Inscription → Création objets → Gestion', async () => {
+    test('âœ… Workflow complet: Inscription â†’ CrÃ©ation objets â†’ Gestion', async () => {
       // 1. Inscription nouvel utilisateur
       const userData = generateUniqueUser('Workflow');
       const registerResult = await makeApiCall('POST', '/api/auth/register', userData);
@@ -644,23 +627,22 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
       expect(registerResult.success).toBe(true);
       const userToken = registerResult.data.token;
       
-      // 2. Création plusieurs objets
+      // 2. CrÃ©ation plusieurs objets
       const objects = [];
         for (let i = 1; i <= 3; i++) {
           const objectData = {
             title: `Workflow Object ${i} ${Date.now()}`,
             description: `Objet ${i} du workflow complet`,
             category: EXISTING_CATEGORIES.ELECTRONIQUE,
-            condition: i === 1 ? 'excellent' : i === 2 ? 'bon' : 'correct',
-            estimatedValue: 50 * i
+            condition: i === 1 ? 'excellent' : i === 2 ? 'bon' : 'correct'
           };
           
           const createResult = await makeApiCall('POST', '/api/objects', objectData, userToken);
           expect(createResult.success).toBe(true);
           objects.push(createResult.data.object);
           
-          await delay(1500); // Rate limiting entre créations
-        }      // 3. Récupération objets utilisateur
+          await delay(1500); // Rate limiting entre crÃ©ations
+        }      // 3. RÃ©cupÃ©ration objets utilisateur
       const myObjectsResult = await makeApiCall('GET', '/api/objects/my-objects', null, userToken);
       expect(myObjectsResult.success).toBe(true);
       expect(myObjectsResult.data.objects.length).toBeGreaterThanOrEqual(3);
@@ -668,7 +650,7 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
       // 4. Modification d'un objet
       const objectToModify = objects[0];
       const updateResult = await makeApiCall('PUT', `/api/objects/${objectToModify._id}`, {
-        title: `${objectToModify.title} - MODIFIÉ WORKFLOW`
+        title: `${objectToModify.title} - MODIFIÃ‰ WORKFLOW`
       }, userToken);
       expect(updateResult.success).toBe(true);
       
@@ -677,31 +659,30 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
       const deleteResult = await makeApiCall('DELETE', `/api/objects/${objectToDelete._id}`, null, userToken);
       expect(deleteResult.success).toBe(true);
       
-      console.log('✅ Workflow complet AUTH + OBJECTS réussi');
+      console.log('âœ… Workflow complet AUTH + OBJECTS rÃ©ussi');
     });
 
-    test('✅ Test limites utilisateur gratuit', async () => {
+    test('âœ… Test limites utilisateur gratuit', async () => {
       const user = getPoolUser();
       
-      // Vérifier les objets actuels
+      // VÃ©rifier les objets actuels
       const currentObjectsResult = await makeApiCall('GET', '/api/objects/my-objects', null, user.token);
       expect(currentObjectsResult.success).toBe(true);
       
       const currentCount = currentObjectsResult.data.objects.length;
-      console.log(`📊 Utilisateur a actuellement ${currentCount} objets`);
+      console.log(`ðŸ“Š Utilisateur a actuellement ${currentCount} objets`);
       
-      // Les users gratuits peuvent avoir jusqu'à 5 objets (à vérifier selon business rules)
+      // Les users gratuits peuvent avoir jusqu'Ã  5 objets (Ã  vÃ©rifier selon business rules)
       const maxFreeObjects = 5;
       
       if (currentCount < maxFreeObjects) {
-        // Créer des objets jusqu'à la limite
+        // CrÃ©er des objets jusqu'Ã  la limite
         for (let i = currentCount; i < maxFreeObjects; i++) {
           const objectData = {
             title: `Limit Test Object ${i + 1}`,
             description: 'Test des limites utilisateur gratuit',
             category: EXISTING_CATEGORIES.VETEMENTS,
-            condition: 'bon',
-            estimatedValue: 40
+            condition: 'bon'
           };
           
           const result = await makeApiCall('POST', '/api/objects', objectData, user.token);
@@ -711,19 +692,20 @@ describe('🚀 SUITE COMPLÈTE AUTH + OBJECTS (API RÉELLES)', () => {
         }
       }
       
-      console.log('✅ Test limites utilisateur gratuit terminé');
+      console.log('âœ… Test limites utilisateur gratuit terminÃ©');
     });
 
   });
 
   // Nettoyage final
   afterAll(async () => {
-    console.log('🧹 Nettoyage final suite AUTH + OBJECTS...');
+    console.log('ðŸ§¹ Nettoyage final suite AUTH + OBJECTS...');
     
-    // Note: En production, éviter de supprimer les données de test
-    // Ici on fait confiance au système de cleanup automatique
+    // Note: En production, Ã©viter de supprimer les donnÃ©es de test
+    // Ici on fait confiance au systÃ¨me de cleanup automatique
     
-    console.log('✅ Suite AUTH + OBJECTS terminée');
+    console.log('âœ… Suite AUTH + OBJECTS terminÃ©e');
   });
 
 });
+

@@ -161,7 +161,6 @@ global.createTestObject = async (objectData = {}, ownerUser = null) => {
     description: 'Description test pour E2E',
     category: 'Électronique',
     condition: 'Bon état',
-    estimatedValue: 50,
     owner: owner._id,
     images: ['/uploads/test-image.jpg'],
     available: true,

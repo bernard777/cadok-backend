@@ -1,14 +1,14 @@
-/**
- * 🔄 ROUTES ADMIN - SUPERVISION DES ÉCHANGES
- * API complète pour la gestion administrative des trades
+﻿/**
+ * ðŸ”„ ROUTES ADMIN - SUPERVISION DES Ã‰CHANGES
+ * API complÃ¨te pour la gestion administrative des trades
+ * AccÃ¨s contrÃ´lÃ© par rÃ´les (admin_trades, super_admin)
  */
 
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../../middlewares/auth');
-const { requireAdmin, requireSuperAdmin } = require('../../middlewares/adminAuth');
+const { requireAuth, requirePermission } = require('../../middleware/roleBasedAccess');
 
-// Modèles
+// ModÃ¨les
 const Trade = require('../../models/Trade');
 const User = require('../../models/User');
 const ObjectModel = require('../../models/Object');
@@ -16,9 +16,9 @@ const Notification = require('../../models/Notification');
 
 /**
  * GET /api/admin/trades
- * Récupérer tous les échanges avec filtres
+ * RÃ©cupÃ©rer tous les Ã©changes avec filtres
  */
-router.get('/', authMiddleware, requireAdmin, async (req, res) => {
+router.get('/', requireAuth, requirePermission('manageTrades'), async (req, res) => {
   try {
     const { 
       status, 
@@ -29,9 +29,9 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
-    console.log('🔍 [ADMIN TRADES] Récupération des échanges...');
+    console.log('ðŸ” [ADMIN TRADES] RÃ©cupÃ©ration des Ã©changes...');
 
-    // Construction de la requête
+    // Construction de la requÃªte
     let query = {};
     
     // Filtre par statut
@@ -56,26 +56,21 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
       ];
     }
 
-    // Récupération avec population complète
+    // RÃ©cupÃ©ration avec population complÃ¨te
     const trades = await Trade.find(query)
       .populate('fromUser', 'pseudo email avatar city subscriptionPlan')
       .populate('toUser', 'pseudo email avatar city subscriptionPlan')
-      .populate('requestedObjects', 'title description images category estimatedValue')
-      .populate('offeredObjects', 'title description images category estimatedValue')
+      .populate('requestedObjects', 'title description images category')
+      .populate('offeredObjects', 'title description images category')
       .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip))
       .lean();
 
-    // Transformation des données pour l'interface mobile
+    // Transformation des donnÃ©es pour l'interface mobile
     const formattedTrades = trades.map(trade => {
       const requestedObject = trade.requestedObjects?.[0];
       const offeredObject = trade.offeredObjects?.[0];
-      
-      // Calcul de la valeur estimée
-      const requestedValue = requestedObject?.estimatedValue || 0;
-      const offeredValue = offeredObject?.estimatedValue || 0;
-      const estimatedValue = (requestedValue + offeredValue) / 2;
 
       return {
         _id: trade._id,
@@ -97,23 +92,20 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
           _id: requestedObject._id,
           title: requestedObject.title,
           image: requestedObject.images?.[0],
-          category: requestedObject.category,
-          estimatedValue: requestedObject.estimatedValue
+          category: requestedObject.category
         } : null,
         offeredObject: offeredObject ? {
           _id: offeredObject._id,
           title: offeredObject.title,
           image: offeredObject.images?.[0],
-          category: offeredObject.category,
-          estimatedValue: offeredObject.estimatedValue
+          category: offeredObject.category
         } : null,
         status: trade.status,
         createdAt: trade.createdAt,
         completedAt: trade.completedAt,
         acceptedAt: trade.acceptedAt,
         refusedAt: trade.refusedAt,
-        estimatedValue: estimatedValue,
-        location: trade.fromUser.city || trade.toUser.city || 'Non spécifiée',
+        location: trade.fromUser.city || trade.toUser.city || 'Non spÃ©cifiÃ©e',
         disputeReason: trade.disputeReason,
         adminNotes: trade.adminNotes,
         riskLevel: trade.security?.riskLevel,
@@ -121,26 +113,26 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
       };
     });
 
-    console.log(`✅ [ADMIN TRADES] ${formattedTrades.length} échanges récupérés`);
+    console.log(`âœ… [ADMIN TRADES] ${formattedTrades.length} Ã©changes rÃ©cupÃ©rÃ©s`);
 
     res.json(formattedTrades);
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur récupération échanges:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur rÃ©cupÃ©ration Ã©changes:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur lors de la récupération des échanges' 
+      error: 'Erreur serveur lors de la rÃ©cupÃ©ration des Ã©changes' 
     });
   }
 });
 
 /**
  * GET /api/admin/trades/stats
- * Statistiques des échanges pour le dashboard
+ * Statistiques des Ã©changes pour le dashboard
  */
-router.get('/stats', authMiddleware, requireAdmin, async (req, res) => {
+router.get('/stats', requireAuth, requirePermission('manageTrades'), async (req, res) => {
   try {
-    console.log('📊 [ADMIN TRADES] Calcul des statistiques...');
+    console.log('ðŸ“Š [ADMIN TRADES] Calcul des statistiques...');
 
     // Comptages par statut
     const [
@@ -169,7 +161,7 @@ router.get('/stats', authMiddleware, requireAdmin, async (req, res) => {
       Trade.countDocuments({ status: 'disputed', createdAt: { $gte: thirtyDaysAgo } })
     ]);
 
-    // Statistiques d'activité des utilisateurs (derniers 30 jours)
+    // Statistiques d'activitÃ© des utilisateurs (derniers 30 jours)
     const activeUsersAgg = await Trade.aggregate([
       { $match: { createdAt: { $gte: thirtyDaysAgo } } },
       { $group: { 
@@ -181,13 +173,13 @@ router.get('/stats', authMiddleware, requireAdmin, async (req, res) => {
 
     const activeUserCount = activeUsersAgg[0]?.users?.length || 0;
 
-    // Taux de conversion (échanges complétés vs proposés)
+    // Taux de conversion (Ã©changes complÃ©tÃ©s vs proposÃ©s)
     const conversionRate = totalTrades > 0 ? (completedTrades / totalTrades) * 100 : 0;
     
-    // Taux de litiges (litiges vs échanges complétés)
+    // Taux de litiges (litiges vs Ã©changes complÃ©tÃ©s)
     const disputeRate = completedTrades > 0 ? (disputedTrades / (completedTrades + disputedTrades)) * 100 : 0;
 
-    // Temps moyen de traitement (pour les échanges complétés avec acceptedAt)
+    // Temps moyen de traitement (pour les Ã©changes complÃ©tÃ©s avec acceptedAt)
     const completedWithTiming = await Trade.find({
       status: 'completed',
       acceptedAt: { $exists: true },
@@ -204,7 +196,7 @@ router.get('/stats', authMiddleware, requireAdmin, async (req, res) => {
     }
 
     const stats = {
-      // 📊 Compteurs de base
+      // ðŸ“Š Compteurs de base
       totalTrades,
       completedTrades,
       pendingTrades,
@@ -212,30 +204,30 @@ router.get('/stats', authMiddleware, requireAdmin, async (req, res) => {
       cancelledTrades,
       proposedTrades,
       
-      // 📈 Métriques de performance
-      conversionRate: Math.round(conversionRate * 100) / 100, // % d'échanges aboutis
+      // ðŸ“ˆ MÃ©triques de performance
+      conversionRate: Math.round(conversionRate * 100) / 100, // % d'Ã©changes aboutis
       disputeRate: Math.round(disputeRate * 100) / 100,       // % de litiges
       avgProcessingDays: avgProcessingTime,                   // Temps moyen en jours
       
-      // 🕒 Activité récente (30 jours)
-      recentTrades,      // Nouveaux échanges
-      recentCompleted,   // Échanges finalisés
+      // ðŸ•’ ActivitÃ© rÃ©cente (30 jours)
+      recentTrades,      // Nouveaux Ã©changes
+      recentCompleted,   // Ã‰changes finalisÃ©s
       recentDisputes,    // Nouveaux litiges
       activeUsers: activeUserCount, // Utilisateurs actifs
       
-      // 🏥 Santé du système
+      // ðŸ¥ SantÃ© du systÃ¨me
       systemHealth: disputeRate < 5 ? 'excellent' : disputeRate < 15 ? 'bon' : 'attention',
-      needsAttention: pendingTrades + disputedTrades, // Échanges nécessitant une action
+      needsAttention: pendingTrades + disputedTrades, // Ã‰changes nÃ©cessitant une action
       
       lastUpdated: new Date().toISOString()
     };
 
-    console.log('✅ [ADMIN TRADES] Statistiques calculées:', stats);
+    console.log('âœ… [ADMIN TRADES] Statistiques calculÃ©es:', stats);
 
     res.json(stats);
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur calcul statistiques:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur calcul statistiques:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Erreur serveur lors du calcul des statistiques' 
@@ -245,28 +237,28 @@ router.get('/stats', authMiddleware, requireAdmin, async (req, res) => {
 
 /**
  * GET /api/admin/trades/:id
- * Détails complets d'un échange
+ * DÃ©tails complets d'un Ã©change
  */
-router.get('/:id', authMiddleware, requireAdmin, async (req, res) => {
+router.get('/:id', requireAuth, requirePermission('manageTrades'), async (req, res) => {
   try {
     const { id } = req.params;
     
-    console.log(`🔍 [ADMIN TRADES] Récupération détails échange ${id}...`);
+    console.log(`ðŸ” [ADMIN TRADES] RÃ©cupÃ©ration dÃ©tails Ã©change ${id}...`);
 
     const trade = await Trade.findById(id)
       .populate('fromUser', 'pseudo email avatar city phone subscriptionPlan createdAt')
       .populate('toUser', 'pseudo email avatar city phone subscriptionPlan createdAt')
-      .populate('requestedObjects', 'title description images category estimatedValue owner createdAt')
-      .populate('offeredObjects', 'title description images category estimatedValue owner createdAt');
+      .populate('requestedObjects', 'title description images category owner createdAt')
+      .populate('offeredObjects', 'title description images category owner createdAt');
 
     if (!trade) {
       return res.status(404).json({
         success: false,
-        error: 'Échange non trouvé'
+        error: 'Ã‰change non trouvÃ©'
       });
     }
 
-    // Historique des notifications liées
+    // Historique des notifications liÃ©es
     const notifications = await Notification.find({ trade: id })
       .populate('user', 'pseudo')
       .sort({ createdAt: -1 });
@@ -295,29 +287,29 @@ router.get('/:id', authMiddleware, requireAdmin, async (req, res) => {
       }))
     };
 
-    console.log(`✅ [ADMIN TRADES] Détails échange récupérés`);
+    console.log(`âœ… [ADMIN TRADES] DÃ©tails Ã©change rÃ©cupÃ©rÃ©s`);
 
     res.json(detailedTrade);
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur récupération détails:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur rÃ©cupÃ©ration dÃ©tails:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur lors de la récupération des détails' 
+      error: 'Erreur serveur lors de la rÃ©cupÃ©ration des dÃ©tails' 
     });
   }
 });
 
 /**
  * PUT /api/admin/trades/:id/approve
- * Approuver un échange en attente
+ * Approuver un Ã©change en attente
  */
-router.put('/:id/approve', authMiddleware, requireAdmin, async (req, res) => {
+router.put('/:id/approve', requireAuth, requirePermission('approveTrades'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason = 'Approuvé par l\'administration' } = req.body;
+    const { reason = 'ApprouvÃ© par l\'administration' } = req.body;
     
-    console.log(`✅ [ADMIN TRADES] Approbation échange ${id}...`);
+    console.log(`âœ… [ADMIN TRADES] Approbation Ã©change ${id}...`);
 
     const trade = await Trade.findById(id)
       .populate('fromUser', 'pseudo email')
@@ -326,29 +318,29 @@ router.put('/:id/approve', authMiddleware, requireAdmin, async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        error: 'Échange non trouvé'
+        error: 'Ã‰change non trouvÃ©'
       });
     }
 
     if (!['pending', 'disputed'].includes(trade.status)) {
       return res.status(400).json({
         success: false,
-        error: 'Seuls les échanges en attente ou en litige peuvent être approuvés'
+        error: 'Seuls les Ã©changes en attente ou en litige peuvent Ãªtre approuvÃ©s'
       });
     }
 
-    // Récupérer les infos de l'admin
+    // RÃ©cupÃ©rer les infos de l'admin
     const admin = await User.findById(req.user.id).select('pseudo');
     const adminPseudo = admin?.pseudo || 'Admin';
 
-    // Mise à jour du statut
+    // Mise Ã  jour du statut
     trade.status = 'completed';
     trade.completedAt = new Date();
-    trade.adminNotes = `${trade.adminNotes || ''}\n[${new Date().toISOString()}] APPROUVÉ par ${adminPseudo}: ${reason}`;
+    trade.adminNotes = `${trade.adminNotes || ''}\n[${new Date().toISOString()}] APPROUVÃ‰ par ${adminPseudo}: ${reason}`;
     
     await trade.save();
 
-    // Marquer les objets comme échangés
+    // Marquer les objets comme Ã©changÃ©s
     if (trade.requestedObjects?.length > 0) {
       await ObjectModel.updateMany(
         { _id: { $in: trade.requestedObjects } },
@@ -367,23 +359,23 @@ router.put('/:id/approve', authMiddleware, requireAdmin, async (req, res) => {
     await Notification.create([
       {
         user: trade.fromUser._id,
-        message: 'Votre échange a été approuvé par l\'administration.',
+        message: 'Votre Ã©change a Ã©tÃ© approuvÃ© par l\'administration.',
         type: 'trade_approved',
         trade: trade._id
       },
       {
         user: trade.toUser._id,
-        message: 'Votre échange a été approuvé par l\'administration.',
+        message: 'Votre Ã©change a Ã©tÃ© approuvÃ© par l\'administration.',
         type: 'trade_approved',
         trade: trade._id
       }
     ]);
 
-    console.log(`✅ [ADMIN TRADES] Échange ${id} approuvé avec succès`);
+    console.log(`âœ… [ADMIN TRADES] Ã‰change ${id} approuvÃ© avec succÃ¨s`);
 
     res.json({
       success: true,
-      message: 'Échange approuvé avec succès',
+      message: 'Ã‰change approuvÃ© avec succÃ¨s',
       trade: {
         _id: trade._id,
         status: trade.status,
@@ -392,24 +384,24 @@ router.put('/:id/approve', authMiddleware, requireAdmin, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur approbation échange:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur approbation Ã©change:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur lors de l\'approbation de l\'échange' 
+      error: 'Erreur serveur lors de l\'approbation de l\'Ã©change' 
     });
   }
 });
 
 /**
  * PUT /api/admin/trades/:id/cancel
- * Annuler un échange
+ * Annuler un Ã©change
  */
-router.put('/:id/cancel', authMiddleware, requireAdmin, async (req, res) => {
+router.put('/:id/cancel', requireAuth, requirePermission('manageTrades'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason = 'Annulé par l\'administration' } = req.body;
+    const { reason = 'AnnulÃ© par l\'administration' } = req.body;
     
-    console.log(`❌ [ADMIN TRADES] Annulation échange ${id}...`);
+    console.log(`âŒ [ADMIN TRADES] Annulation Ã©change ${id}...`);
 
     const trade = await Trade.findById(id)
       .populate('fromUser', 'pseudo email')
@@ -418,25 +410,25 @@ router.put('/:id/cancel', authMiddleware, requireAdmin, async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        error: 'Échange non trouvé'
+        error: 'Ã‰change non trouvÃ©'
       });
     }
 
     if (trade.status === 'completed') {
       return res.status(400).json({
         success: false,
-        error: 'Impossible d\'annuler un échange déjà terminé'
+        error: 'Impossible d\'annuler un Ã©change dÃ©jÃ  terminÃ©'
       });
     }
 
-    // Récupérer les infos de l'admin
+    // RÃ©cupÃ©rer les infos de l'admin
     const admin = await User.findById(req.user.id).select('pseudo');
     const adminPseudo = admin?.pseudo || 'Admin';
 
-    // Mise à jour du statut
+    // Mise Ã  jour du statut
     trade.status = 'cancelled';
     trade.refusedAt = new Date();
-    trade.adminNotes = `${trade.adminNotes || ''}\n[${new Date().toISOString()}] ANNULÉ par ${adminPseudo}: ${reason}`;
+    trade.adminNotes = `${trade.adminNotes || ''}\n[${new Date().toISOString()}] ANNULÃ‰ par ${adminPseudo}: ${reason}`;
     
     await trade.save();
 
@@ -459,23 +451,23 @@ router.put('/:id/cancel', authMiddleware, requireAdmin, async (req, res) => {
     await Notification.create([
       {
         user: trade.fromUser._id,
-        message: `Votre échange a été annulé par l'administration. Raison: ${reason}`,
+        message: `Votre Ã©change a Ã©tÃ© annulÃ© par l'administration. Raison: ${reason}`,
         type: 'trade_cancelled',
         trade: trade._id
       },
       {
         user: trade.toUser._id,
-        message: `Votre échange a été annulé par l'administration. Raison: ${reason}`,
+        message: `Votre Ã©change a Ã©tÃ© annulÃ© par l'administration. Raison: ${reason}`,
         type: 'trade_cancelled',
         trade: trade._id
       }
     ]);
 
-    console.log(`❌ [ADMIN TRADES] Échange ${id} annulé avec succès`);
+    console.log(`âŒ [ADMIN TRADES] Ã‰change ${id} annulÃ© avec succÃ¨s`);
 
     res.json({
       success: true,
-      message: 'Échange annulé avec succès',
+      message: 'Ã‰change annulÃ© avec succÃ¨s',
       trade: {
         _id: trade._id,
         status: trade.status,
@@ -484,33 +476,33 @@ router.put('/:id/cancel', authMiddleware, requireAdmin, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur annulation échange:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur annulation Ã©change:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur lors de l\'annulation de l\'échange' 
+      error: 'Erreur serveur lors de l\'annulation de l\'Ã©change' 
     });
   }
 });
 
 /**
  * PUT /api/admin/trades/:id/resolve-dispute
- * Résoudre un litige
+ * RÃ©soudre un litige
  */
-router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res) => {
+router.put('/:id/resolve-dispute', requireAuth, requirePermission('resolveDisputes'), async (req, res) => {
   try {
     const { id } = req.params;
     const { resolution, action, reason } = req.body;
     
-    console.log(`⚖️ [ADMIN TRADES] Résolution litige échange ${id}...`);
+    console.log(`âš–ï¸ [ADMIN TRADES] RÃ©solution litige Ã©change ${id}...`);
 
     if (!resolution || !action) {
       return res.status(400).json({
         success: false,
-        error: 'Paramètres de résolution manquants'
+        error: 'ParamÃ¨tres de rÃ©solution manquants'
       });
     }
 
-    // Récupérer les infos de l'admin
+    // RÃ©cupÃ©rer les infos de l'admin
     const admin = await User.findById(req.user.id).select('pseudo');
     const adminPseudo = admin?.pseudo || 'Admin';
 
@@ -521,14 +513,14 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
     if (!trade) {
       return res.status(404).json({
         success: false,
-        error: 'Échange non trouvé'
+        error: 'Ã‰change non trouvÃ©'
       });
     }
 
     if (trade.status !== 'disputed') {
       return res.status(400).json({
         success: false,
-        error: 'Cet échange n\'est pas en litige'
+        error: 'Cet Ã©change n\'est pas en litige'
       });
     }
 
@@ -539,9 +531,9 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
       case 'approve':
         newStatus = 'completed';
         trade.completedAt = new Date();
-        notificationMessage = 'Le litige a été résolu en votre faveur. L\'échange est finalisé.';
+        notificationMessage = 'Le litige a Ã©tÃ© rÃ©solu en votre faveur. L\'Ã©change est finalisÃ©.';
         
-        // Marquer les objets comme échangés
+        // Marquer les objets comme Ã©changÃ©s
         if (trade.requestedObjects?.length > 0) {
           await ObjectModel.updateMany(
             { _id: { $in: trade.requestedObjects } },
@@ -559,7 +551,7 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
       case 'cancel':
         newStatus = 'cancelled';
         trade.refusedAt = new Date();
-        notificationMessage = 'Le litige a été résolu par l\'annulation de l\'échange.';
+        notificationMessage = 'Le litige a Ã©tÃ© rÃ©solu par l\'annulation de l\'Ã©change.';
         
         // Remettre les objets disponibles
         if (trade.requestedObjects?.length > 0) {
@@ -579,11 +571,11 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
       default:
         return res.status(400).json({
           success: false,
-          error: 'Action de résolution invalide'
+          error: 'Action de rÃ©solution invalide'
         });
     }
 
-    // Mise à jour du trade
+    // Mise Ã  jour du trade
     trade.status = newStatus;
     trade.disputeResolution = {
       resolvedBy: req.user.id,
@@ -592,7 +584,7 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
       action: action,
       reason: reason
     };
-    trade.adminNotes = `${trade.adminNotes || ''}\n[${new Date().toISOString()}] LITIGE RÉSOLU par ${adminPseudo}: ${resolution} (${action})`;
+    trade.adminNotes = `${trade.adminNotes || ''}\n[${new Date().toISOString()}] LITIGE RÃ‰SOLU par ${adminPseudo}: ${resolution} (${action})`;
     
     await trade.save();
 
@@ -612,11 +604,11 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
       }
     ]);
 
-    console.log(`⚖️ [ADMIN TRADES] Litige échange ${id} résolu: ${action}`);
+    console.log(`âš–ï¸ [ADMIN TRADES] Litige Ã©change ${id} rÃ©solu: ${action}`);
 
     res.json({
       success: true,
-      message: 'Litige résolu avec succès',
+      message: 'Litige rÃ©solu avec succÃ¨s',
       trade: {
         _id: trade._id,
         status: trade.status,
@@ -625,10 +617,10 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
     });
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur résolution litige:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur rÃ©solution litige:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur lors de la résolution du litige' 
+      error: 'Erreur serveur lors de la rÃ©solution du litige' 
     });
   }
 });
@@ -637,7 +629,7 @@ router.put('/:id/resolve-dispute', authMiddleware, requireAdmin, async (req, res
  * PUT /api/admin/trades/:id/notes
  * Ajouter des notes administratives
  */
-router.put('/:id/notes', authMiddleware, requireAdmin, async (req, res) => {
+router.put('/:id/notes', requireAuth, requirePermission('manageTrades'), async (req, res) => {
   try {
     const { id } = req.params;
     const { note } = req.body;
@@ -649,9 +641,9 @@ router.put('/:id/notes', authMiddleware, requireAdmin, async (req, res) => {
       });
     }
 
-    console.log(`📝 [ADMIN TRADES] Ajout note échange ${id}...`);
+    console.log(`ðŸ“ [ADMIN TRADES] Ajout note Ã©change ${id}...`);
 
-    // Récupérer les infos de l'admin
+    // RÃ©cupÃ©rer les infos de l'admin
     const admin = await User.findById(req.user.id).select('pseudo');
     const adminPseudo = admin?.pseudo || 'Admin';
 
@@ -660,7 +652,7 @@ router.put('/:id/notes', authMiddleware, requireAdmin, async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        error: 'Échange non trouvé'
+        error: 'Ã‰change non trouvÃ©'
       });
     }
 
@@ -670,16 +662,16 @@ router.put('/:id/notes', authMiddleware, requireAdmin, async (req, res) => {
     
     await trade.save();
 
-    console.log(`✅ [ADMIN TRADES] Note ajoutée à l'échange ${id}`);
+    console.log(`âœ… [ADMIN TRADES] Note ajoutÃ©e Ã  l'Ã©change ${id}`);
 
     res.json({
       success: true,
-      message: 'Note ajoutée avec succès',
+      message: 'Note ajoutÃ©e avec succÃ¨s',
       adminNotes: trade.adminNotes
     });
     
   } catch (error) {
-    console.error('❌ [ADMIN TRADES] Erreur ajout note:', error);
+    console.error('âŒ [ADMIN TRADES] Erreur ajout note:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Erreur serveur lors de l\'ajout de la note' 
@@ -688,3 +680,4 @@ router.put('/:id/notes', authMiddleware, requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
+

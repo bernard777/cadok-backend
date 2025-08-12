@@ -53,19 +53,38 @@ const userSchema = new mongoose.Schema({
   stripeSubscriptionId: { type: String, default: null },
   lastPaymentDate: { type: Date, default: null },
   
-  // 🛡️ SYSTÈME D'ADMINISTRATION
+  // 🛡️ SYSTÈME D'ADMINISTRATION GRANULAIRE
   role: { 
     type: String, 
-    enum: ['user', 'moderator', 'admin', 'super_admin'], 
+    enum: ['user', 'moderator', 'admin_events', 'admin_users', 'admin_trades', 'admin_content', 'super_admin'], 
     default: 'user' 
   },
   isAdmin: { type: Boolean, default: false },
   adminPermissions: {
+    // Gestion des événements  
     manageEvents: { type: Boolean, default: false },
+    createEvents: { type: Boolean, default: false },
+    moderateEvents: { type: Boolean, default: false },
+    
+    // Gestion des utilisateurs
     manageUsers: { type: Boolean, default: false },
+    banUsers: { type: Boolean, default: false },
+    viewUserDetails: { type: Boolean, default: false },
+    
+    // Gestion des échanges
+    manageTrades: { type: Boolean, default: false },
+    approveTrades: { type: Boolean, default: false },
+    resolveDisputes: { type: Boolean, default: false },
+    
+    // Modération de contenu
     moderateContent: { type: Boolean, default: false },
+    deleteReports: { type: Boolean, default: false },
+    manageReports: { type: Boolean, default: false },
+    
+    // Analytics et système
     viewAnalytics: { type: Boolean, default: false },
-    systemConfig: { type: Boolean, default: false }
+    systemConfig: { type: Boolean, default: false },
+    manageAdmins: { type: Boolean, default: false }
   },
   adminActivatedAt: { type: Date, default: null },
   adminActivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

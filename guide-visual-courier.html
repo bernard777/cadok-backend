@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide Visual - Configuration Courier.com</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f7fa; 
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+        }
+        .step { 
+            padding: 30px; 
+            border-bottom: 1px solid #eee; 
+        }
+        .step:last-child { 
+            border-bottom: none; 
+        }
+        .step-number { 
+            background: #FF6B35; 
+            color: white; 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 50%; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            margin-right: 15px; 
+        }
+        .step-title { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            font-size: 20px; 
+            font-weight: 600; 
+            color: #333; 
+        }
+        .screenshot { 
+            background: #f8f9fa; 
+            border: 2px solid #e9ecef; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin: 15px 0; 
+            text-align: center; 
+            position: relative; 
+        }
+        .browser-bar { 
+            background: #e9ecef; 
+            height: 30px; 
+            border-radius: 6px 6px 0 0; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 10px; 
+            margin: -20px -20px 15px; 
+        }
+        .browser-dot { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            margin-right: 8px; 
+        }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27ca3f; }
+        .url-bar { 
+            background: white; 
+            border-radius: 4px; 
+            padding: 5px 10px; 
+            margin-left: 20px; 
+            flex: 1; 
+            font-size: 12px; 
+            color: #666; 
+        }
+        .api-key { 
+            background: #2d3748; 
+            color: #a0aec0; 
+            padding: 15px; 
+            border-radius: 6px; 
+            font-family: 'Courier New', monospace; 
+            margin: 10px 0; 
+        }
+        .api-key .highlight { 
+            color: #68d391; 
+            font-weight: bold; 
+        }
+        .success { 
+            background: #d4edda; 
+            border: 1px solid #c3e6cb; 
+            border-radius: 6px; 
+            padding: 15px; 
+            color: #155724; 
+            margin: 15px 0; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border: 1px solid #ffeaa7; 
+            border-radius: 6px; 
+            padding: 15px; 
+            color: #856404; 
+            margin: 15px 0; 
+        }
+        .code { 
+            background: #f1f3f4; 
+            border-left: 4px solid #FF6B35; 
+            padding: 15px; 
+            font-family: 'Courier New', monospace; 
+            margin: 15px 0; 
+            border-radius: 0 6px 6px 0; 
+        }
+        .button { 
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); 
+            color: white; 
+            padding: 12px 25px; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            display: inline-block; 
+            text-decoration: none; 
+            margin: 10px 5px; 
+        }
+        .dashboard-mockup { 
+            background: #2d3748; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 15px 0; 
+        }
+        .sidebar { 
+            background: #1a202c; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 15px; 
+        }
+        .nav-item { 
+            padding: 8px 12px; 
+            margin: 5px 0; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .nav-item:hover, .nav-item.active { 
+            background: #4a5568; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 Guide Visuel : Configuration Courier.com</h1>
+            <p>Configuration complète en 10 minutes pour KADOC</p>
+        </div>
+
+        <!-- Étape 1 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">1</div>
+                <div>Création du compte Courier</div>
+            </div>
+            
+            <div class="screenshot">
+                <div class="browser-bar">
+                    <div class="browser-dot red"></div>
+                    <div class="browser-dot yellow"></div>
+                    <div class="browser-dot green"></div>
+                    <div class="url-bar">https://www.courier.com</div>
+                </div>
+                
+                <div style="text-align: center; padding: 30px;">
+                    <h2 style="color: #FF6B35; margin: 0 0 20px;">Welcome to Courier</h2>
+                    <p style="color: #666; margin-bottom: 30px;">The complete communications platform for notifications, emails, and more</p>
+                    <a href="#" class="button">Get Started for Free</a>
+                    <p style="font-size: 12px; color: #999; margin-top: 15px;">✨ 10,000 messages/month free forever</p>
+                </div>
+            </div>
+            
+            <p><strong>Action :</strong> Cliquer sur <strong>"Get Started for Free"</strong></p>
+        </div>
+
+        <!-- Étape 2 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">2</div>
+                <div>Inscription</div>
+            </div>
+            
+            <div class="screenshot">
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 400px; margin: 0 auto;">
+                    <h3 style="text-align: center; margin: 0 0 30px; color: #333;">Create your account</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Email</label>
+                        <input type="text" placeholder="votre-email@gmail.com" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Password</label>
+                        <input type="password" placeholder="••••••••••" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Company Name</label>
+                        <input type="text" placeholder="KADOC" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    
+                    <button class="button" style="width: 100%; text-align: center;">Create Account</button>
+                </div>
+            </div>
+            
+            <div class="warning">
+                <strong>📧 Important :</strong> Vérifiez votre email et cliquez sur le lien de confirmation !
+            </div>
+        </div>
+
+        <!-- Étape 3 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">3</div>
+                <div>Accès au Dashboard</div>
+            </div>
+            
+            <div class="screenshot">
+                <div class="browser-bar">
+                    <div class="browser-dot red"></div>
+                    <div class="browser-dot yellow"></div>
+                    <div class="browser-dot green"></div>
+                    <div class="url-bar">https://app.courier.com/</div>
+                </div>
+                
+                <div class="dashboard-mockup">
+                    <div style="display: flex;">
+                        <div class="sidebar" style="width: 200px;">
+                            <div style="color: #FF6B35; font-weight: bold; margin-bottom: 20px;">📊 Courier</div>
+                            <div class="nav-item">📈 Analytics</div>
+                            <div class="nav-item">📧 Messages</div>
+                            <div class="nav-item">👥 Audiences</div>
+                            <div class="nav-item active" style="background: #4a5568;">⚙️ Settings</div>
+                            <div class="nav-item">📚 Templates</div>
+                        </div>
+                        
+                        <div style="flex: 1; padding-left: 20px;">
+                            <h3 style="margin: 0 0 20px;">Welcome to your dashboard!</h3>
+                            <p style="color: #a0aec0;">Start sending notifications in minutes</p>
+                            <div style="background: #4a5568; padding: 15px; border-radius: 6px; margin-top: 20px;">
+                                <strong>✨ Free Plan Active</strong><br>
+                                <span style="color: #a0aec0;">10,000 messages/month included</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <p><strong>Action :</strong> Une fois connecté, cliquer sur <strong>"Settings"</strong> dans le menu de gauche</p>
+        </div>
+
+        <!-- Étape 4 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">4</div>
+                <div>Récupération des clés API</div>
+            </div>
+            
+            <div class="screenshot">
+                <div class="dashboard-mockup">
+                    <h3 style="margin: 0 0 20px;">Settings > API Keys</h3>
+                    
+                    <div style="background: #1a202c; padding: 20px; border-radius: 8px;">
+                        <h4 style="margin: 0 0 15px; color: white;">Production Keys</h4>
+                        
+                        <div style="background: #2d3748; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">Publishable Key</div>
+                                    <div class="highlight" style="font-family: monospace;">pk_prod_ABC123DEF456GHI789JKL012</div>
+                                </div>
+                                <div>
+                                    <button class="button" style="font-size: 12px; padding: 8px 15px;">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #2d3748; padding: 15px; border-radius: 6px;">
+                            <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">Secret Key</div>
+                            <div style="color: #68d391; font-family: monospace;">sk_prod_••••••••••••••••••••••••</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="success">
+                <strong>🎯 Clé à copier :</strong> Copiez la <strong>Publishable Key</strong> qui commence par <code>pk_prod_</code>
+            </div>
+            
+            <p><strong>Action :</strong></p>
+            <ol>
+                <li>Cliquer sur <strong>"API Keys"</strong></li>
+                <li>Copier la clé <strong>"Publishable Key"</strong> (commence par <code>pk_prod_</code>)</li>
+                <li>⚠️ <strong>NE PAS</strong> copier la "Secret Key"</li>
+            </ol>
+        </div>
+
+        <!-- Étape 5 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">5</div>
+                <div>Configuration dans .env</div>
+            </div>
+            
+            <p>Ouvrir le fichier <code>cadok-backend/.env</code> et remplacer :</p>
+            
+            <div class="code">
+# AVANT
+COURIER_AUTH_TOKEN=pk_prod_VOTRE_TOKEN_COURIER_ICI
+
+# APRÈS (avec votre vraie clé)
+COURIER_AUTH_TOKEN=pk_prod_ABC123DEF456GHI789JKL012
+            </div>
+            
+            <div class="warning">
+                <strong>⚠️ Important :</strong> Remplacez <code>pk_prod_ABC123DEF456GHI789JKL012</code> par votre vraie clé copiée !
+            </div>
+        </div>
+
+        <!-- Étape 6 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">6</div>
+                <div>Test de configuration</div>
+            </div>
+            
+            <p>Dans votre terminal, lancer le test :</p>
+            
+            <div class="code">
+cd cadok-backend
+node test-courier-email.js
+            </div>
+            
+            <div class="success">
+                <strong>✅ Résultat attendu :</strong>
+                <div class="code" style="background: #d4edda; border-left-color: #28a745; margin-top: 10px;">
+📧 === TEST SYSTÈME EMAIL COURIER ===
+
+🔧 1. Vérification configuration...
+✅ Configuration détectée:
+   🔑 Token: pk_prod_ABC123D...
+   📧 From: noreply@kadoc.com
+
+📧 3. Test email de vérification...
+✅ Email de vérification envoyé avec succès!
+   📩 Message ID: 1-63f8a2b4-abc123def456
+                </div>
+            </div>
+            
+            <div class="warning">
+                <strong>❌ Si erreur 401 Unauthorized :</strong> Vérifiez que votre clé API est correcte dans le fichier .env
+            </div>
+        </div>
+
+        <!-- Étape 7 -->
+        <div class="step">
+            <div class="step-title">
+                <div class="step-number">7</div>
+                <div>Vérification finale</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                <div class="success">
+                    <strong>✅ Compte créé</strong><br>
+                    <small>Courier.com configuré</small>
+                </div>
+                <div class="success">
+                    <strong>✅ Clé API copiée</strong><br>
+                    <small>pk_prod_... dans .env</small>
+                </div>
+                <div class="success">
+                    <strong>✅ Test réussi</strong><br>
+                    <small>Emails fonctionnels</small>
+                </div>
+                <div class="success">
+                    <strong>✅ 10k emails/mois</strong><br>
+                    <small>Quota gratuit activé</small>
+                </div>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                <h3 style="margin: 0 0 10px;">🎉 Configuration terminée !</h3>
+                <p style="margin: 0;">KADOC peut maintenant envoyer des emails professionnels</p>
+            </div>
+        </div>
+
+        <!-- Support -->
+        <div class="step">
+            <div style="text-align: center; padding: 20px;">
+                <h3 style="color: #FF6B35;">🛠️ Besoin d'aide ?</h3>
+                <p>Si vous rencontrez des problèmes :</p>
+                <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                    <a href="https://www.courier.com/docs/" class="button">📚 Documentation</a>
+                    <a href="mailto:support@courier.com" class="button">📧 Support Email</a>
+                    <a href="https://status.courier.com/" class="button">📊 Status Page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

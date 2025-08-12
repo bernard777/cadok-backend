@@ -103,14 +103,6 @@ router.post('/',
   console.log('🛡️ POST /api/objects SÉCURISÉ', req.body);
 
   // Les validations de base sont maintenant gérées par le middleware de sécurité
-  // Validation supplémentaire pour estimatedValue
-  if (req.body.estimatedValue && req.body.estimatedValue < 0) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'La valeur estimée ne peut pas être négative.',
-      code: 'NEGATIVE_VALUE'
-    });
-  }
 
   // Validate title and description length
   if (title.trim().length > 100) {
@@ -119,14 +111,6 @@ router.post('/',
   
   if (description.trim().length > 1000) {
     return res.status(400).json({ error: 'La description ne peut pas dépasser 1000 caractères.' });
-  }
-
-  // Validate estimatedValue (ne doit pas être négatif)
-  if (req.body.estimatedValue !== undefined) {
-    const estimatedValue = parseFloat(req.body.estimatedValue);
-    if (isNaN(estimatedValue) || estimatedValue < 0) {
-      return res.status(400).json({ error: 'La valeur estimée doit être un nombre positif ou nul.' });
-    }
   }
 
   // Validate imageUrl format if provided (pour compatibilité descendante)
@@ -175,8 +159,7 @@ router.post('/',
     category: categoryId,
     imageUrl,
     images: processedImages?.length || 0,
-    owner: req.user.id,
-    estimatedValue: req.body.estimatedValue || 0
+    owner: req.user.id
   });
 
   try {
@@ -187,8 +170,7 @@ router.post('/',
       imageUrl,
       images: processedImages,
       owner: req.user.id,
-      attributes: attributes || {},
-      estimatedValue: req.body.estimatedValue || 0
+      attributes: attributes || {}
     });
     console.log('📋 ObjectModel créé, tentative de sauvegarde...');
     const saved = await newObject.save();
@@ -292,13 +274,7 @@ router.get('/search', async (req, res) => {
       filters.category = category;
     }
     
-    if (minValue) {
-      filters.estimatedValue = { ...filters.estimatedValue, $gte: parseInt(minValue) };
-    }
-    
-    if (maxValue) {
-      filters.estimatedValue = { ...filters.estimatedValue, $lte: parseInt(maxValue) };
-    }
+    // Supprimé : filtres par valeur estimée (système de troc pur)
     
     const objects = await ObjectModel.find(filters)
       .populate('owner', 'pseudo city')

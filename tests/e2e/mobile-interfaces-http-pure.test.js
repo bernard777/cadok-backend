@@ -1,6 +1,6 @@
-/**
- * 📱 NOUVELLES INTERFACES MOBILES - VERSION HTTP PURE
- * Tests E2E complets des interfaces mobile avec structure HTTP pure validée
+﻿/**
+ * ðŸ“± NOUVELLES INTERFACES MOBILES - VERSION HTTP PURE
+ * Tests E2E complets des interfaces mobile avec structure HTTP pure validÃ©e
  */
 
 const axios = require('axios');
@@ -8,7 +8,7 @@ const UserDataGenerator = require('../helpers/user-data-generator');
 
 const API_BASE = 'http://localhost:5000/api';
 
-// Configuration Jest (même pattern que les autres tests HTTP-pure)
+// Configuration Jest (mÃªme pattern que les autres tests HTTP-pure)
 jest.setTimeout(30000);
 
 // Helpers HTTP directs pour les tests mobile
@@ -31,7 +31,7 @@ class MobileHelpers {
       ...customData
     });
     
-    console.log('👤 Inscription utilisateur mobile:', userData.pseudo);
+    console.log('ðŸ‘¤ Inscription utilisateur mobile:', userData.pseudo);
     
     try {
       const response = await axios.post(`${API_BASE}/auth/register`, userData, {
@@ -39,7 +39,7 @@ class MobileHelpers {
       });
       
       if (response.status === 201 || response.status === 200) {
-        console.log('✅ Utilisateur mobile créé:', userData.pseudo);
+        console.log('âœ… Utilisateur mobile crÃ©Ã©:', userData.pseudo);
         return {
           success: true,
           user: response.data.user,
@@ -52,13 +52,13 @@ class MobileHelpers {
       return { success: false, error: 'Statut inattendu', status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur inscription mobile:', error.message);
+      console.error('ðŸ’¥ Erreur inscription mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileUserProfile(token) {
-    console.log('📱 Récupération profil mobile');
+    console.log('ðŸ“± RÃ©cupÃ©ration profil mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/user/profile`, {
@@ -67,20 +67,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Profil mobile récupéré');
+        console.log('âœ… Profil mobile rÃ©cupÃ©rÃ©');
         return { success: true, profile: response.data.profile };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur profil mobile:', error.message);
+      console.error('ðŸ’¥ Erreur profil mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileObjectsList(token) {
-    console.log('📦 Récupération objets mobile');
+    console.log('ðŸ“¦ RÃ©cupÃ©ration objets mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/objects`, {
@@ -89,20 +89,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Objets mobile récupérés');
+        console.log('âœ… Objets mobile rÃ©cupÃ©rÃ©s');
         return { success: true, objects: response.data.objects };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur objets mobile:', error.message);
+      console.error('ðŸ’¥ Erreur objets mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileTradesList(token) {
-    console.log('🔄 Récupération trocs mobile');
+    console.log('ðŸ”„ RÃ©cupÃ©ration trocs mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/trades`, {
@@ -111,20 +111,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Trocs mobile récupérés');
+        console.log('âœ… Trocs mobile rÃ©cupÃ©rÃ©s');
         return { success: true, trades: response.data.trades };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur trocs mobile:', error.message);
+      console.error('ðŸ’¥ Erreur trocs mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileNotifications(token) {
-    console.log('🔔 Récupération notifications mobile');
+    console.log('ðŸ”” RÃ©cupÃ©ration notifications mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/notifications`, {
@@ -133,20 +133,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Notifications mobile récupérées');
+        console.log('âœ… Notifications mobile rÃ©cupÃ©rÃ©es');
         return { success: true, notifications: response.data.notifications };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur notifications mobile:', error.message);
+      console.error('ðŸ’¥ Erreur notifications mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileSearchResults(token, searchData) {
-    console.log('🔍 Recherche mobile:', searchData.query);
+    console.log('ðŸ” Recherche mobile:', searchData.query);
     
     try {
       const response = await axios.post(`${API_BASE}/mobile/search`, searchData, {
@@ -155,20 +155,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Recherche mobile effectuée');
+        console.log('âœ… Recherche mobile effectuÃ©e');
         return { success: true, results: response.data.results };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur recherche mobile:', error.message);
+      console.error('ðŸ’¥ Erreur recherche mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileCategories(token) {
-    console.log('📂 Récupération catégories mobile');
+    console.log('ðŸ“‚ RÃ©cupÃ©ration catÃ©gories mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/categories`, {
@@ -177,20 +177,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Catégories mobile récupérées');
+        console.log('âœ… CatÃ©gories mobile rÃ©cupÃ©rÃ©es');
         return { success: true, categories: response.data.categories };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur catégories mobile:', error.message);
+      console.error('ðŸ’¥ Erreur catÃ©gories mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileFilters(token) {
-    console.log('🎚️ Récupération filtres mobile');
+    console.log('ðŸŽšï¸ RÃ©cupÃ©ration filtres mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/filters`, {
@@ -199,20 +199,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Filtres mobile récupérés');
+        console.log('âœ… Filtres mobile rÃ©cupÃ©rÃ©s');
         return { success: true, filters: response.data.filters };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur filtres mobile:', error.message);
+      console.error('ðŸ’¥ Erreur filtres mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileDashboard(token) {
-    console.log('📊 Récupération dashboard mobile');
+    console.log('ðŸ“Š RÃ©cupÃ©ration dashboard mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/dashboard`, {
@@ -221,20 +221,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Dashboard mobile récupéré');
+        console.log('âœ… Dashboard mobile rÃ©cupÃ©rÃ©');
         return { success: true, dashboard: response.data.dashboard };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur dashboard mobile:', error.message);
+      console.error('ðŸ’¥ Erreur dashboard mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async getMobileSettings(token) {
-    console.log('⚙️ Récupération paramètres mobile');
+    console.log('âš™ï¸ RÃ©cupÃ©ration paramÃ¨tres mobile');
     
     try {
       const response = await axios.get(`${API_BASE}/mobile/settings`, {
@@ -243,20 +243,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Paramètres mobile récupérés');
+        console.log('âœ… ParamÃ¨tres mobile rÃ©cupÃ©rÃ©s');
         return { success: true, settings: response.data.settings };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur paramètres mobile:', error.message);
+      console.error('ðŸ’¥ Erreur paramÃ¨tres mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async updateMobileSettings(token, settingsData) {
-    console.log('⚙️ Mise à jour paramètres mobile');
+    console.log('âš™ï¸ Mise Ã  jour paramÃ¨tres mobile');
     
     try {
       const response = await axios.put(`${API_BASE}/mobile/settings`, settingsData, {
@@ -265,20 +265,20 @@ class MobileHelpers {
       });
       
       if (response.status === 200) {
-        console.log('✅ Paramètres mobile mis à jour');
+        console.log('âœ… ParamÃ¨tres mobile mis Ã  jour');
         return { success: true, settings: response.data.settings };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur mise à jour paramètres:', error.message);
+      console.error('ðŸ’¥ Erreur mise Ã  jour paramÃ¨tres:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
 
   static async createObject(token, objectData) {
-    console.log('📦 Création objet mobile:', objectData.name);
+    console.log('ðŸ“¦ CrÃ©ation objet mobile:', objectData.name);
     
     try {
       const response = await axios.post(`${API_BASE}/objects`, objectData, {
@@ -287,14 +287,14 @@ class MobileHelpers {
       });
       
       if (response.status === 201 || response.status === 200) {
-        console.log('✅ Objet créé via mobile:', objectData.name);
+        console.log('âœ… Objet crÃ©Ã© via mobile:', objectData.name);
         return { success: true, object: response.data };
       }
       
       return { success: false, error: response.data, status: response.status };
       
     } catch (error) {
-      console.error('💥 Erreur création objet mobile:', error.message);
+      console.error('ðŸ’¥ Erreur crÃ©ation objet mobile:', error.message);
       return { success: false, error: error.message, status: error.response?.status || 0 };
     }
   }
@@ -305,29 +305,29 @@ class MobileHelpers {
 }
 
 // =============================================================================
-// 🧪 TESTS INTERFACES MOBILES - HTTP PURE
+// ðŸ§ª TESTS INTERFACES MOBILES - HTTP PURE
 // =============================================================================
 
-describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
+describe('ðŸ“± Nouvelles Interfaces Mobiles - HTTP Pure', () => {
   let mobileUser, mobileToken;
   let mobileUser2, mobileToken2;
 
   beforeAll(async () => {
-    console.log('🚀 Initialisation tests interfaces mobiles...');
+    console.log('ðŸš€ Initialisation tests interfaces mobiles...');
   });
 
   afterAll(async () => {
-    console.log('🏁 Tests interfaces mobiles terminés');
+    console.log('ðŸ Tests interfaces mobiles terminÃ©s');
   });
 
   // =============================================================================
-  // 👤 TESTS DE CRÉATION UTILISATEURS MOBILES
+  // ðŸ‘¤ TESTS DE CRÃ‰ATION UTILISATEURS MOBILES
   // =============================================================================
 
-  describe('👤 Création Utilisateurs Mobiles', () => {
+  describe('ðŸ‘¤ CrÃ©ation Utilisateurs Mobiles', () => {
     
-    test('Créer un utilisateur mobile principal', async () => {
-      console.log('🎯 Test: Création utilisateur mobile principal');
+    test('CrÃ©er un utilisateur mobile principal', async () => {
+      console.log('ðŸŽ¯ Test: CrÃ©ation utilisateur mobile principal');
       
       const result = await MobileHelpers.registerUser({
         pseudo: `MobileTestE2E${Date.now()}`,
@@ -343,15 +343,15 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         mobileUser = result.user;
         mobileToken = result.token;
         
-        console.log('✅ Utilisateur mobile principal créé avec succès');
+        console.log('âœ… Utilisateur mobile principal crÃ©Ã© avec succÃ¨s');
       } else {
-        console.log('⚠️ Erreur création mobile principal (conflit email/pseudo attendu)');
+        console.log('âš ï¸ Erreur crÃ©ation mobile principal (conflit email/pseudo attendu)');
         expect(result.success).toBe(false);
       }
     });
     
-    test('Créer un deuxième utilisateur mobile', async () => {
-      console.log('🎯 Test: Création utilisateur mobile secondaire');
+    test('CrÃ©er un deuxiÃ¨me utilisateur mobile', async () => {
+      console.log('ðŸŽ¯ Test: CrÃ©ation utilisateur mobile secondaire');
       
       const result = await MobileHelpers.registerUser({
         pseudo: `MobileTest2E2E${Date.now()}`,
@@ -366,22 +366,22 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         mobileUser2 = result.user;
         mobileToken2 = result.token;
         
-        console.log('✅ Utilisateur mobile secondaire créé avec succès');
+        console.log('âœ… Utilisateur mobile secondaire crÃ©Ã© avec succÃ¨s');
       } else {
-        console.log('⚠️ Erreur création mobile secondaire (conflit email/pseudo attendu)');
+        console.log('âš ï¸ Erreur crÃ©ation mobile secondaire (conflit email/pseudo attendu)');
         expect(result.success).toBe(false);
       }
     });
   });
 
   // =============================================================================
-  // 👤 TESTS PROFIL MOBILE
+  // ðŸ‘¤ TESTS PROFIL MOBILE
   // =============================================================================
 
-  describe('👤 Profil Mobile', () => {
+  describe('ðŸ‘¤ Profil Mobile', () => {
     
-    test('Récupérer le profil mobile utilisateur', async () => {
-      console.log('🎯 Test: Profil mobile utilisateur');
+    test('RÃ©cupÃ©rer le profil mobile utilisateur', async () => {
+      console.log('ðŸŽ¯ Test: Profil mobile utilisateur');
       
       await MobileHelpers.wait(1000);
       
@@ -393,27 +393,27 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.profile).toHaveProperty('city');
         expect(result.profile).toHaveProperty('joinedAt');
         
-        // Vérifier que les données sensibles ne sont pas exposées
+        // VÃ©rifier que les donnÃ©es sensibles ne sont pas exposÃ©es
         expect(result.profile).not.toHaveProperty('password');
         expect(result.profile).not.toHaveProperty('_id');
         
-        console.log('✅ Profil mobile récupéré avec succès');
+        console.log('âœ… Profil mobile rÃ©cupÃ©rÃ© avec succÃ¨s');
         
       } else {
-        console.log('⚠️ API profil mobile non disponible');
+        console.log('âš ï¸ API profil mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 📦 TESTS OBJETS MOBILE
+  // ðŸ“¦ TESTS OBJETS MOBILE
   // =============================================================================
 
-  describe('📦 Objets Mobile', () => {
+  describe('ðŸ“¦ Objets Mobile', () => {
     
-    test('Récupérer les objets en format mobile', async () => {
-      console.log('🎯 Test: Objets format mobile');
+    test('RÃ©cupÃ©rer les objets en format mobile', async () => {
+      console.log('ðŸŽ¯ Test: Objets format mobile');
       
       await MobileHelpers.wait(1000);
       
@@ -423,11 +423,11 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.objects).toBeDefined();
         expect(Array.isArray(result.objects)).toBe(true);
         
-        console.log(`✅ ${result.objects.length} objets mobile récupérés`);
+        console.log(`âœ… ${result.objects.length} objets mobile rÃ©cupÃ©rÃ©s`);
         
         if (result.objects.length > 0) {
           const obj = result.objects[0];
-          // Format optimisé pour React Native
+          // Format optimisÃ© pour React Native
           expect(obj).toHaveProperty('id');
           expect(obj).toHaveProperty('name');
           expect(obj).toHaveProperty('category');
@@ -435,22 +435,21 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         }
         
       } else {
-        console.log('⚠️ API objets mobile non disponible');
+        console.log('âš ï¸ API objets mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
     
-    test('Créer un objet via interface mobile', async () => {
-      console.log('🎯 Test: Création objet mobile');
+    test('CrÃ©er un objet via interface mobile', async () => {
+      console.log('ðŸŽ¯ Test: CrÃ©ation objet mobile');
       
       await MobileHelpers.wait(1000);
       
       const objectData = {
         name: 'Objet Mobile Test E2E',
-        description: 'Créé via interface mobile',
+        description: 'CrÃ©Ã© via interface mobile',
         category: 'Test Mobile',
         condition: 'Excellent',
-        estimatedValue: 35,
         images: []
       };
       
@@ -460,23 +459,23 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.object).toBeDefined();
         expect(result.object.name).toBe(objectData.name);
         
-        console.log('✅ Objet créé via mobile avec succès');
+        console.log('âœ… Objet crÃ©Ã© via mobile avec succÃ¨s');
         
       } else {
-        console.log('⚠️ Création objet mobile échouée');
+        console.log('âš ï¸ CrÃ©ation objet mobile Ã©chouÃ©e');
         expect([404, 401, 400]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 🔄 TESTS TROCS MOBILE
+  // ðŸ”„ TESTS TROCS MOBILE
   // =============================================================================
 
-  describe('🔄 Trocs Mobile', () => {
+  describe('ðŸ”„ Trocs Mobile', () => {
     
-    test('Récupérer les trocs en format mobile', async () => {
-      console.log('🎯 Test: Trocs format mobile');
+    test('RÃ©cupÃ©rer les trocs en format mobile', async () => {
+      console.log('ðŸŽ¯ Test: Trocs format mobile');
       
       await MobileHelpers.wait(1000);
       
@@ -486,31 +485,31 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.trades).toBeDefined();
         expect(Array.isArray(result.trades)).toBe(true);
         
-        console.log(`✅ ${result.trades.length} trocs mobile récupérés`);
+        console.log(`âœ… ${result.trades.length} trocs mobile rÃ©cupÃ©rÃ©s`);
         
         if (result.trades.length > 0) {
           const trade = result.trades[0];
-          // Format adapté pour mobile
+          // Format adaptÃ© pour mobile
           expect(trade).toHaveProperty('id');
           expect(trade).toHaveProperty('status');
           expect(trade).toHaveProperty('items');
         }
         
       } else {
-        console.log('⚠️ API trocs mobile non disponible');
+        console.log('âš ï¸ API trocs mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 🔔 TESTS NOTIFICATIONS MOBILE
+  // ðŸ”” TESTS NOTIFICATIONS MOBILE
   // =============================================================================
 
-  describe('🔔 Notifications Mobile', () => {
+  describe('ðŸ”” Notifications Mobile', () => {
     
-    test('Récupérer les notifications mobiles', async () => {
-      console.log('🎯 Test: Notifications mobiles');
+    test('RÃ©cupÃ©rer les notifications mobiles', async () => {
+      console.log('ðŸŽ¯ Test: Notifications mobiles');
       
       await MobileHelpers.wait(1000);
       
@@ -520,7 +519,7 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.notifications).toBeDefined();
         expect(Array.isArray(result.notifications)).toBe(true);
         
-        console.log(`✅ ${result.notifications.length} notifications mobiles récupérées`);
+        console.log(`âœ… ${result.notifications.length} notifications mobiles rÃ©cupÃ©rÃ©es`);
         
         if (result.notifications.length > 0) {
           const notification = result.notifications[0];
@@ -532,20 +531,20 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         }
         
       } else {
-        console.log('⚠️ API notifications mobile non disponible');
+        console.log('âš ï¸ API notifications mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 🔍 TESTS RECHERCHE MOBILE
+  // ðŸ” TESTS RECHERCHE MOBILE
   // =============================================================================
 
-  describe('🔍 Recherche Mobile', () => {
+  describe('ðŸ” Recherche Mobile', () => {
     
     test('Effectuer une recherche mobile', async () => {
-      console.log('🎯 Test: Recherche mobile');
+      console.log('ðŸŽ¯ Test: Recherche mobile');
       
       await MobileHelpers.wait(1000);
       
@@ -564,16 +563,16 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.results).toHaveProperty('objects');
         expect(result.results).toHaveProperty('totalCount');
         
-        console.log(`✅ Recherche mobile: ${result.results.totalCount} résultats`);
+        console.log(`âœ… Recherche mobile: ${result.results.totalCount} rÃ©sultats`);
         
       } else {
-        console.log('⚠️ API recherche mobile non disponible');
+        console.log('âš ï¸ API recherche mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
     
-    test('Récupérer les catégories pour mobile', async () => {
-      console.log('🎯 Test: Catégories mobile');
+    test('RÃ©cupÃ©rer les catÃ©gories pour mobile', async () => {
+      console.log('ðŸŽ¯ Test: CatÃ©gories mobile');
       
       await MobileHelpers.wait(1000);
       
@@ -583,7 +582,7 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.categories).toBeDefined();
         expect(Array.isArray(result.categories)).toBe(true);
         
-        console.log(`✅ ${result.categories.length} catégories mobile récupérées`);
+        console.log(`âœ… ${result.categories.length} catÃ©gories mobile rÃ©cupÃ©rÃ©es`);
         
         if (result.categories.length > 0) {
           const category = result.categories[0];
@@ -593,20 +592,20 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         }
         
       } else {
-        console.log('⚠️ API catégories mobile non disponible');
+        console.log('âš ï¸ API catÃ©gories mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 📊 TESTS DASHBOARD MOBILE
+  // ðŸ“Š TESTS DASHBOARD MOBILE
   // =============================================================================
 
-  describe('📊 Dashboard Mobile', () => {
+  describe('ðŸ“Š Dashboard Mobile', () => {
     
-    test('Récupérer le dashboard mobile', async () => {
-      console.log('🎯 Test: Dashboard mobile');
+    test('RÃ©cupÃ©rer le dashboard mobile', async () => {
+      console.log('ðŸŽ¯ Test: Dashboard mobile');
       
       await MobileHelpers.wait(1000);
       
@@ -618,27 +617,27 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.dashboard).toHaveProperty('recentActivity');
         expect(result.dashboard).toHaveProperty('notifications');
         
-        console.log('✅ Dashboard mobile récupéré avec succès');
+        console.log('âœ… Dashboard mobile rÃ©cupÃ©rÃ© avec succÃ¨s');
         
-        // Vérifier le format adapté mobile
+        // VÃ©rifier le format adaptÃ© mobile
         expect(result.dashboard.summary).toHaveProperty('objectsCount');
         expect(result.dashboard.summary).toHaveProperty('tradesCount');
         
       } else {
-        console.log('⚠️ API dashboard mobile non disponible');
+        console.log('âš ï¸ API dashboard mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // ⚙️ TESTS PARAMÈTRES MOBILE
+  // âš™ï¸ TESTS PARAMÃˆTRES MOBILE
   // =============================================================================
 
-  describe('⚙️ Paramètres Mobile', () => {
+  describe('âš™ï¸ ParamÃ¨tres Mobile', () => {
     
-    test('Récupérer les paramètres mobiles', async () => {
-      console.log('🎯 Test: Paramètres mobiles');
+    test('RÃ©cupÃ©rer les paramÃ¨tres mobiles', async () => {
+      console.log('ðŸŽ¯ Test: ParamÃ¨tres mobiles');
       
       await MobileHelpers.wait(1000);
       
@@ -650,16 +649,16 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.settings).toHaveProperty('privacy');
         expect(result.settings).toHaveProperty('preferences');
         
-        console.log('✅ Paramètres mobiles récupérés');
+        console.log('âœ… ParamÃ¨tres mobiles rÃ©cupÃ©rÃ©s');
         
       } else {
-        console.log('⚠️ API paramètres mobile non disponible');
+        console.log('âš ï¸ API paramÃ¨tres mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
     
-    test('Mettre à jour les paramètres mobiles', async () => {
-      console.log('🎯 Test: Mise à jour paramètres mobiles');
+    test('Mettre Ã  jour les paramÃ¨tres mobiles', async () => {
+      console.log('ðŸŽ¯ Test: Mise Ã  jour paramÃ¨tres mobiles');
       
       await MobileHelpers.wait(1000);
       
@@ -687,23 +686,23 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.settings.notifications.push).toBe(true);
         expect(result.settings.preferences.language).toBe('fr');
         
-        console.log('✅ Paramètres mobiles mis à jour');
+        console.log('âœ… ParamÃ¨tres mobiles mis Ã  jour');
         
       } else {
-        console.log('⚠️ Mise à jour paramètres mobile échouée');
+        console.log('âš ï¸ Mise Ã  jour paramÃ¨tres mobile Ã©chouÃ©e');
         expect([404, 401, 400]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 🎚️ TESTS FILTRES MOBILE
+  // ðŸŽšï¸ TESTS FILTRES MOBILE
   // =============================================================================
 
-  describe('🎚️ Filtres Mobile', () => {
+  describe('ðŸŽšï¸ Filtres Mobile', () => {
     
-    test('Récupérer les filtres mobiles', async () => {
-      console.log('🎯 Test: Filtres mobiles');
+    test('RÃ©cupÃ©rer les filtres mobiles', async () => {
+      console.log('ðŸŽ¯ Test: Filtres mobiles');
       
       await MobileHelpers.wait(1000);
       
@@ -715,59 +714,60 @@ describe('📱 Nouvelles Interfaces Mobiles - HTTP Pure', () => {
         expect(result.filters).toHaveProperty('conditions');
         expect(result.filters).toHaveProperty('priceRanges');
         
-        console.log('✅ Filtres mobiles récupérés');
+        console.log('âœ… Filtres mobiles rÃ©cupÃ©rÃ©s');
         
-        // Vérifier que les filtres sont adaptés pour mobile
+        // VÃ©rifier que les filtres sont adaptÃ©s pour mobile
         expect(Array.isArray(result.filters.categories)).toBe(true);
         expect(Array.isArray(result.filters.conditions)).toBe(true);
         
       } else {
-        console.log('⚠️ API filtres mobile non disponible');
+        console.log('âš ï¸ API filtres mobile non disponible');
         expect([404, 401]).toContain(result.status);
       }
     });
   });
 
   // =============================================================================
-  // 🎯 VALIDATION FINALE INTERFACES MOBILES
+  // ðŸŽ¯ VALIDATION FINALE INTERFACES MOBILES
   // =============================================================================
 
-  describe('🎯 Validation Finale Interfaces Mobiles', () => {
+  describe('ðŸŽ¯ Validation Finale Interfaces Mobiles', () => {
     
-    test('Système interfaces mobiles opérationnel', async () => {
-      console.log('🎯 Test: Validation finale interfaces mobiles');
+    test('SystÃ¨me interfaces mobiles opÃ©rationnel', async () => {
+      console.log('ðŸŽ¯ Test: Validation finale interfaces mobiles');
       
-      // Validation des comptes créés (si créés avec succès)
+      // Validation des comptes crÃ©Ã©s (si crÃ©Ã©s avec succÃ¨s)
       if (mobileUser) {
         expect(mobileUser.pseudo).toContain('MobileTestE2E');
-        console.log('✅ Utilisateur mobile principal validé');
+        console.log('âœ… Utilisateur mobile principal validÃ©');
       }
       
       if (mobileUser2) {
         expect(mobileUser2.pseudo).toContain('MobileTest2E2E');
-        console.log('✅ Utilisateur mobile secondaire validé');
+        console.log('âœ… Utilisateur mobile secondaire validÃ©');
       }
       
-      // Validation des tokens (si utilisateurs créés)
+      // Validation des tokens (si utilisateurs crÃ©Ã©s)
       if (mobileToken) {
         expect(mobileToken.length).toBeGreaterThan(50);
-        console.log('✅ Token mobile principal validé');
+        console.log('âœ… Token mobile principal validÃ©');
       }
       
       if (mobileToken2) {
         expect(mobileToken2.length).toBeGreaterThan(50);
-        console.log('✅ Token mobile secondaire validé');
+        console.log('âœ… Token mobile secondaire validÃ©');
       }
       
-      // Test final de cohérence
+      // Test final de cohÃ©rence
       await MobileHelpers.wait(1000);
       
-      // Validation que les APIs mobiles retournent 404 (non implémentées)
-      console.log('✅ Validation finale interfaces mobiles terminée');
-      console.log('📊 Résumé: APIs interfaces mobiles détectées comme non implémentées (404)');
+      // Validation que les APIs mobiles retournent 404 (non implÃ©mentÃ©es)
+      console.log('âœ… Validation finale interfaces mobiles terminÃ©e');
+      console.log('ðŸ“Š RÃ©sumÃ©: APIs interfaces mobiles dÃ©tectÃ©es comme non implÃ©mentÃ©es (404)');
       
       // Test basique qui passe toujours
       expect(true).toBe(true);
     });
   });
 });
+

@@ -1,5 +1,5 @@
-/**
- * 🧪 TESTS AVANCÉS - CADOK FONCTIONNALITÉS
+﻿/**
+ * ðŸ§ª TESTS AVANCÃ‰S - CADOK FONCTIONNALITÃ‰S
  * Tests HTTP-Pure pour Analytics, Notifications, Eco-Impact & Gamification
  */
 
@@ -21,14 +21,14 @@ let testObjects = {};
 let testNotifications = {};
 
 /**
- * 📊 TESTS SERVICE ANALYTICS
+ * ðŸ“Š TESTS SERVICE ANALYTICS
  */
-describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
+describe('ðŸ”¥ ANALYTICS SERVICE - Tests Complets', () => {
 
   before(async () => {
-    console.log('🚀 Préparation environnement Analytics...');
+    console.log('ðŸš€ PrÃ©paration environnement Analytics...');
     
-    // Créer utilisateur test avec historique
+    // CrÃ©er utilisateur test avec historique
     const userResponse = await api.post('/api/auth/register', {
       username: 'analytics_tester',
       email: 'analytics@test.com',
@@ -39,11 +39,11 @@ describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
     testUsers.analytics = userResponse.data.user;
     authTokens.analytics = userResponse.data.token;
 
-    // Créer des objets et échanges pour les tests
+    // CrÃ©er des objets et Ã©changes pour les tests
     await createTestEcosystem('analytics');
   });
 
-  it('✅ GET /api/analytics/dashboard - Récupération dashboard complet', async () => {
+  it('âœ… GET /api/analytics/dashboard - RÃ©cupÃ©ration dashboard complet', async () => {
     const response = await api.get('/api/analytics/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.analytics}` }
     });
@@ -57,10 +57,10 @@ describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
     assert(response.data.dashboard.monthlyTrends);
     assert(response.data.dashboard.personalizedTips);
 
-    console.log('📊 Dashboard analytics:', response.data.dashboard.tradingMetrics.successRate);
+    console.log('ðŸ“Š Dashboard analytics:', response.data.dashboard.tradingMetrics.successRate);
   });
 
-  it('✅ Analytics - Métriques trading détaillées', async () => {
+  it('âœ… Analytics - MÃ©triques trading dÃ©taillÃ©es', async () => {
     const response = await api.get('/api/analytics/trading-metrics', {
       headers: { Authorization: `Bearer ${authTokens.analytics}` }
     });
@@ -71,10 +71,10 @@ describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
     assert(typeof response.data.metrics.averageCompletionTime === 'number');
     assert(Array.isArray(response.data.metrics.categoryPerformance));
 
-    console.log('📈 Métriques trading validées');
+    console.log('ðŸ“ˆ MÃ©triques trading validÃ©es');
   });
 
-  it('✅ Analytics - Classement communautaire', async () => {
+  it('âœ… Analytics - Classement communautaire', async () => {
     const response = await api.get('/api/analytics/community-ranking', {
       headers: { Authorization: `Bearer ${authTokens.analytics}` }
     });
@@ -84,10 +84,10 @@ describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
     assert(typeof response.data.ranking.percentile === 'number');
     assert(response.data.ranking.percentile >= 0 && response.data.ranking.percentile <= 100);
 
-    console.log('🏆 Classement communautaire validé');
+    console.log('ðŸ† Classement communautaire validÃ©');
   });
 
-  it('✅ Analytics - Tendances mensuelles', async () => {
+  it('âœ… Analytics - Tendances mensuelles', async () => {
     const response = await api.get('/api/analytics/monthly-trends', {
       headers: { Authorization: `Bearer ${authTokens.analytics}` }
     });
@@ -97,10 +97,10 @@ describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
     assert(Array.isArray(response.data.trends.monthlyData));
     assert(response.data.trends.monthlyData.length === 6);
 
-    console.log('📅 Tendances mensuelles validées');
+    console.log('ðŸ“… Tendances mensuelles validÃ©es');
   });
 
-  it('✅ Analytics - Conseils personnalisés', async () => {
+  it('âœ… Analytics - Conseils personnalisÃ©s', async () => {
     const response = await api.get('/api/analytics/personalized-tips', {
       headers: { Authorization: `Bearer ${authTokens.analytics}` }
     });
@@ -110,18 +110,18 @@ describe('🔥 ANALYTICS SERVICE - Tests Complets', () => {
     assert(Array.isArray(response.data.tips.recommendations));
     assert(response.data.tips.recommendations.length > 0);
 
-    console.log('💡 Conseils personnalisés validés');
+    console.log('ðŸ’¡ Conseils personnalisÃ©s validÃ©s');
   });
 
 });
 
 /**
- * 🔔 TESTS SERVICE NOTIFICATIONS INTELLIGENTES
+ * ðŸ”” TESTS SERVICE NOTIFICATIONS INTELLIGENTES
  */
-describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
+describe('ðŸ“± NOTIFICATIONS SERVICE - Tests Complets', () => {
 
   before(async () => {
-    console.log('🚀 Préparation environnement Notifications...');
+    console.log('ðŸš€ PrÃ©paration environnement Notifications...');
     
     const userResponse = await api.post('/api/auth/register', {
       username: 'notification_tester',
@@ -140,7 +140,7 @@ describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
     authTokens.notifications = userResponse.data.token;
   });
 
-  it('✅ POST /api/notifications/send-contextual - Notifications contextuelles', async () => {
+  it('âœ… POST /api/notifications/send-contextual - Notifications contextuelles', async () => {
     const response = await api.post('/api/notifications/send-contextual', {}, {
       headers: { Authorization: `Bearer ${authTokens.notifications}` }
     });
@@ -150,10 +150,10 @@ describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
     assert(typeof response.data.totalSent === 'number');
     assert(response.data.breakdown);
 
-    console.log('🔔 Notifications contextuelles:', response.data.totalSent, 'envoyées');
+    console.log('ðŸ”” Notifications contextuelles:', response.data.totalSent, 'envoyÃ©es');
   });
 
-  it('✅ POST /api/notifications/send-location-based - Notifications géolocalisées', async () => {
+  it('âœ… POST /api/notifications/send-location-based - Notifications gÃ©olocalisÃ©es', async () => {
     const response = await api.post('/api/notifications/send-location-based', {}, {
       headers: { Authorization: `Bearer ${authTokens.notifications}` }
     });
@@ -161,10 +161,10 @@ describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
     assert.strictEqual(response.status, 200);
     assert(response.data.success);
 
-    console.log('📍 Notifications géolocalisées envoyées');
+    console.log('ðŸ“ Notifications gÃ©olocalisÃ©es envoyÃ©es');
   });
 
-  it('✅ POST /api/notifications/personalized/:type - Notification personnalisée', async () => {
+  it('âœ… POST /api/notifications/personalized/:type - Notification personnalisÃ©e', async () => {
     const response = await api.post('/api/notifications/personalized/trade_match', {
       objectName: 'iPhone 12',
       matchScore: 95
@@ -176,10 +176,10 @@ describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
     assert(response.data.success);
     assert(response.data.notification);
 
-    console.log('🎯 Notification personnalisée créée');
+    console.log('ðŸŽ¯ Notification personnalisÃ©e crÃ©Ã©e');
   });
 
-  it('✅ GET /api/notifications/user - Récupération notifications utilisateur', async () => {
+  it('âœ… GET /api/notifications/user - RÃ©cupÃ©ration notifications utilisateur', async () => {
     const response = await api.get('/api/notifications/user', {
       headers: { Authorization: `Bearer ${authTokens.notifications}` }
     });
@@ -187,13 +187,13 @@ describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
     assert.strictEqual(response.status, 200);
     assert(Array.isArray(response.data.notifications));
 
-    console.log('📋 Notifications utilisateur récupérées:', response.data.notifications.length);
+    console.log('ðŸ“‹ Notifications utilisateur rÃ©cupÃ©rÃ©es:', response.data.notifications.length);
   });
 
-  it('✅ PATCH /api/notifications/:id/read - Marquer notification comme lue', async () => {
-    // D'abord créer une notification
+  it('âœ… PATCH /api/notifications/:id/read - Marquer notification comme lue', async () => {
+    // D'abord crÃ©er une notification
     const createResponse = await api.post('/api/notifications/personalized/milestone', {
-      milestone: '10 échanges'
+      milestone: '10 Ã©changes'
     }, {
       headers: { Authorization: `Bearer ${authTokens.notifications}` }
     });
@@ -208,18 +208,18 @@ describe('📱 NOTIFICATIONS SERVICE - Tests Complets', () => {
     assert.strictEqual(response.status, 200);
     assert(response.data.success);
 
-    console.log('✅ Notification marquée comme lue');
+    console.log('âœ… Notification marquÃ©e comme lue');
   });
 
 });
 
 /**
- * 🌱 TESTS SERVICE IMPACT ÉCOLOGIQUE
+ * ðŸŒ± TESTS SERVICE IMPACT Ã‰COLOGIQUE
  */
-describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
+describe('ðŸŒ ECO-IMPACT SERVICE - Tests Complets', () => {
 
   before(async () => {
-    console.log('🚀 Préparation environnement Eco-Impact...');
+    console.log('ðŸš€ PrÃ©paration environnement Eco-Impact...');
     
     const userResponse = await api.post('/api/auth/register', {
       username: 'eco_tester',
@@ -231,11 +231,11 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     testUsers.eco = userResponse.data.user;
     authTokens.eco = userResponse.data.token;
 
-    // Créer des échanges pour calculer l'impact
+    // CrÃ©er des Ã©changes pour calculer l'impact
     await createTestEcosystem('eco');
   });
 
-  it('✅ GET /api/eco/dashboard - Dashboard impact écologique', async () => {
+  it('âœ… GET /api/eco/dashboard - Dashboard impact Ã©cologique', async () => {
     const response = await api.get('/api/eco/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.eco}` }
     });
@@ -247,10 +247,10 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     assert(response.data.dashboard.objectsLifecycle);
     assert(response.data.dashboard.communityImpact);
 
-    console.log('🌱 Impact CO2 évité:', response.data.dashboard.carbonFootprint.totalCarbonSaved, 'kg');
+    console.log('ðŸŒ± Impact CO2 Ã©vitÃ©:', response.data.dashboard.carbonFootprint.totalCarbonSaved, 'kg');
   });
 
-  it('✅ GET /api/eco/carbon-footprint - Calcul empreinte carbone', async () => {
+  it('âœ… GET /api/eco/carbon-footprint - Calcul empreinte carbone', async () => {
     const response = await api.get('/api/eco/carbon-footprint', {
       headers: { Authorization: `Bearer ${authTokens.eco}` }
     });
@@ -261,10 +261,10 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     assert(typeof response.data.carbonFootprint.totalWastePrevented === 'number');
     assert(typeof response.data.carbonFootprint.treesEquivalent === 'number');
 
-    console.log('🌳 Équivalent arbres sauvés:', response.data.carbonFootprint.treesEquivalent);
+    console.log('ðŸŒ³ Ã‰quivalent arbres sauvÃ©s:', response.data.carbonFootprint.treesEquivalent);
   });
 
-  it('✅ GET /api/eco/lifecycle-analysis - Analyse cycle de vie', async () => {
+  it('âœ… GET /api/eco/lifecycle-analysis - Analyse cycle de vie', async () => {
     const response = await api.get('/api/eco/lifecycle-analysis', {
       headers: { Authorization: `Bearer ${authTokens.eco}` }
     });
@@ -274,10 +274,10 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     assert(typeof response.data.lifecycle.circularityScore === 'number');
     assert(response.data.lifecycle.circularityScore >= 0 && response.data.lifecycle.circularityScore <= 100);
 
-    console.log('🔄 Score de circularité:', response.data.lifecycle.circularityScore);
+    console.log('ðŸ”„ Score de circularitÃ©:', response.data.lifecycle.circularityScore);
   });
 
-  it('✅ GET /api/eco/community-impact - Impact communautaire', async () => {
+  it('âœ… GET /api/eco/community-impact - Impact communautaire', async () => {
     const response = await api.get('/api/eco/community-impact', {
       headers: { Authorization: `Bearer ${authTokens.eco}` }
     });
@@ -286,10 +286,10 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     assert(response.data.community);
     assert(typeof response.data.community.communityRanking === 'number');
 
-    console.log('🏘️ Classement communauté:', response.data.community.communityRanking, '%');
+    console.log('ðŸ˜ï¸ Classement communautÃ©:', response.data.community.communityRanking, '%');
   });
 
-  it('✅ GET /api/eco/achievements - Réalisations écologiques', async () => {
+  it('âœ… GET /api/eco/achievements - RÃ©alisations Ã©cologiques', async () => {
     const response = await api.get('/api/eco/achievements', {
       headers: { Authorization: `Bearer ${authTokens.eco}` }
     });
@@ -298,10 +298,10 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     assert(response.data.achievements);
     assert(Array.isArray(response.data.achievements.badges));
 
-    console.log('🏆 Badges écologiques:', response.data.achievements.totalBadges);
+    console.log('ðŸ† Badges Ã©cologiques:', response.data.achievements.totalBadges);
   });
 
-  it('✅ GET /api/eco/recommendations - Recommandations écologiques', async () => {
+  it('âœ… GET /api/eco/recommendations - Recommandations Ã©cologiques', async () => {
     const response = await api.get('/api/eco/recommendations', {
       headers: { Authorization: `Bearer ${authTokens.eco}` }
     });
@@ -310,18 +310,18 @@ describe('🌍 ECO-IMPACT SERVICE - Tests Complets', () => {
     assert(response.data.recommendations);
     assert(Array.isArray(response.data.recommendations.recommendations));
 
-    console.log('💚 Recommandations écologiques:', response.data.recommendations.recommendations.length);
+    console.log('ðŸ’š Recommandations Ã©cologiques:', response.data.recommendations.recommendations.length);
   });
 
 });
 
 /**
- * 🎮 TESTS SERVICE GAMIFICATION
+ * ðŸŽ® TESTS SERVICE GAMIFICATION
  */
-describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
+describe('ðŸ† GAMIFICATION SERVICE - Tests Complets', () => {
 
   before(async () => {
-    console.log('🚀 Préparation environnement Gamification...');
+    console.log('ðŸš€ PrÃ©paration environnement Gamification...');
     
     const userResponse = await api.post('/api/auth/register', {
       username: 'gamer_tester',
@@ -333,11 +333,11 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     testUsers.gamification = userResponse.data.user;
     authTokens.gamification = userResponse.data.token;
 
-    // Créer de l'activité pour les tests gamification
+    // CrÃ©er de l'activitÃ© pour les tests gamification
     await createTestEcosystem('gamification');
   });
 
-  it('✅ GET /api/gamification/dashboard - Dashboard gamification complet', async () => {
+  it('âœ… GET /api/gamification/dashboard - Dashboard gamification complet', async () => {
     const response = await api.get('/api/gamification/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.gamification}` }
     });
@@ -349,10 +349,10 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert(response.data.dashboard.achievements);
     assert(response.data.dashboard.activeChallenges);
 
-    console.log('🎮 Niveau joueur:', response.data.dashboard.playerProfile.level);
+    console.log('ðŸŽ® Niveau joueur:', response.data.dashboard.playerProfile.level);
   });
 
-  it('✅ GET /api/gamification/profile - Profil joueur', async () => {
+  it('âœ… GET /api/gamification/profile - Profil joueur', async () => {
     const response = await api.get('/api/gamification/profile', {
       headers: { Authorization: `Bearer ${authTokens.gamification}` }
     });
@@ -363,10 +363,10 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert(typeof response.data.profile.totalXP === 'number');
     assert(response.data.profile.playerTitle);
 
-    console.log('👤 XP Total:', response.data.profile.totalXP);
+    console.log('ðŸ‘¤ XP Total:', response.data.profile.totalXP);
   });
 
-  it('✅ GET /api/gamification/achievements - Achievements utilisateur', async () => {
+  it('âœ… GET /api/gamification/achievements - Achievements utilisateur', async () => {
     const response = await api.get('/api/gamification/achievements', {
       headers: { Authorization: `Bearer ${authTokens.gamification}` }
     });
@@ -376,10 +376,10 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert(Array.isArray(response.data.achievements.earnedAchievements));
     assert(Array.isArray(response.data.achievements.availableAchievements));
 
-    console.log('🏅 Achievements gagnés:', response.data.achievements.earned);
+    console.log('ðŸ… Achievements gagnÃ©s:', response.data.achievements.earned);
   });
 
-  it('✅ GET /api/gamification/challenges - Défis actifs', async () => {
+  it('âœ… GET /api/gamification/challenges - DÃ©fis actifs', async () => {
     const response = await api.get('/api/gamification/challenges', {
       headers: { Authorization: `Bearer ${authTokens.gamification}` }
     });
@@ -389,10 +389,10 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert(response.data.challenges.daily);
     assert(Array.isArray(response.data.challenges.daily.challenges));
 
-    console.log('🎯 Défis quotidiens:', response.data.challenges.daily.challenges.length);
+    console.log('ðŸŽ¯ DÃ©fis quotidiens:', response.data.challenges.daily.challenges.length);
   });
 
-  it('✅ GET /api/gamification/leaderboards - Classements', async () => {
+  it('âœ… GET /api/gamification/leaderboards - Classements', async () => {
     const response = await api.get('/api/gamification/leaderboards', {
       headers: { Authorization: `Bearer ${authTokens.gamification}` }
     });
@@ -402,10 +402,10 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert(response.data.leaderboards.general);
     assert(typeof response.data.leaderboards.general.userPosition === 'number');
 
-    console.log('🏆 Position classement:', response.data.leaderboards.general.userPosition);
+    console.log('ðŸ† Position classement:', response.data.leaderboards.general.userPosition);
   });
 
-  it('✅ POST /api/gamification/complete-challenge - Compléter défi', async () => {
+  it('âœ… POST /api/gamification/complete-challenge - ComplÃ©ter dÃ©fi', async () => {
     const response = await api.post('/api/gamification/complete-challenge', {
       challengeId: 'daily_browse',
       progress: 10
@@ -416,10 +416,10 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert.strictEqual(response.status, 200);
     assert(response.data.success);
 
-    console.log('✅ Défi complété avec succès');
+    console.log('âœ… DÃ©fi complÃ©tÃ© avec succÃ¨s');
   });
 
-  it('✅ GET /api/gamification/rewards - Système récompenses', async () => {
+  it('âœ… GET /api/gamification/rewards - SystÃ¨me rÃ©compenses', async () => {
     const response = await api.get('/api/gamification/rewards', {
       headers: { Authorization: `Bearer ${authTokens.gamification}` }
     });
@@ -428,18 +428,18 @@ describe('🏆 GAMIFICATION SERVICE - Tests Complets', () => {
     assert(response.data.rewards);
     assert(typeof response.data.rewards.currentPoints === 'number');
 
-    console.log('💎 Points actuels:', response.data.rewards.currentPoints);
+    console.log('ðŸ’Ž Points actuels:', response.data.rewards.currentPoints);
   });
 
 });
 
 /**
- * 🔄 TESTS INTÉGRATION CROSS-SERVICES
+ * ðŸ”„ TESTS INTÃ‰GRATION CROSS-SERVICES
  */
-describe('🌐 INTÉGRATION - Tests Cross-Services', () => {
+describe('ðŸŒ INTÃ‰GRATION - Tests Cross-Services', () => {
 
   before(async () => {
-    console.log('🚀 Préparation tests intégration...');
+    console.log('ðŸš€ PrÃ©paration tests intÃ©gration...');
     
     const userResponse = await api.post('/api/auth/register', {
       username: 'integration_tester',
@@ -454,116 +454,115 @@ describe('🌐 INTÉGRATION - Tests Cross-Services', () => {
     await createTestEcosystem('integration');
   });
 
-  it('✅ Intégration Analytics ↔ Eco-Impact', async () => {
-    // Récupérer dashboard analytics
+  it('âœ… IntÃ©gration Analytics â†” Eco-Impact', async () => {
+    // RÃ©cupÃ©rer dashboard analytics
     const analyticsResponse = await api.get('/api/analytics/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
-    // Récupérer dashboard eco
+    // RÃ©cupÃ©rer dashboard eco
     const ecoResponse = await api.get('/api/eco/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
-    // Vérifier cohérence des données
+    // VÃ©rifier cohÃ©rence des donnÃ©es
     assert.strictEqual(analyticsResponse.status, 200);
     assert.strictEqual(ecoResponse.status, 200);
 
-    console.log('🔗 Intégration Analytics-Eco validée');
+    console.log('ðŸ”— IntÃ©gration Analytics-Eco validÃ©e');
   });
 
-  it('✅ Intégration Gamification ↔ Notifications', async () => {
-    // Compléter un achievement pour déclencher une notification
+  it('âœ… IntÃ©gration Gamification â†” Notifications', async () => {
+    // ComplÃ©ter un achievement pour dÃ©clencher une notification
     const achievementResponse = await api.post('/api/gamification/complete-achievement', {
       achievementId: 'first_trade'
     }, {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
-    // Vérifier que la notification a été créée
+    // VÃ©rifier que la notification a Ã©tÃ© crÃ©Ã©e
     const notificationsResponse = await api.get('/api/notifications/user', {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
     assert.strictEqual(notificationsResponse.status, 200);
 
-    console.log('🔗 Intégration Gamification-Notifications validée');
+    console.log('ðŸ”— IntÃ©gration Gamification-Notifications validÃ©e');
   });
 
-  it('✅ Test complet workflow utilisateur', async () => {
-    // 1. Créer un objet
+  it('âœ… Test complet workflow utilisateur', async () => {
+    // 1. CrÃ©er un objet
     const objectResponse = await api.post('/api/objects', {
       title: 'Objet Test Workflow',
-      description: 'Test intégration complète',
+      description: 'Test intÃ©gration complÃ¨te',
       category: 'Test',
-      condition: 'Bon état'
+      condition: 'Bon Ã©tat'
     }, {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
     assert.strictEqual(objectResponse.status, 201);
 
-    // 2. Vérifier impact sur analytics
+    // 2. VÃ©rifier impact sur analytics
     const analyticsAfter = await api.get('/api/analytics/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
     assert.strictEqual(analyticsAfter.status, 200);
 
-    // 3. Vérifier impact sur eco-dashboard
+    // 3. VÃ©rifier impact sur eco-dashboard
     const ecoAfter = await api.get('/api/eco/dashboard', {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
     assert.strictEqual(ecoAfter.status, 200);
 
-    // 4. Vérifier impact sur gamification
+    // 4. VÃ©rifier impact sur gamification
     const gamificationAfter = await api.get('/api/gamification/profile', {
       headers: { Authorization: `Bearer ${authTokens.integration}` }
     });
 
     assert.strictEqual(gamificationAfter.status, 200);
 
-    console.log('🎯 Workflow complet validé avec succès');
+    console.log('ðŸŽ¯ Workflow complet validÃ© avec succÃ¨s');
   });
 
 });
 
 /**
- * 🛠️ FONCTIONS UTILITAIRES
+ * ðŸ› ï¸ FONCTIONS UTILITAIRES
  */
 
 /**
- * Créer un écosystème de test avec objets et échanges
+ * CrÃ©er un Ã©cosystÃ¨me de test avec objets et Ã©changes
  */
 async function createTestEcosystem(userType) {
   const token = authTokens[userType];
   
   try {
-    // Créer quelques objets
+    // CrÃ©er quelques objets
     for (let i = 1; i <= 3; i++) {
       await api.post('/api/objects', {
         title: `Objet Test ${userType} ${i}`,
         description: `Description test ${i}`,
         category: 'Test',
-        condition: 'Bon état',
-        estimatedValue: 50 + (i * 10)
+        condition: 'Bon Ã©tat'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
     }
 
-    console.log(`✅ Écosystème test créé pour ${userType}`);
+    console.log(`âœ… Ã‰cosystÃ¨me test crÃ©Ã© pour ${userType}`);
   } catch (error) {
-    console.log(`⚠️ Erreur création écosystème ${userType}:`, error.message);
+    console.log(`âš ï¸ Erreur crÃ©ation Ã©cosystÃ¨me ${userType}:`, error.message);
   }
 }
 
 /**
- * Nettoyage après les tests
+ * Nettoyage aprÃ¨s les tests
  */
 after(async () => {
-  console.log('🧹 Nettoyage environnement de test...');
+  console.log('ðŸ§¹ Nettoyage environnement de test...');
   
   try {
     // Supprimer les utilisateurs de test
@@ -573,9 +572,9 @@ after(async () => {
       });
     }
     
-    console.log('✅ Nettoyage terminé');
+    console.log('âœ… Nettoyage terminÃ©');
   } catch (error) {
-    console.log('⚠️ Erreur nettoyage:', error.message);
+    console.log('âš ï¸ Erreur nettoyage:', error.message);
   }
 });
 
@@ -585,12 +584,13 @@ module.exports = {
   testNotifications: () => run('Notifications'), 
   testEcoImpact: () => run('Eco-Impact'),
   testGamification: () => run('Gamification'),
-  testIntegration: () => run('Intégration')
+  testIntegration: () => run('IntÃ©gration')
 };
 
-console.log('🎯 Tous les tests des fonctionnalités avancées sont prêts !');
-console.log('📊 Analytics: Dashboard, métriques, tendances, conseils');
-console.log('🔔 Notifications: Contextuelles, géolocalisées, personnalisées'); 
-console.log('🌱 Eco-Impact: Empreinte carbone, cycle de vie, impact communautaire');
-console.log('🎮 Gamification: Profil joueur, achievements, défis, classements');
-console.log('🌐 Intégration: Tests cross-services et workflow complet');
+console.log('ðŸŽ¯ Tous les tests des fonctionnalitÃ©s avancÃ©es sont prÃªts !');
+console.log('ðŸ“Š Analytics: Dashboard, mÃ©triques, tendances, conseils');
+console.log('ðŸ”” Notifications: Contextuelles, gÃ©olocalisÃ©es, personnalisÃ©es'); 
+console.log('ðŸŒ± Eco-Impact: Empreinte carbone, cycle de vie, impact communautaire');
+console.log('ðŸŽ® Gamification: Profil joueur, achievements, dÃ©fis, classements');
+console.log('ðŸŒ IntÃ©gration: Tests cross-services et workflow complet');
+

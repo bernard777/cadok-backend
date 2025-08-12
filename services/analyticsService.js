@@ -330,7 +330,7 @@ class AnalyticsService {
 
   calculateAvgObjectValue(objects) {
     if (objects.length === 0) return 0;
-    const values = objects.map(o => o.estimatedValue || 0);
+    // Pour un système de troc pur, on supprime les calculs basés sur la valeur monétaire
     return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
   }
 

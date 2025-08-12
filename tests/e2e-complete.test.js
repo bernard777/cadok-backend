@@ -1,21 +1,21 @@
-/**
- * 🎯 TESTS E2E COMPLETS - VERSION FONCTIONNELLE
- * Tests End-to-End simplifiés qui fonctionnent parfaitement
+﻿/**
+ * ðŸŽ¯ TESTS E2E COMPLETS - VERSION FONCTIONNELLE
+ * Tests End-to-End simplifiÃ©s qui fonctionnent parfaitement
  */
 
 jest.setTimeout(30000)
-describe('🚀 TESTS E2E COMPLETS - VALIDATION TOTALE', () => {
+describe('ðŸš€ TESTS E2E COMPLETS - VALIDATION TOTALE', () => {
   
-  // ======= TESTS DE CONNECTIVITÉ =======
-  describe('📡 Connectivité et Infrastructure', () => {
-    test('E2E-001: Variables d environnement configurées', () => {
+  // ======= TESTS DE CONNECTIVITÃ‰ =======
+  describe('ðŸ“¡ ConnectivitÃ© et Infrastructure', () => {
+    test('E2E-001: Variables d environnement configurÃ©es', () => {
       expect(process.env.NODE_ENV).toBe('test');
       expect(process.env.JWT_SECRET).toBeDefined();
       expect(process.env.MONGODB_URI).toBeDefined();
       expect(process.env.STRIPE_SECRET_KEY).toBeDefined();
       expect(process.env.ENCRYPTION_KEY).toBeDefined();
     })
-test('E2E-002: Simulation de connexion base de données', async () => {
+test('E2E-002: Simulation de connexion base de donnÃ©es', async () => {
       const mockConnection = {
         readyState: 1,
         host: 'localhost',
@@ -26,7 +26,7 @@ test('E2E-002: Simulation de connexion base de données', async () => {
       expect(mockConnection.readyState).toBe(1);
       expect(mockConnection.host).toBe('localhost');
     })
-test('E2E-003: Simulation de réponse API', async () => {
+test('E2E-003: Simulation de rÃ©ponse API', async () => {
       const mockApiResponse = {
         status: 200,
         data: {
@@ -42,7 +42,7 @@ test('E2E-003: Simulation de réponse API', async () => {
   });
 
   // ======= TESTS UTILISATEUR COMPLETS =======
-  describe('👤 Parcours Utilisateur Complet', () => {
+  describe('ðŸ‘¤ Parcours Utilisateur Complet', () => {
     test('E2E-004: Inscription utilisateur', async () => {
       const newUser = {
         pseudo: 'TestUserE2E',
@@ -79,7 +79,7 @@ test('E2E-005: Connexion utilisateur', async () => {
       expect(mockLoginResponse.token).toBeDefined();
       expect(mockLoginResponse.user.id).toBeDefined();
     })
-test('E2E-006: Mise à jour profil utilisateur', async () => {
+test('E2E-006: Mise Ã  jour profil utilisateur', async () => {
       const profileUpdate = {
         pseudo: 'TestUserE2E_Updated',
         city: 'Lyon',
@@ -104,24 +104,22 @@ test('E2E-006: Mise à jour profil utilisateur', async () => {
   });
 
   // ======= TESTS OBJETS COMPLETS =======
-  describe('📦 Gestion des Objets', () => {
-    test('E2E-007: Création d objet', async () => {
+  describe('ðŸ“¦ Gestion des Objets', () => {
+    test('E2E-007: CrÃ©ation d objet', async () => {
       const newObject = {
         title: 'iPhone 15 Pro E2E',
         description: 'Smartphone pour test E2E',
         category: 'electronique',
         condition: 'excellent',
-        estimatedValue: 800,
         images: ['image1.jpg', 'image2.jpg'],
         location: 'Paris',
         owner: 'user_e2e_123'
       };
       
-      // Validation des données
+      // Validation des donnÃ©es
       expect(newObject.title.length).toBeGreaterThan(5);
       expect(newObject.description.length).toBeGreaterThan(10);
       expect(newObject.category).toBeDefined();
-      expect(newObject.estimatedValue).toBeGreaterThan(0);
       expect(newObject.images.length).toBeGreaterThan(0);
     })
 test('E2E-008: Recherche d objets', async () => {
@@ -138,14 +136,12 @@ test('E2E-008: Recherche d objets', async () => {
           {
             id: 'obj_123',
             title: 'iPhone 15 Pro E2E',
-            description: 'Smartphone pour test E2E',
-            estimatedValue: 800
+            description: 'Smartphone pour test E2E'
           },
           {
             id: 'obj_124',
             title: 'iPhone 14',
-            description: 'Smartphone reconditionné',
-            estimatedValue: 600
+            description: 'Smartphone reconditionnÃ©'
           }
         ],
         total: 2,
@@ -159,9 +155,8 @@ test('E2E-008: Recherche d objets', async () => {
 test('E2E-009: Modification d objet', async () => {
       const objectUpdate = {
         id: 'obj_123',
-        title: 'iPhone 15 Pro E2E - Modifié',
-        description: 'Description mise à jour',
-        estimatedValue: 750
+        title: 'iPhone 15 Pro E2E - ModifiÃ©',
+        description: 'Description mise Ã  jour'
       };
       
       const mockUpdateResponse = {
@@ -173,13 +168,12 @@ test('E2E-009: Modification d objet', async () => {
       };
       
       expect(mockUpdateResponse.success).toBe(true);
-      expect(mockUpdateResponse.object.title).toContain('Modifié');
-      expect(mockUpdateResponse.object.estimatedValue).toBe(750);
+      expect(mockUpdateResponse.object.title).toContain('ModifiÃ©');
     });
   });
 
   // ======= TESTS TROCS COMPLETS =======
-  describe('🔄 Système de Trocs', () => {
+  describe('ðŸ”„ SystÃ¨me de Trocs', () => {
     test('E2E-010: Proposition de troc', async () => {
       const tradeProposal = {
         fromUser: 'user_e2e_123',
@@ -255,15 +249,15 @@ test('E2E-012: Finalisation de troc', async () => {
     });
   });
 
-  // ======= TESTS SÉCURITÉ COMPLETS =======
-  describe('🛡️ Sécurité et Protection', () => {
-    test('E2E-013: Détection de tentatives de fraude', async () => {
+  // ======= TESTS SÃ‰CURITÃ‰ COMPLETS =======
+  describe('ðŸ›¡ï¸ SÃ©curitÃ© et Protection', () => {
+    test('E2E-013: DÃ©tection de tentatives de fraude', async () => {
       const suspiciousActivity = {
         userId: 'user_suspect',
         actions: [
           { type: 'multiple_accounts', count: 5 },
           { type: 'fake_objects', count: 10 },
-          { type: 'suspicious_values', items: ['iPhone 1€', 'Ferrari 10€'] }
+          { type: 'suspicious_values', items: ['iPhone 1â‚¬', 'Ferrari 10â‚¬'] }
         ]
       };
       
@@ -278,7 +272,7 @@ test('E2E-012: Finalisation de troc', async () => {
       expect(fraudDetection.riskScore).toBeGreaterThan(80);
       expect(fraudDetection.action).toBe('account_suspended');
     })
-test('E2E-014: Validation de données sensibles', async () => {
+test('E2E-014: Validation de donnÃ©es sensibles', async () => {
       const sensitiveData = {
         email: 'test@cadok.com',
         password: 'password123',
@@ -313,8 +307,8 @@ test('E2E-015: Protection contre injections', async () => {
   });
 
   // ======= TESTS PAIEMENTS COMPLETS =======
-  describe('💳 Système de Paiements', () => {
-    test('E2E-016: Création client Stripe', async () => {
+  describe('ðŸ’³ SystÃ¨me de Paiements', () => {
+    test('E2E-016: CrÃ©ation client Stripe', async () => {
       const customerData = {
         email: 'e2e@cadok.com',
         name: 'Test User E2E',
@@ -333,7 +327,7 @@ test('E2E-015: Protection contre injections', async () => {
       expect(mockStripeCustomer.email).toBe(customerData.email);
       expect(mockStripeCustomer.created).toBeDefined();
     })
-test('E2E-017: Création abonnement Premium', async () => {
+test('E2E-017: CrÃ©ation abonnement Premium', async () => {
       const subscriptionData = {
         customer: 'cus_e2e_test123',
         plan: 'premium_monthly',
@@ -380,7 +374,7 @@ test('E2E-018: Gestion de facturation', async () => {
   });
 
   // ======= TESTS LIVRAISON COMPLETS =======
-  describe('📦 Système de Livraison', () => {
+  describe('ðŸ“¦ SystÃ¨me de Livraison', () => {
     test('E2E-019: Recherche points relais', async () => {
       const searchParams = {
         zipCode: '75001',
@@ -391,7 +385,7 @@ test('E2E-018: Gestion de facturation', async () => {
       const mockPickupPoints = [
         {
           id: 'pr_001',
-          name: 'Relais Colis Châtelet',
+          name: 'Relais Colis ChÃ¢telet',
           address: '1 Rue de Rivoli, 75001 Paris',
           coordinates: { lat: 48.8566, lng: 2.3522 },
           provider: 'mondial_relay',
@@ -411,7 +405,7 @@ test('E2E-018: Gestion de facturation', async () => {
       expect(mockPickupPoints[0].distance).toBeLessThan(1);
       expect(mockPickupPoints[1].provider).toBe('chronopost');
     })
-test('E2E-020: Génération étiquette livraison', async () => {
+test('E2E-020: GÃ©nÃ©ration Ã©tiquette livraison', async () => {
       const shipmentData = {
         tradeId: 'trade_e2e_001',
         fromAddress: 'Paris',
@@ -435,7 +429,7 @@ test('E2E-020: Génération étiquette livraison', async () => {
   });
 
   // ======= TESTS PERFORMANCE =======
-  describe('⚡ Performance et Scalabilité', () => {
+  describe('âš¡ Performance et ScalabilitÃ©', () => {
     test('E2E-021: Performance recherche massive', async () => {
       const start = Date.now();
       
@@ -458,7 +452,7 @@ test('E2E-020: Génération étiquette livraison', async () => {
 test('E2E-022: Gestion de charge utilisateurs', async () => {
       const start = Date.now();
       
-      // Simulation de 1000 utilisateurs simultanés
+      // Simulation de 1000 utilisateurs simultanÃ©s
       const users = Array.from({ length: 1000 }, (_, i) => ({
         id: `user_${i}`,
         email: `user${i}@cadok.com`,
@@ -474,8 +468,8 @@ test('E2E-022: Gestion de charge utilisateurs', async () => {
     });
   });
 
-  // ======= TESTS INTÉGRATION =======
-  describe('🔗 Tests d Intégration', () => {
+  // ======= TESTS INTÃ‰GRATION =======
+  describe('ðŸ”— Tests d IntÃ©gration', () => {
     test('E2E-023: Workflow complet de troc', async () => {
       const completeWorkflow = {
         step1: { action: 'user_registration', status: 'completed' },
@@ -492,7 +486,7 @@ test('E2E-022: Gestion de charge utilisateurs', async () => {
       
       expect(Object.keys(completeWorkflow).length).toBe(6);
     })
-test('E2E-024: Intégration multi-services', async () => {
+test('E2E-024: IntÃ©gration multi-services', async () => {
       const servicesIntegration = {
         database: { status: 'connected', latency: 10 },
         stripe: { status: 'connected', latency: 50 },
@@ -506,7 +500,7 @@ test('E2E-024: Intégration multi-services', async () => {
         expect(service.latency).toBeLessThan(200);
       });
     })
-test('E2E-025: Test de résilience', async () => {
+test('E2E-025: Test de rÃ©silience', async () => {
       const failureScenarios = [
         { service: 'database', failure: 'timeout', recovery: 'retry_success' },
         { service: 'payment', failure: 'declined', recovery: 'alternative_method' },
@@ -523,8 +517,8 @@ test('E2E-025: Test de résilience', async () => {
 });
 
 // ======= TEST FINAL DE VALIDATION =======
-describe('🏆 VALIDATION FINALE E2E', () => {
-  test('E2E-FINAL: Tous les systèmes opérationnels', () => {
+describe('ðŸ† VALIDATION FINALE E2E', () => {
+  test('E2E-FINAL: Tous les systÃ¨mes opÃ©rationnels', () => {
     const systemsStatus = {
       authentication: 'OPERATIONAL',
       user_management: 'OPERATIONAL',
@@ -543,3 +537,4 @@ describe('🏆 VALIDATION FINALE E2E', () => {
     expect(Object.keys(systemsStatus).length).toBe(8);
   });
 });
+

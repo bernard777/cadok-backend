@@ -1,0 +1,20 @@
+
+KADOC - Vérification de votre compte
+====================================
+
+Bonjour Jean Dupont,
+
+Bienvenue sur KADOC ! Pour activer votre compte, utilisez le code de vérification ci-dessous :
+
+CODE DE VÉRIFICATION : ABC123
+
+Ou cliquez sur ce lien : https://kadoc.com/verify?code=ABC123
+
+Ce code expire dans 10 minutes.
+
+Si vous n'avez pas créé de compte KADOC, ignorez cet email.
+
+---
+KADOC - Plateforme de Troc
+🌍 Échangeons pour un monde plus durable
+    

@@ -96,10 +96,10 @@ class FreeTradeSecurityService {
    */
   async createSecuredTrade(tradeData) {
     try {
-      const { fromUserId, toUserId, fromObjects, toObjects, estimatedValue } = tradeData;
+      const { fromUserId, toUserId, fromObjects, toObjects } = tradeData;
 
       // Vérifier l'éligibilité
-      const eligibility = await this.checkTradeEligibility(fromUserId, toUserId, estimatedValue);
+      const eligibility = await this.checkTradeEligibility(fromUserId, toUserId);
       
       if (!eligibility.eligible) {
         throw new Error('Échange non autorisé selon les règles de sécurité');
@@ -111,18 +111,14 @@ class FreeTradeSecurityService {
         toUser: toUserId,
         offeredObjects: fromObjects,
         requestedObjects: toObjects,
-        estimatedValue: {
-          amount: estimatedValue,
-          currency: 'EUR',
-          calculatedAt: new Date()
-        },
+        // Système de troc pur sans valeur monétaire
         security: {
-          level: this.calculateSecurityLevel(estimatedValue),
+          level: this.calculateSecurityLevel(),
           requirements: {
-            photoProofRequired: estimatedValue > 50,
-            trackingRequired: estimatedValue > 30,
-            witnessRequired: estimatedValue > 200,
-            identityVerificationRequired: estimatedValue > 100
+            photoProofRequired: true, // Toujours requis pour un troc sécurisé
+            trackingRequired: true,
+            witnessRequired: false,
+            identityVerificationRequired: true
           },
           milestones: {
             objectsPhotographed: { fromUser: false, toUser: false },

@@ -68,13 +68,6 @@ const tradeSchema = new mongoose.Schema({
     }
   },
 
-  // Valeur estimée pour le calcul du dépôt
-  estimatedValue: {
-    amount: Number,
-    currency: { type: String, default: 'EUR' },
-    calculatedAt: Date
-  },
-
   // Score de confiance et sécurité
   security: {
     trustScores: {

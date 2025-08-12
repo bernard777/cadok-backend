@@ -223,6 +223,26 @@ if (fs.existsSync(adminTradesRoutePath)) {
   console.warn("Warning: './routes/admin/trades.js' not found. '/api/admin/trades' route not registered.");
 }
 
+// Ajout des routes Admin Rôles et Permissions
+const adminRolesRoutePath = path.join(__dirname, 'routes', 'admin', 'roles.js');
+if (fs.existsSync(adminRolesRoutePath)) {
+  const adminRolesRoutes = require('./routes/admin/roles');
+  app.use('/api/admin', adminRolesRoutes);
+  console.log('✅ Admin Roles routes registered: /api/admin/roles');
+} else {
+  console.warn("Warning: './routes/admin/roles.js' not found. '/api/admin/roles' route not registered.");
+}
+
+// 📢 Routes de Signalements - Modération Communautaire
+const reportsRoutePath = path.join(__dirname, 'routes', 'reports.js');
+if (fs.existsSync(reportsRoutePath)) {
+  const reportsRoutes = require('./routes/reports');
+  app.use('/api/reports', reportsRoutes);
+  console.log('✅ Reports routes registered: /api/reports');
+} else {
+  console.warn("Warning: './routes/reports.js' not found. '/api/reports' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');

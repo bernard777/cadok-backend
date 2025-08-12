@@ -166,13 +166,7 @@ class SecurityMiddleware {
       body('category')
         .trim()
         .isLength({ min: 1, max: 50 })
-        .withMessage('La catégorie est requise'),
-      
-      body('estimatedValue')
-        .isNumeric()
-        .withMessage('La valeur estimée doit être un nombre')
-        .isFloat({ min: 0, max: 1000000 })
-        .withMessage('La valeur estimée doit être entre 0 et 1,000,000')
+        .withMessage('La catégorie est requise')
     ];
   }
 
