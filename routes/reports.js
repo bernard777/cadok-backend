@@ -540,4 +540,133 @@ async function applyModerationAction(report, resolutionType, adminId) {
   }
 }
 
+/**
+ * GET /api/reports/admin-activity - Statistiques d'activité des administrateurs
+ * Accessible aux super admins uniquement
+ */
+router.get('/admin-activity', requireAuth, requirePermission('manage_system'), async (req, res) => {
+  try {
+    const { period = '30' } = req.query;
+    const days = parseInt(period);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Statistiques des actions par admin
+    const adminActivity = await Report.aggregate([
+      {
+        $match: {
+          $or: [
+            { 'adminReview.reviewedAt': { $gte: startDate } },
+            { 'resolution.resolvedAt': { $gte: startDate } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: {
+            admin: { $ifNull: ['$resolution.resolvedBy', '$adminReview.reviewedBy'] }
+          },
+          assignedReports: {
+            $sum: {
+              $cond: [{ $ne: ['$adminReview.reviewedBy', null] }, 1, 0]
+            }
+          },
+          resolvedReports: {
+            $sum: {
+              $cond: [{ $ne: ['$resolution.resolvedBy', null] }, 1, 0]
+            }
+          },
+          resolutionTypes: {
+            $push: '$resolution.resolutionType'
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id.admin',
+          foreignField: '_id',
+          as: 'adminInfo'
+        }
+      },
+      {
+        $project: {
+          adminId: '$_id.admin',
+          adminName: { $arrayElemAt: ['$adminInfo.pseudo', 0] },
+          adminEmail: { $arrayElemAt: ['$adminInfo.email', 0] },
+          assignedReports: 1,
+          resolvedReports: 1,
+          totalActivity: { $add: ['$assignedReports', '$resolvedReports'] },
+          resolutionBreakdown: {
+            $reduce: {
+              input: '$resolutionTypes',
+              initialValue: {},
+              in: {
+                $mergeObjects: [
+                  '$$value',
+                  { $cond: [
+                    { $ne: ['$$this', null] },
+                    { $arrayToObject: [[ { k: '$$this', v: { $add: [{ $ifNull: [{ $getField: { field: '$$this', input: '$$value' } }, 0] }, 1] } }]] },
+                    {}
+                  ]}
+                ]
+              }
+            }
+          }
+        }
+      },
+      { $sort: { totalActivity: -1 } }
+    ]);
+
+    // Statistiques générales d'activité
+    const periodStats = await Report.aggregate([
+      {
+        $match: {
+          reportedAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalReportsReceived: { $sum: 1 },
+          totalProcessed: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['resolved', 'dismissed']] }, 1, 0]
+            }
+          },
+          avgResponseTime: {
+            $avg: {
+              $cond: [
+                { $ne: ['$resolution.resolvedAt', null] },
+                { $subtract: ['$resolution.resolvedAt', '$reportedAt'] },
+                null
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      period: `${days} derniers jours`,
+      adminActivity: adminActivity,
+      periodStats: periodStats[0] || {
+        totalReportsReceived: 0,
+        totalProcessed: 0,
+        avgResponseTime: 0
+      },
+      processedReportsPercent: periodStats[0] ? 
+        ((periodStats[0].totalProcessed / periodStats[0].totalReportsReceived) * 100).toFixed(1) : 0
+    });
+
+  } catch (error) {
+    console.error('Erreur statistiques activité admin:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur lors de la récupération des statistiques d\'activité' 
+    });
+  }
+});
+
 module.exports = router;
