@@ -9,6 +9,8 @@ uploads/
 uploads/avatars/
 uploads/object-images/
 uploads/**/*
+# Mais garder le README du dossier uploads
+!uploads/README.md
 
 # MongoDB binaries
 mongodb-binaries/
