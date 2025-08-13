@@ -4,6 +4,12 @@ node_modules/
 # Env variables
 .env
 
+# Uploads - Ne pas versionner les fichiers uploadés par les utilisateurs
+uploads/
+uploads/avatars/
+uploads/object-images/
+uploads/**/*
+
 # MongoDB binaries
 mongodb-binaries/
 *.exe
