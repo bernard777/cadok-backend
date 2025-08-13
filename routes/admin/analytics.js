@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../../middlewares/auth');
+const { requireAuth, requirePermission } = require('../../middleware/roleBasedAccess');
 
 const User = require('../../models/User');
 const ObjectModel = require('../../models/Object');
@@ -14,23 +14,10 @@ const Report = require('../../models/Report');
 const Event = require('../../models/Event');
 
 /**
- * 🛡️ Middleware admin seulement
- */
-const adminMiddleware = (req, res, next) => {
-  if (!req.user || !['admin', 'super_admin'].includes(req.user.role)) {
-    return res.status(403).json({ 
-      success: false, 
-      error: 'Accès administrateur requis' 
-    });
-  }
-  next();
-};
-
-/**
  * GET /api/admin/analytics/platform-overview
  * Vue d'ensemble de la plateforme (admins seulement)
  */
-router.get('/platform-overview', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/platform-overview', requireAuth, requirePermission('moderate_content'), async (req, res) => {
   try {
     console.log('📊 [ADMIN] Chargement vue d\'ensemble plateforme...');
 
@@ -105,7 +92,7 @@ router.get('/platform-overview', authMiddleware, adminMiddleware, async (req, re
  * GET /api/admin/analytics/user-activity
  * Activité globale des utilisateurs (admins seulement)
  */
-router.get('/user-activity', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/user-activity', requireAuth, requirePermission('moderate_content'), async (req, res) => {
   try {
     console.log('📊 [ADMIN] Chargement activité utilisateurs...');
     const { period = '30' } = req.query;
@@ -183,7 +170,7 @@ router.get('/user-activity', authMiddleware, adminMiddleware, async (req, res) =
  * GET /api/admin/analytics/trading-overview
  * Vue d'ensemble des échanges (admins seulement)
  */
-router.get('/trading-overview', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/trading-overview', requireAuth, requirePermission('moderate_content'), async (req, res) => {
   try {
     console.log('📊 [ADMIN] Chargement vue d\'ensemble échanges...');
     const { period = '30' } = req.query;
@@ -275,12 +262,12 @@ router.get('/trading-overview', authMiddleware, adminMiddleware, async (req, res
  * GET /api/admin/analytics/content-metrics
  * Métriques de contenu (objets, événements)
  */
-router.get('/content-metrics', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/content-metrics', requireAuth, requirePermission('moderate_content'), async (req, res) => {
   try {
     console.log('📊 [ADMIN] Chargement métriques contenu...');
 
     // Distribution des objets par catégorie
-    const objectsByCategory = await Object.aggregate([
+    const objectsByCategory = await ObjectModel.aggregate([
       {
         $group: {
           _id: '$category',

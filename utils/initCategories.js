@@ -90,11 +90,16 @@ const defaultCategories = [
  */
 async function initializeCategories() {
   try {
-    // Vérifier si des catégories existent déjà
+    // Vérifier si des catégories existent déjà en nombre suffisant
     const existingCategoriesCount = await Category.countDocuments();
+    const expectedCategoriesCount = defaultCategories.length;
     
-    if (existingCategoriesCount > 0) {
+    if (existingCategoriesCount >= expectedCategoriesCount) {
       console.log(`📦 [CATEGORIES] ${existingCategoriesCount} catégories déjà présentes - initialisation ignorée`);
+      return;
+    } else if (existingCategoriesCount > 0) {
+      console.log(`⚠️ [CATEGORIES] ${existingCategoriesCount} catégories trouvées, mais ${expectedCategoriesCount} attendues - réinitialisation nécessaire`);
+      console.log('🔄 [CATEGORIES] Utilisation du script: node scripts/manage-categories.js reset');
       return;
     }
 

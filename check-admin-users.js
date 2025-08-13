@@ -8,7 +8,7 @@ async function checkUsers() {
     console.log('🔍 VÉRIFICATION UTILISATEURS');
     console.log('============================');
     
-    await mongoose.connect('mongodb://localhost:27017/cadok_test');
+    await mongoose.connect('mongodb://localhost:27017/cadok');
     console.log('✅ Connecté à MongoDB\n');
 
     // Chercher tous les admins
