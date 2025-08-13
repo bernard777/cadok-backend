@@ -54,6 +54,146 @@ const Category = require('../models/Category'); // Assurez-vous d'importer le mo
 const MIN_CATEGORY_COUNT = 4;
 const MAX_CATEGORY_COUNT = 8; // Modifiez ce nombre selon la limite souhaitée
 
+// GET /:id - Récupérer le profil public d'un utilisateur
+router.get('/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    console.log('🔍 [DEBUG] Récupération profil pour userId:', userId);
+    
+    // Validation de l'ID utilisateur
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      console.log('❌ [DEBUG] ID utilisateur invalide:', userId);
+      return res.status(400).json({ 
+        success: false, 
+        message: "ID utilisateur manquant ou invalide." 
+      });
+    }
+
+    // Vérifier que l'ID est un ObjectId valide
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.log('❌ [DEBUG] Format ObjectId invalide:', userId);
+      return res.status(400).json({ 
+        success: false, 
+        message: "Format d'ID utilisateur invalide." 
+      });
+    }
+
+    // Récupérer le profil utilisateur (champs publics uniquement)
+    const user = await User.findById(userId)
+      .select('pseudo avatar city verified createdAt profile tradeStats subscriptionPlan')
+      .lean();
+    
+    if (!user) {
+      console.log('❌ [DEBUG] Utilisateur non trouvé:', userId);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Utilisateur introuvable.' 
+      });
+    }
+
+    console.log('✅ [DEBUG] Profil utilisateur trouvé:', user.pseudo);
+
+    // Calculer les statistiques d'échanges
+    const ObjectModel = require('../models/Object');
+    const Trade = require('../models/Trade');
+    
+    // Compter les objets disponibles de l'utilisateur
+    const objectsCount = await ObjectModel.countDocuments({ 
+      owner: userId, 
+      status: 'available' 
+    });
+
+    // Compter les échanges terminés
+    const completedTrades = await Trade.countDocuments({
+      $and: [
+        { status: 'completed' },
+        {
+          $or: [
+            { fromUser: userId },
+            { toUser: userId }
+          ]
+        }
+      ]
+    });
+
+    // Calculer la note moyenne depuis les échanges
+    const tradesWithRatings = await Trade.find({
+      $and: [
+        { status: 'completed' },
+        { 
+          $or: [
+            { fromUser: userId, 'ratings.toUserRating': { $exists: true } },
+            { toUser: userId, 'ratings.fromUserRating': { $exists: true } }
+          ]
+        }
+      ]
+    }).select('ratings fromUser toUser');
+
+    let totalRating = 0;
+    let ratingCount = 0;
+
+    tradesWithRatings.forEach(trade => {
+      if (trade.fromUser.toString() === userId && trade.ratings?.toUserRating?.score) {
+        totalRating += trade.ratings.toUserRating.score;
+        ratingCount++;
+      }
+      if (trade.toUser.toString() === userId && trade.ratings?.fromUserRating?.score) {
+        totalRating += trade.ratings.fromUserRating.score;
+        ratingCount++;
+      }
+    });
+
+    const averageRating = ratingCount > 0 ? Math.round((totalRating / ratingCount) * 10) / 10 : 0;
+
+    // Construire le profil public enrichi
+    const publicProfile = {
+      _id: user._id,
+      pseudo: user.pseudo,
+      avatar: user.avatar,
+      city: user.city,
+      verified: user.verified,
+      joinedAt: user.createdAt,
+      profile: user.profile || {},
+      stats: {
+        objectsCount,
+        completedTrades,
+        averageRating,
+        totalRatings: ratingCount
+      },
+      subscriptionPlan: user.subscriptionPlan,
+      // Calculer un score de confiance basé sur l'activité et les évaluations
+      trustScore: Math.min(100, Math.round(
+        (completedTrades * 10) + 
+        (averageRating * 15) + 
+        (user.verified ? 20 : 0) +
+        (objectsCount * 2)
+      ))
+    };
+
+    console.log('✅ [DEBUG] Profil public construit:', {
+      pseudo: publicProfile.pseudo,
+      objectsCount,
+      completedTrades,
+      averageRating,
+      trustScore: publicProfile.trustScore
+    });
+
+    res.json({
+      success: true,
+      user: publicProfile
+    });
+
+  } catch (err) {
+    console.error('❌ [DEBUG] Erreur récupération profil:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Erreur serveur lors de la récupération du profil." 
+    });
+  }
+});
+
 router.post('/me/favorites', auth, async (req, res) => {
   const { categories } = req.body;
   if (!Array.isArray(categories) || categories.length < MIN_CATEGORY_COUNT || categories.length > MAX_CATEGORY_COUNT) {
@@ -382,6 +522,94 @@ router.post('/me/account/deactivate', auth, async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Erreur serveur lors de la désactivation du compte' 
+    });
+  }
+});
+
+// GET /:id/reviews - Récupérer tous les avis reçus par un utilisateur
+router.get('/:id/reviews', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Vérifier que l'utilisateur existe
+    const user = await User.findById(userId).select('pseudo averageRating totalRatings');
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Utilisateur non trouvé.' 
+      });
+    }
+
+    // Récupérer les avis depuis les trocs terminés
+    const Trade = require('../models/Trade');
+    const trades = await Trade.find({
+      $and: [
+        { status: 'completed' },
+        {
+          $or: [
+            { 'requester': userId, 'ratings.toUserRating': { $exists: true } },
+            { 'owner': userId, 'ratings.fromUserRating': { $exists: true } }
+          ]
+        }
+      ]
+    }).populate('requester', 'pseudo avatar')
+      .populate('owner', 'pseudo avatar')
+      .populate('requestedObjects', 'title')
+      .sort({ completedAt: -1 });
+
+    // Formatter les avis pour cet utilisateur
+    const reviews = [];
+    
+    trades.forEach(trade => {
+      if (trade.requester._id.toString() === userId && trade.ratings?.toUserRating) {
+        // L'utilisateur était le requester et a reçu une évaluation
+        reviews.push({
+          rating: trade.ratings.toUserRating.score,
+          comment: trade.ratings.toUserRating.comment,
+          submittedAt: trade.ratings.toUserRating.submittedAt,
+          fromUser: {
+            id: trade.owner._id,
+            pseudo: trade.owner.pseudo,
+            avatar: trade.owner.avatar
+          },
+          tradeTitle: trade.requestedObjects?.[0]?.title || 'Troc',
+          tradeId: trade._id
+        });
+      }
+      
+      if (trade.owner._id.toString() === userId && trade.ratings?.fromUserRating) {
+        // L'utilisateur était l'owner et a reçu une évaluation
+        reviews.push({
+          rating: trade.ratings.fromUserRating.score,
+          comment: trade.ratings.fromUserRating.comment,
+          submittedAt: trade.ratings.fromUserRating.submittedAt,
+          fromUser: {
+            id: trade.requester._id,
+            pseudo: trade.requester.pseudo,
+            avatar: trade.requester.avatar
+          },
+          tradeTitle: trade.requestedObjects?.[0]?.title || 'Troc',
+          tradeId: trade._id
+        });
+      }
+    });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        pseudo: user.pseudo,
+        averageRating: user.averageRating,
+        totalRatings: user.totalRatings
+      },
+      reviews: reviews
+    });
+
+  } catch (err) {
+    console.error('Erreur récupération avis:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur serveur lors de la récupération des avis.' 
     });
   }
 });

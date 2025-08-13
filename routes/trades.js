@@ -1215,4 +1215,139 @@ router.patch('/:id/complete', auth, async (req, res) => {
   }
 });
 
+// POST /api/trades/:id/rating - Évaluer un utilisateur après un troc terminé
+router.post('/:id/rating', auth, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const tradeId = req.params.id;
+
+    // Validation des données
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'La note doit être entre 1 et 5.' 
+      });
+    }
+
+    // Récupérer le trade
+    const trade = await Trade.findById(tradeId)
+      .populate('requester', 'pseudo')
+      .populate('owner', 'pseudo');
+    
+    if (!trade) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Troc non trouvé.' 
+      });
+    }
+
+    // Vérifier que le trade est terminé
+    if (trade.status !== 'completed') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le troc doit être terminé pour être évalué.' 
+      });
+    }
+
+    // Vérifier que l'utilisateur fait partie du troc
+    const isRequester = trade.requester._id.toString() === req.user.id;
+    const isOwner = trade.owner._id.toString() === req.user.id;
+    
+    if (!isRequester && !isOwner) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Vous ne pouvez pas évaluer ce troc.' 
+      });
+    }
+
+    // Initialiser ratings si nécessaire
+    if (!trade.ratings) {
+      trade.ratings = {};
+    }
+
+    // Déterminer quel utilisateur évalue l'autre
+    if (isRequester) {
+      // Le requester évalue l'owner
+      if (trade.ratings.fromUserRating) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Vous avez déjà évalué ce troc.' 
+        });
+      }
+      
+      trade.ratings.fromUserRating = {
+        score: rating,
+        comment: comment?.trim() || '',
+        submittedAt: new Date(),
+        submittedBy: req.user.id
+      };
+    } else {
+      // L'owner évalue le requester
+      if (trade.ratings.toUserRating) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Vous avez déjà évalué ce troc.' 
+        });
+      }
+      
+      trade.ratings.toUserRating = {
+        score: rating,
+        comment: comment?.trim() || '',
+        submittedAt: new Date(),
+        submittedBy: req.user.id
+      };
+    }
+
+    // Sauvegarder le trade
+    await trade.save();
+
+    // Mettre à jour les statistiques de l'utilisateur évalué
+    const User = require('../models/User');
+    const evaluatedUserId = isRequester ? trade.owner._id : trade.requester._id;
+    const evaluatedUser = await User.findById(evaluatedUserId);
+    
+    if (evaluatedUser) {
+      // Ajouter la nouvelle évaluation
+      evaluatedUser.ratingsReceived.push({
+        fromUser: req.user.id,
+        rating: rating,
+        comment: comment?.trim() || '',
+        trade: tradeId,
+        createdAt: new Date()
+      });
+
+      // Recalculer la moyenne
+      const totalRatings = evaluatedUser.ratingsReceived.length;
+      const sumRatings = evaluatedUser.ratingsReceived.reduce((sum, r) => sum + r.rating, 0);
+      evaluatedUser.averageRating = Math.round((sumRatings / totalRatings) * 10) / 10;
+      evaluatedUser.totalRatings = totalRatings;
+
+      await evaluatedUser.save();
+    }
+
+    // Créer une notification pour l'utilisateur évalué
+    await Notification.create({
+      user: evaluatedUserId,
+      message: `Vous avez reçu une nouvelle évaluation (${rating}/5) de votre troc avec ${req.user.pseudo || 'un utilisateur'}.`,
+      type: 'trade_rated',
+      trade: tradeId
+    }).catch(() => {});
+
+    res.json({ 
+      success: true, 
+      message: 'Évaluation enregistrée avec succès.',
+      trade: await Trade.findById(tradeId)
+        .populate('requester', 'pseudo avatar')
+        .populate('owner', 'pseudo avatar')
+    });
+
+  } catch (err) {
+    console.error('Erreur évaluation troc:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur serveur lors de l\'évaluation.' 
+    });
+  }
+});
+
 module.exports = router;
