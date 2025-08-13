@@ -1,0 +1,5 @@
+# Ce fichier permet de maintenir le dossier object-images dans Git sans inclure les images
+# Les images d'objets des utilisateurs ne sont pas versionnées pour des raisons de:
+# - Confidentialité  
+# - Taille du dépôt
+# - Séparation entre code et données utilisateur

@@ -4,14 +4,6 @@ node_modules/
 # Env variables
 .env
 
-# Uploads - Ne pas versionner les fichiers uploadés par les utilisateurs
-uploads/
-uploads/avatars/
-uploads/object-images/
-uploads/**/*
-# Mais garder le README du dossier uploads
-!uploads/README.md
-
 # MongoDB binaries
 mongodb-binaries/
 *.exe
@@ -29,6 +21,23 @@ scripts/create-admin-*.js
 
 # Coverage reports
 coverage/
+
+# Uploads - Images des utilisateurs (ne pas commit)
+uploads/avatars/*.jpg
+uploads/avatars/*.jpeg
+uploads/avatars/*.png
+uploads/avatars/*.gif
+uploads/avatars/*.webp
+uploads/object-images/*.jpg
+uploads/object-images/*.jpeg
+uploads/object-images/*.png
+uploads/object-images/*.gif
+uploads/object-images/*.webp
+
+# Garder la structure des dossiers mais pas les images
+!uploads/README.md
+!uploads/avatars/.gitkeep
+!uploads/object-images/.gitkeep
 
 # VS Code settings
 .vscode/
