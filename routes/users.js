@@ -49,6 +49,73 @@ router.put('/me/notification-preferences', auth, async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur.' });
   }
 });
+
+// --- Préférences de fonctionnalités ---
+// GET /me/preferences - Récupérer les préférences de fonctionnalités
+router.get('/me/preferences', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('featurePreferences');
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    
+    // Mapper les préférences pour l'interface mobile
+    const preferences = {
+      detailedAnalytics: user.featurePreferences?.analytics ?? true,
+      pushNotifications: user.featurePreferences?.notifications ?? true,
+      geolocation: true, // Toujours activé pour l'instant
+      ecoImpact: user.featurePreferences?.eco ?? true,
+      gamification: user.featurePreferences?.gaming ?? true
+    };
+    
+    res.json({ success: true, preferences });
+  } catch (err) {
+    console.error('Erreur récupération préférences:', err);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// PUT /me/preferences - Mettre à jour les préférences de fonctionnalités  
+router.put('/me/preferences', auth, async (req, res) => {
+  try {
+    const updates = {};
+    
+    // Mapper les préférences de l'interface vers le modèle
+    if (typeof req.body.detailedAnalytics !== 'undefined') {
+      updates['featurePreferences.analytics'] = req.body.detailedAnalytics;
+    }
+    if (typeof req.body.pushNotifications !== 'undefined') {
+      updates['featurePreferences.notifications'] = req.body.pushNotifications;
+    }
+    if (typeof req.body.ecoImpact !== 'undefined') {
+      updates['featurePreferences.eco'] = req.body.ecoImpact;
+    }
+    if (typeof req.body.gamification !== 'undefined') {
+      updates['featurePreferences.gaming'] = req.body.gamification;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true, select: 'featurePreferences' }
+    );
+    
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    
+    // Retourner les préférences dans le format attendu
+    const preferences = {
+      detailedAnalytics: user.featurePreferences?.analytics ?? true,
+      pushNotifications: user.featurePreferences?.notifications ?? true,
+      geolocation: true,
+      ecoImpact: user.featurePreferences?.eco ?? true,
+      gamification: user.featurePreferences?.gaming ?? true
+    };
+    
+    res.json({ success: true, preferences });
+  } catch (err) {
+    console.error('Erreur mise à jour préférences:', err);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 const Category = require('../models/Category'); // Assurez-vous d'importer le modèle Category
 
 const MIN_CATEGORY_COUNT = 4;
