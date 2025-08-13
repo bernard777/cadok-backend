@@ -464,8 +464,8 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// 🌍 4. Recherche par géolocalisation avec distance
-// GET /api/objects/nearby?lat=48.8566&lng=2.3522&radius=10&status=available
+// 🌍 4. Recherche par géolocalisation avec distance AVANCÉE
+// GET /api/objects/nearby?lat=48.8566&lng=2.3522&radius=10&status=available&precision=high
 router.get('/nearby', async (req, res) => {
   try {
     const { 
@@ -473,9 +473,17 @@ router.get('/nearby', async (req, res) => {
       lng, 
       radius = 10, 
       status = 'available',
+      statuses,  // Support du format pluriel depuis le mobile
       category,
-      limit = 20
+      categories, // Support du format pluriel
+      limit = 20,
+      precision = 'auto', // 'high' = GPS exact, 'medium' = hybride, 'low' = ville seulement
+      excludeOwnObjects = 'true'
     } = req.query;
+    
+    // Gestion flexible des paramètres singulier/pluriel
+    const finalStatus = statuses ? statuses.split(',')[0] : status;
+    const finalCategory = categories ? categories.split(',')[0] : category;
     
     if (!lat || !lng) {
       return res.status(400).json({ 
@@ -495,35 +503,150 @@ router.get('/nearby', async (req, res) => {
         message: 'Coordonnées invalides' 
       });
     }
-    
-    // Pour l'instant, recherche par ville (géolocalisation basique)
-    // TODO: Implémenter vraie géolocalisation avec coordonnées GPS
-    const filters = { status };
-    if (category) {
-      try {
-        if (mongoose.Types.ObjectId.isValid(category)) {
-          filters.category = category;
+
+    console.log(`🌍 Recherche géolocalisée: lat=${latitude}, lng=${longitude}, radius=${radiusKm}km, precision=${precision}, status=${finalStatus}`);
+
+    // 🎯 RECHERCHE GPS PRÉCISE (si objets ont des coordonnées)
+    let objectsWithGPS = [];
+    let fallbackToCity = false;
+
+    try {
+      const gpsFilters = {
+        status: finalStatus,
+        'location.coordinates': { $exists: true, $ne: null },
+        'location.isPublic': { $ne: false }
+      };
+
+      // Filtre par catégorie
+      if (finalCategory) {
+        if (mongoose.Types.ObjectId.isValid(finalCategory)) {
+          gpsFilters.category = finalCategory;
         } else {
-          const categoryDoc = await Category.findOne({ name: new RegExp(category, 'i') });
+          const categoryDoc = await Category.findOne({ name: new RegExp(finalCategory, 'i') });
           if (categoryDoc) {
-            filters.category = categoryDoc._id;
+            gpsFilters.category = categoryDoc._id;
           }
         }
-      } catch (error) {
-        console.warn('Erreur filtre catégorie géoloc:', error);
       }
+
+      // Exclure les objets de l'utilisateur connecté
+      if (excludeOwnObjects === 'true' && req.user) {
+        gpsFilters.owner = { $ne: req.user.id };
+      }
+
+      // Recherche géospatiale MongoDB avec $near
+      if (precision === 'high' || precision === 'auto') {
+        objectsWithGPS = await ObjectModel.find({
+          ...gpsFilters,
+          'location.coordinates': {
+            $near: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [longitude, latitude] // [lng, lat] pour GeoJSON
+              },
+              $maxDistance: radiusKm * 1000 // Convertir km en mètres
+            }
+          }
+        })
+        .populate('owner', 'pseudo city avatar')
+        .populate('category', 'name')
+        .limit(limitNum)
+        .lean();
+
+        console.log(`📍 ${objectsWithGPS.length} objets trouvés avec coordonnées GPS précises`);
+      }
+    } catch (error) {
+      console.warn('⚠️ Recherche GPS échoue, fallback vers recherche par ville:', error.message);
+      fallbackToCity = true;
     }
-    
-    // Recherche basique par zone (utilise les villes pour simuler la distance)
-    const objects = await ObjectModel.find(filters)
-      .populate('owner', 'pseudo city avatar')
-      .populate('category', 'name')
-      .limit(limitNum)
-      .sort({ createdAt: -1 });
-    
-    // Transformer les URLs
-    const objectsWithFullUrls = objects.map(object => {
-      const objWithUrls = object.toObject();
+
+    // 🏙️ RECHERCHE FALLBACK PAR VILLE (si pas assez de résultats GPS)
+    let objectsByCity = [];
+    if (objectsWithGPS.length < limitNum || precision === 'low' || fallbackToCity) {
+      console.log('🏙️ Complément par recherche ville...');
+      
+      // Déterminer les villes dans le rayon (approximation)
+      const nearbyAreas = await findNearbyAreas(latitude, longitude, radiusKm);
+      
+      const cityFilters = {
+        status: finalStatus,
+        $or: [
+          { 'location.address.city': { $in: nearbyAreas.cities } },
+          { 'location.address.zipCode': { $in: nearbyAreas.zipCodes } }
+        ]
+      };
+
+      if (finalCategory) {
+        if (mongoose.Types.ObjectId.isValid(finalCategory)) {
+          cityFilters.category = finalCategory;
+        } else {
+          const categoryDoc = await Category.findOne({ name: new RegExp(finalCategory, 'i') });
+          if (categoryDoc) {
+            cityFilters.category = categoryDoc._id;
+          }
+        }
+      }
+
+      if (excludeOwnObjects === 'true' && req.user) {
+        cityFilters.owner = { $ne: req.user.id };
+      }
+
+      // Exclure les objets déjà trouvés par GPS
+      if (objectsWithGPS.length > 0) {
+        const foundIds = objectsWithGPS.map(obj => obj._id);
+        cityFilters._id = { $nin: foundIds };
+      }
+
+      objectsByCity = await ObjectModel.find(cityFilters)
+        .populate('owner', 'pseudo city avatar')
+        .populate('category', 'name')
+        .limit(limitNum - objectsWithGPS.length)
+        .sort({ createdAt: -1 })
+        .lean();
+
+      console.log(`🏙️ ${objectsByCity.length} objets supplémentaires trouvés par ville`);
+    }
+
+    // 📊 COMBINER ET ENRICHIR LES RÉSULTATS
+    let allObjects = [...objectsWithGPS, ...objectsByCity];
+
+    // Calculer les distances exactes pour tous les objets
+    const objectsWithDistances = allObjects.map(obj => {
+      let distance = null;
+      let distanceSource = 'unknown';
+
+      // Distance GPS précise si coordonnées disponibles
+      if (obj.location && obj.location.coordinates && obj.location.coordinates.length === 2) {
+        const [objLng, objLat] = obj.location.coordinates;
+        distance = calculateDistance(latitude, longitude, objLat, objLng);
+        distanceSource = 'gps';
+      } else {
+        // Distance approximative par ville
+        distance = estimateCityDistance(latitude, longitude, obj.location?.address?.city);
+        distanceSource = 'city';
+      }
+
+      return {
+        ...obj,
+        distance,
+        distanceSource,
+        // Ajouter des métadonnées utiles
+        hasGPSLocation: !!(obj.location && obj.location.coordinates),
+        locationPrecision: obj.location?.precision || 'unknown'
+      };
+    });
+
+    // Trier par distance croissante
+    objectsWithDistances.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+
+    // Limiter aux résultats dans le rayon demandé
+    const objectsInRadius = objectsWithDistances.filter(obj => 
+      !obj.distance || obj.distance <= radiusKm
+    ).slice(0, limitNum);
+
+    // 🖼️ Transformer les URLs des images
+    const objectsWithFullUrls = objectsInRadius.map(object => {
+      const objWithUrls = { ...object };
       
       if (objWithUrls.owner && objWithUrls.owner.avatar) {
         objWithUrls.owner.avatar = getFullUrl(req, objWithUrls.owner.avatar);
@@ -540,16 +663,38 @@ router.get('/nearby', async (req, res) => {
       
       return objWithUrls;
     });
-    
+
+    // 📈 STATISTIQUES DE LA RECHERCHE
+    const stats = {
+      searchMethod: precision,
+      searchCenter: { latitude, longitude },
+      radiusKm,
+      totalFound: objectsWithFullUrls.length,
+      breakdown: {
+        gpsResults: objectsWithGPS.length,
+        cityResults: objectsByCity.length,
+        inRadius: objectsInRadius.length
+      },
+      avgDistance: objectsInRadius.length > 0 ? 
+        Math.round((objectsInRadius.reduce((sum, obj) => sum + (obj.distance || 0), 0) / objectsInRadius.length) * 100) / 100 : 0,
+      precisionLevels: {
+        exact: objectsInRadius.filter(o => o.locationPrecision === 'exact').length,
+        approximate: objectsInRadius.filter(o => o.locationPrecision === 'approximate').length,
+        cityOnly: objectsInRadius.filter(o => o.locationPrecision === 'city_only').length
+      }
+    };
+
     res.json({
       success: true,
       objects: objectsWithFullUrls,
+      searchStats: stats,
       searchParams: {
         latitude,
         longitude,
         radiusKm,
-        found: objectsWithFullUrls.length,
-        note: 'Géolocalisation basique - utilise les villes pour simuler la distance'
+        precision,
+        category: category || 'all',
+        status
       }
     });
     
@@ -558,6 +703,157 @@ router.get('/nearby', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Erreur lors de la recherche géolocalisée',
+      error: error.message
+    });
+  }
+});
+
+// 🌍 5. Mettre à jour la géolocalisation d'un objet
+// PUT /api/objects/:id/location
+router.put('/:id/location', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { coordinates, city, zipCode, street, precision, isPublic } = req.body;
+
+    const object = await ObjectModel.findById(id);
+    if (!object) {
+      return res.status(404).json({
+        success: false,
+        message: 'Objet non trouvé'
+      });
+    }
+
+    // Vérifier que l'utilisateur est propriétaire
+    if (object.owner.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Non autorisé - vous n\'êtes pas le propriétaire de cet objet'
+      });
+    }
+
+    // Mettre à jour les coordonnées GPS
+    if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
+      const [lng, lat] = coordinates;
+      if (!isNaN(lng) && !isNaN(lat)) {
+        object.location = object.location || {};
+        object.location.coordinates = [parseFloat(lng), parseFloat(lat)];
+        object.location.precision = precision || 'approximate';
+        console.log(`📍 Coordonnées GPS mises à jour: [${lng}, ${lat}]`);
+      }
+    }
+
+    // Mettre à jour l'adresse textuelle
+    if (city) {
+      object.location = object.location || {};
+      object.location.address = object.location.address || {};
+      object.location.address.city = city;
+    }
+    
+    if (zipCode) {
+      object.location = object.location || {};
+      object.location.address = object.location.address || {};
+      object.location.address.zipCode = zipCode;
+    }
+
+    if (street) {
+      object.location = object.location || {};
+      object.location.address = object.location.address || {};
+      object.location.address.street = street;
+    }
+
+    // Gestion de la visibilité
+    if (typeof isPublic === 'boolean') {
+      object.location = object.location || {};
+      object.location.isPublic = isPublic;
+    }
+
+    await object.save();
+
+    res.json({
+      success: true,
+      message: 'Localisation mise à jour avec succès',
+      location: object.location,
+      objectId: object._id
+    });
+
+  } catch (error) {
+    console.error('🚫 Erreur mise à jour localisation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour de la localisation',
+      error: error.message
+    });
+  }
+});
+
+// 🌍 6. Géocoder une adresse (utilitaire)
+// POST /api/objects/geocode
+router.post('/geocode', auth, async (req, res) => {
+  try {
+    const { address } = req.body;
+
+    if (!address || typeof address !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Adresse requise'
+      });
+    }
+
+    // Utiliser le service de géolocalisation
+    const { GeolocationService } = require('../services/geolocationService');
+    const geoService = new GeolocationService();
+    
+    const result = await geoService.geocodeAddress(address);
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Impossible de géocoder cette adresse'
+      });
+    }
+
+    res.json({
+      success: true,
+      address: address,
+      coordinates: result.coordinates,
+      precision: result.precision,
+      source: result.source,
+      confidence: result.confidence || 0.5
+    });
+
+  } catch (error) {
+    console.error('🚫 Erreur géocodage:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du géocodage',
+      error: error.message
+    });
+  }
+});
+
+// 🌍 7. Obtenir les statistiques de géolocalisation
+// GET /api/objects/geolocation-stats
+router.get('/geolocation-stats', auth, async (req, res) => {
+  try {
+    const { GeolocationService } = require('../services/geolocationService');
+    const geoService = new GeolocationService();
+    
+    const stats = await geoService.getLocationStats();
+
+    res.json({
+      success: true,
+      stats: stats || {
+        objects: { total: 0, withCoordinates: 0, percentage: 0 },
+        users: { total: 0, withCoordinates: 0, percentage: 0 },
+        cachedCities: 0
+      }
+    });
+
+  } catch (error) {
+    console.error('🚫 Erreur stats géolocalisation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des statistiques',
       error: error.message
     });
   }
@@ -921,5 +1217,92 @@ router.post('/upload-image', upload.single('image'), (req, res) => {
 });
 
 
+
+// 🛠️ MÉTHODES UTILITAIRES POUR GÉOLOCALISATION
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  if (!lat1 || !lng1 || !lat2 || !lng2) return null;
+
+  const R = 6371; // Rayon de la Terre en km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  return Math.round(distance * 100) / 100; // Arrondi à 2 décimales
+}
+
+function toRad(value) {
+  return value * Math.PI / 180;
+}
+
+function estimateCityDistance(lat, lng, cityName) {
+  if (!cityName) return null;
+  
+  // Coordonnées approximatives des villes principales
+  const cityCoords = {
+    'Paris': [48.8566, 2.3522],
+    'Lyon': [45.7640, 4.8357],
+    'Marseille': [43.2965, 5.3698],
+    'Toulouse': [43.6047, 1.4442],
+    'Nice': [43.7102, 7.2620],
+    'Nantes': [47.2184, -1.5536],
+    'Montpellier': [43.6110, 3.8767],
+    'Strasbourg': [48.5734, 7.7521],
+    'Bordeaux': [44.8378, -0.5792],
+    'Lille': [50.6292, 3.0573]
+  };
+  
+  const cityLower = cityName.toLowerCase();
+  const cityKey = Object.keys(cityCoords).find(city => 
+    city.toLowerCase() === cityLower || cityLower.includes(city.toLowerCase())
+  );
+  
+  if (cityKey) {
+    const [cityLat, cityLng] = cityCoords[cityKey];
+    return calculateDistance(lat, lng, cityLat, cityLng);
+  }
+  
+  return 50; // Distance par défaut si ville inconnue
+}
+
+async function findNearbyAreas(lat, lng, radiusKm) {
+  // Approximation des villes dans un rayon donné
+  // En production, utiliser une vraie API ou base de données géographique
+  
+  const allAreas = {
+    'Paris': { coords: [48.8566, 2.3522], zipPrefixes: ['75', '77', '78', '91', '92', '93', '94', '95'] },
+    'Lyon': { coords: [45.7640, 4.8357], zipPrefixes: ['69', '01', '42'] },
+    'Marseille': { coords: [43.2965, 5.3698], zipPrefixes: ['13', '83'] },
+    'Toulouse': { coords: [43.6047, 1.4442], zipPrefixes: ['31', '32'] },
+    'Nice': { coords: [43.7102, 7.2620], zipPrefixes: ['06', '83'] },
+    'Bordeaux': { coords: [44.8378, -0.5792], zipPrefixes: ['33', '24'] }
+  };
+  
+  const nearbyAreas = {
+    cities: [],
+    zipCodes: []
+  };
+  
+  for (const [city, data] of Object.entries(allAreas)) {
+    const distance = calculateDistance(lat, lng, data.coords[0], data.coords[1]);
+    if (distance && distance <= radiusKm) {
+      nearbyAreas.cities.push(city);
+      nearbyAreas.zipCodes.push(...data.zipPrefixes);
+    }
+  }
+  
+  // Si aucune ville trouvée, élargir la recherche
+  if (nearbyAreas.cities.length === 0) {
+    nearbyAreas.cities = Object.keys(allAreas);
+    nearbyAreas.zipCodes = Object.values(allAreas).flatMap(area => area.zipPrefixes);
+  }
+  
+  return nearbyAreas;
+}
 
 module.exports = router;

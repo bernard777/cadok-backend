@@ -18,7 +18,19 @@ const userSchema = new mongoose.Schema({
     city: { type: String, required: true }, // Ville (peut être différente de la ville du profil)
     country: { type: String, required: true, default: 'France' }, // Pays
     additionalInfo: { type: String, default: '' }, // Informations supplémentaires (étage, etc.)
-    isDefault: { type: Boolean, default: true } // Adresse par défaut
+    isDefault: { type: Boolean, default: true }, // Adresse par défaut
+    // 📍 COORDONNÉES GPS OPTIONNELLES
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      index: '2dsphere',
+      default: undefined
+    },
+    // Précision de l'adresse
+    precision: {
+      type: String,
+      enum: ['exact', 'approximate', 'city_only'],
+      default: 'city_only'
+    }
   },
   
   // 👤 INFORMATIONS PERSONNELLES COMPLÈTES
@@ -195,6 +207,52 @@ userSchema.methods.canReceivePhoneCode = function() {
   }
   
   return true;
+};
+
+// 📍 MÉTHODES DE GÉOLOCALISATION
+userSchema.methods.updateCoordinates = async function(lat, lng, precision = 'approximate') {
+  if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+    this.address.coordinates = [parseFloat(lng), parseFloat(lat)];
+    this.address.precision = precision;
+    return this.save();
+  }
+  return Promise.reject(new Error('Coordonnées invalides'));
+};
+
+userSchema.methods.getDistanceFrom = function(lat, lng) {
+  if (!this.address.coordinates || !lat || !lng) return null;
+  
+  const [userLng, userLat] = this.address.coordinates;
+  const R = 6371; // Rayon de la Terre en km
+  
+  const dLat = (lat - userLat) * Math.PI / 180;
+  const dLng = (lng - userLng) * Math.PI / 180;
+  
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(userLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  
+  return Math.round(R * c * 100) / 100; // Distance en km
+};
+
+userSchema.statics.findNearby = function(lat, lng, maxDistance = 5000, filters = {}) {
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    return this.find(filters);
+  }
+  
+  return this.find({
+    ...filters,
+    'address.coordinates': {
+      $near: {
+        $geometry: {
+          type: 'Point',
+          coordinates: [parseFloat(lng), parseFloat(lat)]
+        },
+        $maxDistance: maxDistance // en mètres
+      }
+    }
+  });
 };
 
 module.exports = mongoose.model('User', userSchema);
