@@ -590,6 +590,13 @@ router.get('/admin-activity', requireAuth, requirePermission('manage_system'), a
         }
       },
       {
+        $match: {
+          'adminInfo.0': { $exists: true }, // S'assurer que l'admin existe
+          'adminInfo.0.isActive': { $ne: false }, // Admin actif
+          'adminInfo.0.isBanned': { $ne: true }, // Admin non banni
+        }
+      },
+      {
         $project: {
           adminId: '$_id.admin',
           adminName: { $arrayElemAt: ['$adminInfo.pseudo', 0] },

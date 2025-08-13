@@ -243,6 +243,16 @@ if (fs.existsSync(reportsRoutePath)) {
   console.warn("Warning: './routes/reports.js' not found. '/api/reports' route not registered.");
 }
 
+// 📊 Ajout des routes Admin Analytics - Statistiques Plateforme
+const adminAnalyticsRoutePath = path.join(__dirname, 'routes', 'admin', 'analytics.js');
+if (fs.existsSync(adminAnalyticsRoutePath)) {
+  const adminAnalyticsRoutes = require('./routes/admin/analytics');
+  app.use('/api/admin/analytics', adminAnalyticsRoutes);
+  console.log('✅ Admin Analytics routes registered: /api/admin/analytics');
+} else {
+  console.warn("Warning: './routes/admin/analytics.js' not found. '/api/admin/analytics' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');
