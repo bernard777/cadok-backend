@@ -127,8 +127,13 @@ router.post('/', auth, async (req, res) => {
       ? "Vous avez reçu une demande de troc sécurisé. Photos requises avant validation."
       : "Vous avez reçu une nouvelle demande de troc sur plusieurs objets.";
 
+    const notificationTitle = riskAnalysis.constraints.photosRequired
+      ? "Demande de troc sécurisé"
+      : "Nouvelle demande de troc";
+
     await Notification.create({
       user: ownerId,
+      title: notificationTitle,
       message: notificationMessage,
       type: NOTIFICATION_TYPE.TRADE_REQUEST,
       trade: saved._id
@@ -152,6 +157,7 @@ router.post('/', auth, async (req, res) => {
 
     res.status(201).json({ success: true, trade: responseData });
   } catch (err) {
+    console.error('❌ Erreur dans POST /trades:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -323,6 +329,7 @@ router.put('/:id/accept', auth, async (req, res) => {
     // Notification à l'autre utilisateur
     await Notification.create({
       user: notificationUser,
+      title: "Notification",
       message: notificationMessage,
       type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
       trade: trade._id
@@ -372,6 +379,7 @@ router.put('/:id/refuse', auth, async (req, res) => {
     // Notification pour User 1 (celui qui avait fait la demande)
     await Notification.create({
       user: trade.fromUser,
+      title: "Troc refusé",
       message: "Votre demande de troc a été refusée.",
       type: NOTIFICATION_TYPE.TRADE_REFUSED,
       trade: trade._id
@@ -409,6 +417,7 @@ router.put('/:id/reject', auth, async (req, res) => {
     // Notification pour User 1 (celui qui avait fait la demande)
     await Notification.create({
       user: trade.fromUser._id,
+      title: "Troc refusé",
       message: "Votre demande de troc a été refusée.",
       type: NOTIFICATION_TYPE.TRADE_REFUSED,
       trade: trade._id
@@ -468,6 +477,7 @@ router.put('/:id/propose', auth, async (req, res) => {
     // Notification pour l'utilisateur 1
     await Notification.create({
       user: trade.fromUser,
+      title: "Proposition de troc",
       message: "Une contre-proposition de troc a été faite.",
       type: NOTIFICATION_TYPE.TRADE_PROPOSED,
       trade: trade._id
@@ -521,6 +531,7 @@ router.put('/:id/confirm', auth, async (req, res) => {
 
     await Notification.create({
       user: trade.toUser,
+      title: "Troc accepté",
       message: "Votre proposition de troc a été acceptée.",
       type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
       trade: trade._id
@@ -555,6 +566,7 @@ router.put('/:id/cancel', auth, async (req, res) => {
 
     await Notification.create({
       user: trade.toUser,
+      title: "Troc refusé",
       message: "Votre proposition de troc a été refusée.",
       type: NOTIFICATION_TYPE.TRADE_REFUSED,
       trade: trade._id
@@ -746,11 +758,12 @@ router.patch('/:id/accept', auth, async (req, res) => {
 
     if (notificationUser) {
       await Notification.create({
-        user: notificationUser,
-        message: notificationMessage,
-        type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
-        trade: trade._id
-      });
+      user: notificationUser,
+      title: "Notification",
+      message: notificationMessage,
+      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
+      trade: trade._id
+    });
     }
 
     res.json({ message: 'Troc accepté avec succès.', trade });
@@ -807,11 +820,12 @@ router.patch('/:id/decline', auth, async (req, res) => {
 
     if (notificationUser) {
       await Notification.create({
-        user: notificationUser,
-        message: notificationMessage,
-        type: NOTIFICATION_TYPE.TRADE_REFUSED,
-        trade: trade._id
-      });
+      user: notificationUser,
+      title: "Notification",
+      message: notificationMessage,
+      type: NOTIFICATION_TYPE.TRADE_REFUSED,
+      trade: trade._id
+    });
     }
 
     res.json({ message: 'Troc refusé.', trade });
@@ -895,6 +909,7 @@ router.post('/:id/make-proposal', auth, async (req, res) => {
     // Notification pour User 1
     await Notification.create({
       user: originalTrade.fromUser,
+      title: "Proposition de troc",
       message: `Une proposition a été faite pour votre demande de troc.`,
       type: NOTIFICATION_TYPE.TRADE_PROPOSED,
       trade: originalTrade._id
@@ -953,6 +968,7 @@ router.patch('/:id/ask-different', auth, async (req, res) => {
     // Notification pour l'autre utilisateur
     await Notification.create({
       user: trade.toUser._id,
+      title: "Demande de troc",
       message: `${trade.fromUser.pseudo} vous demande de choisir un autre objet pour l'échange.`,
       type: NOTIFICATION_TYPE.TRADE_REQUEST,
       trade: tradeId
