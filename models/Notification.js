@@ -15,6 +15,7 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
+      // Types existants
       'location_based',
       'timing_optimal', 
       'urgency',
@@ -25,7 +26,15 @@ const notificationSchema = new mongoose.Schema({
       'milestone',
       'trade_request',
       'trade_accepted',
-      'system'
+      'system',
+      
+      // Nouveaux types pour les notifications personnalisées
+      'new_message',
+      'trade_update',
+      'object_interest',
+      'community_update',
+      'marketing_tips',
+      'smart_suggestion'
     ]
   },
   title: {

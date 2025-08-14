@@ -296,6 +296,109 @@ router.get('/me/favorites', auth, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/users/me/favorite-objects/:objectId
+ * Ajouter/retirer un objet des favoris
+ */
+router.post('/me/favorite-objects/:objectId', auth, async (req, res) => {
+  try {
+    const { objectId } = req.params;
+    const userId = req.user.id;
+
+    // Vérifier que l'objet existe
+    const ObjectModel = require('../models/Object');
+    const object = await ObjectModel.findById(objectId).populate('owner', 'pseudo');
+    
+    if (!object) {
+      return res.status(404).json({ error: 'Objet non trouvé' });
+    }
+
+    // Ne pas permettre d'ajouter ses propres objets en favoris
+    if (object.owner._id.toString() === userId) {
+      return res.status(400).json({ error: 'Vous ne pouvez pas ajouter vos propres objets en favoris' });
+    }
+
+    const user = await User.findById(userId);
+    const isFavorite = user.favoriteObjects && user.favoriteObjects.includes(objectId);
+
+    let updatedUser;
+    let action;
+
+    if (isFavorite) {
+      // Retirer des favoris
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $pull: { favoriteObjects: objectId } },
+        { new: true }
+      );
+      action = 'removed';
+    } else {
+      // Ajouter aux favoris
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $addToSet: { favoriteObjects: objectId } }, // $addToSet évite les doublons
+        { new: true }
+      );
+      action = 'added';
+
+      // 🔔 DÉCLENCHER NOTIFICATION AU PROPRIÉTAIRE
+      try {
+        const { notificationTriggers } = require('../middleware/notificationTriggers');
+        await notificationTriggers.triggerObjectInterest(
+          object.owner._id,        // Propriétaire (receveur)
+          objectId,               // ID de l'objet
+          object.title,           // Nom de l'objet
+          userId,                 // ID de celui qui ajoute en favori
+          req.user.pseudo || 'Un utilisateur',  // Nom de celui qui ajoute
+          'favorite'              // Type d'intérêt
+        );
+        console.log(`🔔 Notification envoyée: ${req.user.pseudo} a ajouté "${object.title}" en favori`);
+      } catch (notifError) {
+        console.error('❌ Erreur notification favoris:', notifError);
+        // Ne pas faire échouer la requête pour une erreur de notification
+      }
+    }
+
+    res.json({
+      success: true,
+      action,
+      isFavorite: action === 'added',
+      favoriteCount: updatedUser.favoriteObjects ? updatedUser.favoriteObjects.length : 0
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur gestion favoris objet:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/users/me/favorite-objects
+ * Récupérer les objets favoris d'un utilisateur
+ */
+router.get('/me/favorite-objects', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate({
+        path: 'favoriteObjects',
+        populate: {
+          path: 'owner category',
+          select: 'pseudo name city'
+        }
+      })
+      .select('favoriteObjects');
+
+    res.json({ 
+      favoriteObjects: user.favoriteObjects || [],
+      count: user.favoriteObjects ? user.favoriteObjects.length : 0
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur récupération objets favoris:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Changement de mot de passe sécurisé
 router.post('/change-password', auth, async (req, res) => {
   const { currentPassword, password } = req.body;

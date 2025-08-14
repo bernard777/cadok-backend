@@ -234,6 +234,16 @@ if (fs.existsSync(adminRolesRoutePath)) {
   console.warn("Warning: './routes/admin/roles.js' not found. '/api/admin/roles' route not registered.");
 }
 
+// 🔔 Routes Admin Notifications
+const adminNotificationsPath = path.join(__dirname, 'routes', 'admin', 'notifications.js');
+if (fs.existsSync(adminNotificationsPath)) {
+  const adminNotificationsRoutes = require('./routes/admin/notifications');
+  app.use('/api/admin/notifications', adminNotificationsRoutes);
+  console.log('✅ Admin Notifications routes registered: /api/admin/notifications');
+} else {
+  console.warn("Warning: './routes/admin/notifications.js' not found. '/api/admin/notifications' route not registered.");
+}
+
 // 📢 Routes de Signalements - Modération Communautaire
 const reportsRoutePath = path.join(__dirname, 'routes', 'reports.js');
 if (fs.existsSync(reportsRoutePath)) {

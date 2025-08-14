@@ -911,7 +911,7 @@ router.get('/me', auth, async (req, res) => {
 
 // 👁️ 2.2. Récupérer le détail d'un objet
 // GET /api/objects/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {

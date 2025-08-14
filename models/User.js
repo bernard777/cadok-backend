@@ -50,12 +50,38 @@ const userSchema = new mongoose.Schema({
   lastPhoneVerificationSent: { type: Date, default: null },
   
   favoriteCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+  favoriteObjects: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Object' 
+  }],
   notificationPreferences: {
+    // Préférences générales
     notifications_push: { type: Boolean, default: true },
     notifications_email: { type: Boolean, default: false },
-    promotions: { type: Boolean, default: false },
     sound: { type: Boolean, default: true },
-    vibration: { type: Boolean, default: true }
+    vibration: { type: Boolean, default: true },
+    
+    // Préférences spécifiques (correspondant aux switches de l'écran mobile)
+    newMessages: { type: Boolean, default: true },
+    tradeUpdates: { type: Boolean, default: true },
+    objectInterest: { type: Boolean, default: true },
+    marketingTips: { type: Boolean, default: false },
+    communityUpdates: { type: Boolean, default: true },
+    smartSuggestions: { type: Boolean, default: true },
+    
+    // Heures silencieuses
+    quietHours: {
+      enabled: { type: Boolean, default: true },
+      start: { type: String, default: '22:00' },
+      end: { type: String, default: '08:00' }
+    },
+    
+    // Fréquence des notifications
+    frequency: { 
+      type: String, 
+      enum: ['minimal', 'normal', 'frequent'], 
+      default: 'normal' 
+    }
   },
   // Informations de paiement et abonnement
   subscriptionPlan: { type: String, enum: ['basic', 'premium'], default: null },

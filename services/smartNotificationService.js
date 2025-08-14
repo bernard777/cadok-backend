@@ -299,6 +299,18 @@ class SmartNotificationService {
         case 'milestone':
           notification = await this.createMilestoneNotification(userId, customData);
           break;
+        case 'new_message':
+          notification = await this.createNewMessageNotification(userId, customData);
+          break;
+        case 'trade_update':
+          notification = await this.createTradeUpdateNotification(userId, customData);
+          break;
+        case 'object_interest':
+          notification = await this.createObjectInterestNotification(userId, customData);
+          break;
+        case 'community_update':
+          notification = await this.createCommunityUpdateNotification(userId, customData);
+          break;
         default:
           throw new Error(`Unknown notification type: ${type}`);
       }
@@ -311,6 +323,87 @@ class SmartNotificationService {
     }
   }
 
+  /**
+   * 💬 Notification nouveau message
+   */
+  async createNewMessageNotification(userId, data) {
+    return this.createNotification({
+      userId,
+      type: 'new_message',
+      title: '💬 Nouveau message',
+      message: `${data.senderName || 'Un utilisateur'} vous a envoyé un message`,
+      data: {
+        conversationId: data.conversationId,
+        senderId: data.senderId,
+        messagePreview: data.messagePreview
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * 🔄 Notification mise à jour d'échange
+   */
+  async createTradeUpdateNotification(userId, data) {
+    const statusTexts = {
+      'accepted': 'accepté',
+      'rejected': 'refusé',
+      'completed': 'finalisé',
+      'cancelled': 'annulé'
+    };
+    
+    const statusText = statusTexts[data.newStatus] || 'mis à jour';
+    
+    return this.createNotification({
+      userId,
+      type: 'trade_update',
+      title: '🔄 Échange mis à jour',
+      message: `Votre échange a été ${statusText}`,
+      data: {
+        tradeId: data.tradeId,
+        newStatus: data.newStatus,
+        otherUserName: data.otherUserName
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * 👀 Notification intérêt pour objet
+   */
+  async createObjectInterestNotification(userId, data) {
+    return this.createNotification({
+      userId,
+      type: 'object_interest',
+      title: '👀 Intérêt pour votre objet',
+      message: `${data.interestedUserName || 'Quelqu\'un'} s'intéresse à "${data.objectName}"`,
+      data: {
+        objectId: data.objectId,
+        interestedUserId: data.interestedUserId,
+        interestType: data.interestType
+      },
+      priority: 'medium'
+    });
+  }
+
+  /**
+   * 📢 Notification mise à jour communauté
+   */
+  async createCommunityUpdateNotification(userId, data) {
+    return this.createNotification({
+      userId,
+      type: 'community_update',
+      title: '📢 Mise à jour communauté',
+      message: data.message || 'Nouvelles fonctionnalités disponibles',
+      data: {
+        updateType: data.updateType,
+        version: data.version,
+        features: data.features
+      },
+      priority: 'low'
+    });
+  }
+
   // 🛠️ MÉTHODES UTILITAIRES
 
   canReceiveNotification(user, type) {
@@ -321,20 +414,59 @@ class SmartNotificationService {
     // Vérifications générales
     if (prefs.notifications_push === false) return false;
     
-    // Vérifications spécifiques par type
+    // Vérifier les heures silencieuses
+    if (prefs.quietHours && prefs.quietHours.enabled) {
+      const now = moment();
+      const currentTime = now.format('HH:mm');
+      const startTime = prefs.quietHours.start || '22:00';
+      const endTime = prefs.quietHours.end || '08:00';
+      
+      if (this.isInQuietHours(currentTime, startTime, endTime)) {
+        return false; // Pas de notifications pendant les heures silencieuses
+      }
+    }
+    
+    // Vérifications spécifiques par type (correspondant aux switches mobile)
     switch (type) {
       case 'location':
-        return prefs.locationBased !== false;
-      case 'timing':
-        return prefs.timingOptimized !== false;
       case 'urgency':
-        return prefs.urgentAlerts !== false;
       case 'seasonal':
-        return prefs.seasonal !== false;
+        return prefs.smartSuggestions !== false;
+      case 'timing':
       case 'engagement':
-        return prefs.reactivation !== false;
+        return prefs.smartSuggestions !== false;
+      case 'trade_updates':
+        return prefs.tradeUpdates !== false;
+      case 'new_messages':
+        return prefs.newMessages !== false;
+      case 'object_interest':
+        return prefs.objectInterest !== false;
+      case 'community_updates':
+        return prefs.communityUpdates !== false;
+      case 'marketing_tips':
+        return prefs.marketingTips === true;
       default:
         return true;
+    }
+  }
+
+  isInQuietHours(currentTime, startTime, endTime) {
+    // Convertir les heures en minutes pour comparaison
+    const parseTime = (timeStr) => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    
+    const current = parseTime(currentTime);
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
+    
+    if (start <= end) {
+      // Même jour (ex: 22:00 - 08:00 du lendemain)
+      return current >= start && current <= end;
+    } else {
+      // Chevauchement sur deux jours (ex: 22:00 - 08:00)
+      return current >= start || current <= end;
     }
   }
 

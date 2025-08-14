@@ -164,16 +164,30 @@ router.post('/:tradeId/messages', auth, async (req, res) => {
     // Populer le message avant de le renvoyer
     await message.populate('from', 'pseudo avatar');
 
-    // Créer une notification pour l'autre utilisateur
-    const Notification = require('../models/Notification');
+    // 🔔 DÉCLENCHER NOTIFICATION INTELLIGENTE pour l'autre utilisateur
     const otherUserId = trade.fromUser.toString() === req.user.id ? trade.toUser : trade.fromUser;
     
-    await Notification.create({
-      user: otherUserId,
-      message: `Nouveau message de ${req.user.pseudo} dans votre conversation`,
-      type: 'message',
-      trade: tradeId
-    });
+    try {
+      const { notificationTriggers } = require('../middleware/notificationTriggers');
+      await notificationTriggers.triggerNewMessage(
+        req.user.id,                    // senderId
+        otherUserId,                    // receiverId
+        tradeId,                        // conversationId (trade ID)
+        content.substring(0, 100)       // messagePreview (100 premiers caractères)
+      );
+      console.log(`🔔 Notification message envoyée: ${req.user.pseudo} → autre utilisateur`);
+    } catch (notifError) {
+      console.error('❌ Erreur notification message:', notifError);
+      // Créer une notification basique en fallback
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        user: otherUserId,
+        title: 'Nouveau message',
+        message: `Nouveau message de ${req.user.pseudo} dans votre conversation`,
+        type: 'new_message',
+        trade: tradeId
+      });
+    }
 
     res.status(201).json(message);
   } catch (error) {

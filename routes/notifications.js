@@ -277,5 +277,177 @@ router.get('/smart', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/notifications/preferences
+ * Mettre à jour les préférences de notifications d'un utilisateur
+ */
+router.put('/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const preferences = req.body;
+
+    // Mettre à jour les préférences de notifications dans le profil utilisateur
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { 
+        $set: { 
+          [`notificationPreferences.${Object.keys(preferences)[0]}`]: Object.values(preferences)[0] 
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    console.log(`✅ Préférences notifications mises à jour pour ${user.pseudo}:`, preferences);
+
+    res.json({
+      success: true,
+      message: 'Préférences de notifications mises à jour',
+      preferences: user.notificationPreferences || {}
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur mise à jour préférences notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour des préférences'
+    });
+  }
+});
+
+/**
+ * GET /api/notifications/preferences
+ * Récupérer les préférences de notifications d'un utilisateur
+ */
+router.get('/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    // Préférences par défaut si elles n'existent pas
+    const defaultPreferences = {
+      newMessages: true,
+      tradeUpdates: true,
+      objectInterest: true,
+      marketingTips: false,
+      communityUpdates: true,
+      smartSuggestions: true,
+      quietHours: { enabled: true, start: '22:00', end: '08:00' },
+      frequency: 'normal'
+    };
+
+    const preferences = user.notificationPreferences || defaultPreferences;
+
+    res.json({
+      success: true,
+      preferences: preferences
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur récupération préférences notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des préférences'
+    });
+  }
+});
+
+// 🔔 CRÉATION DE NOTIFICATIONS SPÉCIFIQUES
+router.post('/send', authMiddleware, async (req, res) => {
+  try {
+    const { userId, type, data } = req.body;
+    
+    if (!userId || !type) {
+      return res.status(400).json({ error: 'userId et type sont requis' });
+    }
+
+    const result = await notificationService.sendPersonalizedNotification(userId, type, data);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        notification: result.notification,
+        message: 'Notification envoyée avec succès'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.reason || result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur envoi notification:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi de la notification' });
+  }
+});
+
+// 🎯 DÉCLENCHEMENT DES NOTIFICATIONS INTELLIGENTES
+router.post('/smart-send', authMiddleware, async (req, res) => {
+  try {
+    const results = await notificationService.sendContextualNotifications();
+
+    res.json({
+      success: true,
+      results,
+      message: `${results.totalSent || 0} notifications envoyées`
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur notifications intelligentes:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi des notifications intelligentes' });
+  }
+});
+
+// 🧪 ROUTE DE TEST DES NOTIFICATIONS
+router.post('/test', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type = 'new_message' } = req.body;
+    
+    const testData = {
+      'new_message': {
+        senderName: 'Test User',
+        messagePreview: 'Ceci est un message de test',
+        conversationId: 'test_conv_123'
+      },
+      'trade_update': {
+        tradeId: 'test_trade_123',
+        newStatus: 'accepted',
+        otherUserName: 'Test User'
+      },
+      'object_interest': {
+        objectId: 'test_obj_123',
+        objectName: 'Objet de test',
+        interestedUserName: 'Test User',
+        interestType: 'view'
+      }
+    };
+
+    const result = await notificationService.sendPersonalizedNotification(
+      userId, 
+      type, 
+      testData[type] || {}
+    );
+
+    res.json({
+      success: true,
+      result,
+      message: 'Notification de test envoyée'
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur test notification:', error);
+    res.status(500).json({ error: 'Erreur lors du test de notification' });
+  }
+});
+
 module.exports = router;
 module.exports.createNotification = createNotification;
