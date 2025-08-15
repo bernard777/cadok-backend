@@ -213,6 +213,4 @@ class SMSVerificationService {
   }
 }
 
-// Export d'une instance singleton
-const smsService = new SMSVerificationService();
-module.exports = smsService;
+module.exports = SMSVerificationService;
