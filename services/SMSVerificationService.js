@@ -4,6 +4,7 @@
  */
 
 const twilio = require('twilio');
+const { parsePhoneNumber, isValidPhoneNumber } = require('libphonenumber-js');
 
 class SMSVerificationService {
   constructor() {
@@ -35,22 +36,28 @@ class SMSVerificationService {
   }
 
   /**
-   * Formater le numéro de téléphone français
+   * Formater le numéro de téléphone international
    */
   formatPhoneNumber(phone) {
-    // Nettoyer le numéro
-    let cleaned = phone.replace(/\D/g, '');
-    
-    // Si commence par 0, remplacer par +33
-    if (cleaned.startsWith('0')) {
-      cleaned = '+33' + cleaned.substring(1);
+    try {
+      const phoneObj = parsePhoneNumber(phone);
+      if (phoneObj && phoneObj.isValid()) {
+        return phoneObj.format('E.164');
+      }
+      
+      // Fallback pour numéros français
+      let cleaned = phone.replace(/\D/g, '');
+      if (cleaned.startsWith('0')) {
+        cleaned = '+33' + cleaned.substring(1);
+      } else if (!cleaned.startsWith('+')) {
+        cleaned = '+33' + cleaned;
+      }
+      
+      return cleaned;
+    } catch (error) {
+      console.error('Erreur formatage téléphone:', error);
+      return phone;
     }
-    // Si ne commence pas par +33, l'ajouter
-    else if (!cleaned.startsWith('+33')) {
-      cleaned = '+33' + cleaned;
-    }
-    
-    return cleaned;
   }
 
   /**

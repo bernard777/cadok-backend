@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const { JSDOM } = require('jsdom');
 const createDOMPurify = require('dompurify');
+const { parsePhoneNumber } = require('libphonenumber-js');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window);
@@ -214,8 +215,29 @@ class SecurityMiddleware {
       body('phoneNumber')
         .notEmpty()
         .withMessage('Le numéro de téléphone est obligatoire')
-        .matches(/^(\+33|0)[1-9](\d{8})$/)
-        .withMessage('Numéro de téléphone français invalide'),
+        .custom((value) => {
+          try {
+            const phone = parsePhoneNumber(value);
+            if (!phone || !phone.isValid()) {
+              throw new Error('Numéro de téléphone invalide');
+            }
+            return true;
+          } catch (error) {
+            throw new Error('Format de numéro de téléphone invalide - utilisez le format international (+33...)');
+          }
+        })
+        .customSanitizer((value) => {
+          try {
+            const phone = parsePhoneNumber(value);
+            if (phone && phone.isValid()) {
+              // Normaliser au format E.164
+              return phone.format('E.164');
+            }
+            return value;
+          } catch (error) {
+            return value;
+          }
+        }),
       
       body('city')
         .notEmpty()
