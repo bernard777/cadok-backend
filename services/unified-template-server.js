@@ -2,7 +2,7 @@
  * SERVEUR TEMPLATES UNIFIÉS
  * ========================
  * 
- * Serveur simple pour visualiser les templates CADOK unifiés
+ * Serveur simple pour visualiser les templates KADOC unifiés
  */
 
 const express = require('express');
@@ -30,7 +30,7 @@ class UnifiedTemplateServer {
     // Info API
     this.app.get('/api/info', (req, res) => {
       res.json({
-        message: 'Templates CADOK Unifiés',
+        message: 'Templates KADOC Unifiés',
         design: 'Basé sur EmailTemplates.js',
         templates: [
           'verification.html - Email de vérification',
@@ -56,7 +56,7 @@ class UnifiedTemplateServer {
       console.log(`📱 URL: ${url}`);
       console.log('📂 Dossier: email-preview-unifie/');
       console.log('🎨 Design: EmailTemplates.js unifié');
-      console.log('✨ Couleurs CADOK officielles');
+      console.log('✨ Couleurs KADOC officielles');
       
       // Ouvrir automatiquement Chrome
       console.log('\n🌐 Ouverture de Chrome...');
@@ -105,7 +105,7 @@ if (require.main === module) {
   // Gestion propre de l'arrêt
   process.on('SIGINT', () => {
     console.log('\n\n👋 Arrêt du serveur templates unifiés...');
-    console.log('✅ Templates CADOK standardisés avec succès !');
+    console.log('✅ Templates KADOC standardisés avec succès !');
     process.exit(0);
   });
 }
