@@ -264,6 +264,16 @@ if (fs.existsSync(adminAnalyticsRoutePath)) {
   console.warn("Warning: './routes/admin/analytics.js' not found. '/api/admin/analytics' route not registered.");
 }
 
+// 🎨 Routes de vérification avec pages KADOC thématiques
+const kadocVerificationRoutePath = path.join(__dirname, 'routes', 'verification-routes.js');
+if (fs.existsSync(kadocVerificationRoutePath)) {
+  const verificationRoutes = require('./routes/verification-routes');
+  app.use('/', verificationRoutes);
+  console.log('✅ Verification routes registered: /verification');
+} else {
+  console.warn("Warning: './routes/verification-routes.js' not found. Verification routes not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');
