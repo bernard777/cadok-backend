@@ -174,6 +174,16 @@ router.post(
       let userToReturn = await User.findById(newUser._id).select('-password').lean();
       userToReturn.avatar = getFullUrl(req, userToReturn.avatar);
       
+      // S'assurer que les champs de vérification sont présents pour l'app mobile
+      userToReturn.emailVerified = userToReturn.emailVerified || false;
+      userToReturn.phoneVerified = userToReturn.phoneVerified || false;
+      userToReturn.verified = userToReturn.verified || false;
+      
+      console.log('📊 [REGISTER] Utilisateur retourné - Statut vérifications:');
+      console.log(`   • emailVerified: ${userToReturn.emailVerified}`);
+      console.log(`   • phoneVerified: ${userToReturn.phoneVerified}`);
+      console.log(`   • verified: ${userToReturn.verified}`);
+      
       console.log('📧 [SECURE REGISTER] Envoi de l\'email de vérification...');
       
       // Envoi de l'email de vérification avec Resend
@@ -204,23 +214,8 @@ router.post(
         // On ne fait pas échouer l'inscription pour un problème d'email
       }
       
-      // 📧 ENVOI EMAIL DE BIENVENUE (confirmation création compte)
-      console.log('📧 [WELCOME] Envoi email de bienvenue...');
-      try {
-        const EmailVerificationService = require('../services/EmailVerificationService');
-        const emailService = new EmailVerificationService();
-        
-        const welcomeResult = await emailService.sendWelcomeEmail(userToReturn);
-        
-        if (welcomeResult.success) {
-          console.log('✅ [WELCOME] Email de bienvenue envoyé à:', email);
-        } else {
-          console.error('⚠️ [WELCOME] Échec envoi email de bienvenue:', welcomeResult.error);
-        }
-      } catch (emailError) {
-        console.error('⚠️ Erreur envoi email de bienvenue:', emailError.message);
-        // Ne pas faire échouer l'inscription pour un problème d'email
-      }
+      // 📧 EMAIL DE BIENVENUE sera envoyé APRÈS vérification complète (email + téléphone)
+      console.log('ℹ️ [WELCOME] Email de bienvenue sera envoyé après vérification complète (email + téléphone)');
       
       console.log('✅ [SECURE REGISTER] Inscription sécurisée réussie pour:', email);
       res.status(201).json({ 

@@ -198,6 +198,18 @@ router.post('/verify-phone', authMiddleware, async (req, res) => {
 
       console.log(`✅ [SMS] Téléphone vérifié pour ${user.email}: ${phoneNumber}`);
 
+      // 🎉 VÉRIFIER SI EMAIL DE BIENVENUE DOIT ÊTRE ENVOYÉ
+      try {
+        const WelcomeEmailTrigger = require('../services/WelcomeEmailTrigger');
+        const welcomeTrigger = new WelcomeEmailTrigger();
+        
+        console.log('🔄 [WELCOME] Vérification déclenchement email de bienvenue après vérification téléphone...');
+        await welcomeTrigger.tryTriggerWelcomeEmail(userId);
+      } catch (welcomeError) {
+        console.error('⚠️ [WELCOME] Erreur déclenchement email bienvenue:', welcomeError.message);
+        // Ne pas faire échouer la vérification téléphone pour un problème d'email de bienvenue
+      }
+
       res.json({
         success: true,
         message: 'Numéro de téléphone vérifié avec succès',
@@ -295,6 +307,18 @@ router.post('/email/confirm/:token', async (req, res) => {
     });
 
     console.log(`✅ Email vérifié pour ${user.email}`);
+
+    // 🎉 VÉRIFIER SI EMAIL DE BIENVENUE DOIT ÊTRE ENVOYÉ
+    try {
+      const WelcomeEmailTrigger = require('../services/WelcomeEmailTrigger');
+      const welcomeTrigger = new WelcomeEmailTrigger();
+      
+      console.log('🔄 [WELCOME] Vérification déclenchement email de bienvenue après vérification email...');
+      await welcomeTrigger.tryTriggerWelcomeEmail(user._id);
+    } catch (welcomeError) {
+      console.error('⚠️ [WELCOME] Erreur déclenchement email bienvenue:', welcomeError.message);
+      // Ne pas faire échouer la vérification email pour un problème d'email de bienvenue
+    }
 
     res.json({
       success: true,

@@ -82,18 +82,26 @@ class CadokEmailTemplates {
   }
 
   /**
-   * Template Email de Vérification
+   * Template Email de Vérification (ÉTAPE 1 : APRÈS INSCRIPTION)
    */
   static getVerificationTemplate(userName, verificationCode, verificationUrl, userEmail) {
     const content = `
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="color: ${this.COLORS.DARK}; margin: 0 0 15px; font-size: 24px;">
-                    🎉 Votre compte a été créé !
+                    🎉 Inscription réussie !
                 </h2>
                 <p style="color: ${this.COLORS.MUTED}; margin: 0; font-size: 16px; line-height: 1.6;">
                     Salut <strong style="color: ${this.COLORS.PRIMARY};">${userName}</strong> ! <br>
-                    Bienvenue dans la communauté KADOC. Pour commencer à échanger, 
-                    il nous faut juste vérifier votre adresse email.
+                    Votre compte KADOC vient d'être créé. Pour des raisons de sécurité, 
+                    nous devons vérifier votre adresse email avant d'activer votre compte.
+                </p>
+            </div>
+
+            <!-- Statut actuel -->
+            <div style="background: #fff3cd; border-left: 4px solid ${this.COLORS.ACCENT}; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <h3 style="color: #856404; margin: 0 0 10px; font-size: 16px;">📍 Où en êtes-vous ?</h3>
+                <p style="color: #856404; margin: 0; font-size: 14px;">
+                    <strong>✅ Compte créé</strong> • ⏳ Vérification email en attente • ⏸️ Onboarding • ⏸️ Première utilisation
                 </p>
             </div>
 
@@ -106,7 +114,7 @@ class CadokEmailTemplates {
                     ${verificationCode}
                 </div>
                 <p style="color: ${this.COLORS.MUTED}; margin: 15px 0 0; font-size: 12px;">
-                    Ce code expire dans 15 minutes
+                    Ce code expire dans 15 minutes • Vérification requise
                 </p>
             </div>
 
@@ -116,18 +124,27 @@ class CadokEmailTemplates {
                    style="display: inline-block; background: linear-gradient(135deg, ${this.COLORS.SECONDARY} 0%, ${this.COLORS.SUCCESS} 100%); 
                           color: ${this.COLORS.WHITE}; padding: 16px 32px; text-decoration: none; border-radius: 30px; 
                           font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(46,125,50,0.3);">
-                    ✅ Vérifier mon compte
+                    🔐 Vérifier mon email maintenant
                 </a>
             </div>
 
-            <!-- Info complémentaire -->
+            <!-- Prochaines étapes -->
             <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <h3 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 15px; font-size: 18px;">🚀 Que pouvez-vous faire ensuite ?</h3>
-                <ul style="color: ${this.COLORS.MUTED}; margin: 0; padding-left: 20px; line-height: 1.6;">
-                    <li>Publier vos premiers objets à échanger</li>
-                    <li>Découvrir les annonces de votre quartier</li>
-                    <li>Commencer vos premiers trocs</li>
-                </ul>
+                <h3 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 15px; font-size: 18px;">�️ Prochaines étapes</h3>
+                <div style="color: ${this.COLORS.MUTED}; line-height: 1.6; font-size: 14px;">
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: ${this.COLORS.ACCENT};">1.</strong> Vérifiez votre email (vous y êtes !)
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: ${this.COLORS.MUTED};">2.</strong> Choisissez vos catégories d'intérêt
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: ${this.COLORS.MUTED};">3.</strong> Publiez votre premier objet à échanger
+                    </div>
+                    <div>
+                        <strong style="color: ${this.COLORS.MUTED};">4.</strong> Découvrez les offres près de chez vous
+                    </div>
+                </div>
             </div>
     `;
 
@@ -140,35 +157,41 @@ class CadokEmailTemplates {
   }
 
   /**
-   * Template Email de Bienvenue
+   * Template Email de Bienvenue (ÉTAPE 2 : APRÈS VÉRIFICATION)
    */
   static getWelcomeTemplate(userName, loginUrl = '#') {
     const content = `
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="color: ${this.COLORS.SUCCESS}; margin: 0 0 15px; font-size: 28px;">
-                    🎉 Compte vérifié avec succès !
+                    🎉 Email vérifié ! Compte activé !
                 </h2>
                 <p style="color: ${this.COLORS.MUTED}; margin: 0; font-size: 18px; line-height: 1.6;">
-                    Félicitations <strong style="color: ${this.COLORS.PRIMARY};">${userName}</strong> !<br>
-                    Votre compte KADOC est maintenant actif.
+                    Parfait <strong style="color: ${this.COLORS.PRIMARY};">${userName}</strong> !<br>
+                    Votre compte KADOC est maintenant totalement opérationnel.
                 </p>
             </div>
 
-            <!-- Avantages -->
-            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; padding: 25px; margin: 25px 0;">
-                <h3 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 20px; font-size: 20px;">✨ Prêt à commencer l'aventure ?</h3>
-                <div style="display: grid; gap: 15px;">
-                    <div style="background: ${this.COLORS.WHITE}; padding: 15px; border-radius: 8px; border-left: 4px solid ${this.COLORS.ACCENT};">
-                        <strong style="color: ${this.COLORS.PRIMARY};">🔄 Échanger</strong><br>
-                        <span style="color: ${this.COLORS.MUTED};">Troquez vos objets avec vos voisins</span>
-                    </div>
-                    <div style="background: ${this.COLORS.WHITE}; padding: 15px; border-radius: 8px; border-left: 4px solid ${this.COLORS.ACCENT};">
-                        <strong style="color: ${this.COLORS.PRIMARY};">📱 Publier</strong><br>
-                        <span style="color: ${this.COLORS.MUTED};">Ajoutez vos annonces facilement</span>
-                    </div>
-                    <div style="background: ${this.COLORS.WHITE}; padding: 15px; border-radius: 8px; border-left: 4px solid ${this.COLORS.ACCENT};">
-                        <strong style="color: ${this.COLORS.PRIMARY};">🌍 Découvrir</strong><br>
-                        <span style="color: ${this.COLORS.MUTED};">Explorez votre communauté locale</span>
+            <!-- Progression -->
+            <div style="background: #d4edda; border-left: 4px solid ${this.COLORS.SUCCESS}; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <h3 style="color: #155724; margin: 0 0 10px; font-size: 16px;">🏁 Étape terminée !</h3>
+                <p style="color: #155724; margin: 0; font-size: 14px;">
+                    <strong>✅ Compte créé</strong> • <strong>✅ Email vérifié</strong> • ⏳ Onboarding en cours • ⏸️ Première utilisation
+                </p>
+            </div>
+
+            <!-- Prochaine étape : Onboarding -->
+            <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+                <h3 style="color: #856404; margin: 0 0 15px; font-size: 20px;">🎯 Prochaine étape : Personnalisation</h3>
+                <p style="color: #856404; margin: 0 0 20px; font-size: 16px;">
+                    Choisissez vos catégories d'intérêt pour recevoir les meilleures recommandations
+                </p>
+                <div style="background: ${this.COLORS.WHITE}; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: #856404;">
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 15px;">🎮 Jeux</span>
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 15px;">📚 Livres</span>
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 15px;">👗 Mode</span>
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 15px;">🏠 Maison</span>
+                        <span style="background: #f8f9fa; padding: 5px 10px; border-radius: 15px;">⚽ Sport</span>
                     </div>
                 </div>
             </div>
@@ -179,8 +202,27 @@ class CadokEmailTemplates {
                    style="display: inline-block; background: linear-gradient(135deg, ${this.COLORS.ACCENT} 0%, #F57C00 100%); 
                           color: ${this.COLORS.WHITE}; padding: 18px 36px; text-decoration: none; border-radius: 30px; 
                           font-weight: 600; font-size: 18px; box-shadow: 0 4px 15px rgba(255,143,0,0.3);">
-                    🚀 Commencer à troquer
+                    🚀 Continuer la configuration
                 </a>
+            </div>
+
+            <!-- Aperçu des fonctionnalités -->
+            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0;">
+                <h3 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 20px; font-size: 20px;">🌟 Découvrez KADOC</h3>
+                <div style="display: grid; gap: 15px;">
+                    <div style="background: ${this.COLORS.WHITE}; padding: 15px; border-radius: 8px; border-left: 4px solid ${this.COLORS.ACCENT};">
+                        <strong style="color: ${this.COLORS.PRIMARY};">� Troc intelligent</strong><br>
+                        <span style="color: ${this.COLORS.MUTED}; font-size: 14px;">Algorithme de matching pour des échanges équitables</span>
+                    </div>
+                    <div style="background: ${this.COLORS.WHITE}; padding: 15px; border-radius: 8px; border-left: 4px solid ${this.COLORS.ACCENT};">
+                        <strong style="color: ${this.COLORS.PRIMARY};">📍 Géolocalisation</strong><br>
+                        <span style="color: ${this.COLORS.MUTED}; font-size: 14px;">Trouvez des échanges près de chez vous</span>
+                    </div>
+                    <div style="background: ${this.COLORS.WHITE}; padding: 15px; border-radius: 8px; border-left: 4px solid ${this.COLORS.ACCENT};">
+                        <strong style="color: ${this.COLORS.PRIMARY};">💬 Chat intégré</strong><br>
+                        <span style="color: ${this.COLORS.MUTED}; font-size: 14px;">Négociez directement dans l'app</span>
+                    </div>
+                </div>
             </div>
     `;
 
@@ -193,55 +235,196 @@ class CadokEmailTemplates {
   }
 
   /**
-   * Template Reset Password
+   * Template Reset Password (ÉTAPE SUPPORT : RÉCUPÉRATION COMPTE)
    */
-  static getPasswordResetTemplate(userName, resetUrl) {
+  static getPasswordResetTemplate(userName, resetUrl, expirationTime = '1 heure') {
     const content = `
             <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: ${this.COLORS.WARNING}; margin: 0 0 15px; font-size: 24px;">
-                    🔐 Réinitialisation de mot de passe
+                <div style="background: #fff3cd; border-radius: 50px; width: 80px; height: 80px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 40px;">🔐</span>
+                </div>
+                <h2 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 15px; font-size: 28px;">
+                    Réinitialisation de mot de passe
                 </h2>
-                <p style="color: ${this.COLORS.MUTED}; margin: 0; font-size: 16px; line-height: 1.6;">
+                <p style="color: ${this.COLORS.MUTED}; margin: 0; font-size: 18px; line-height: 1.6;">
                     Bonjour <strong style="color: ${this.COLORS.PRIMARY};">${userName}</strong>,<br>
-                    Nous avons reçu une demande de réinitialisation de votre mot de passe KADOC.
+                    Une demande de réinitialisation a été effectuée pour votre compte.
                 </p>
             </div>
 
             <!-- Alerte sécurité -->
-            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 24px; margin-right: 10px;">⚠️</span>
-                    <strong style="color: #856404;">Sécurité importante</strong>
-                </div>
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <h3 style="color: #856404; margin: 0 0 10px; font-size: 16px;">⚠️ Demande de récupération</h3>
                 <p style="color: #856404; margin: 0; font-size: 14px;">
-                    Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. 
-                    Votre mot de passe reste inchangé.
+                    Si vous n'avez <strong>pas</strong> demandé cette réinitialisation, ignorez cet email.<br>
+                    Votre compte reste sécurisé et aucune action n'est nécessaire.
                 </p>
             </div>
 
-            <!-- CTA Reset -->
+            <!-- Instructions -->
+            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0;">
+                <h3 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 20px; font-size: 20px;">🔄 Comment procéder ?</h3>
+                <div style="color: ${this.COLORS.TEXT}; line-height: 1.8;">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <span style="background: ${this.COLORS.ACCENT}; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 12px; font-weight: bold;">1</span>
+                        <span>Cliquez sur le bouton de réinitialisation ci-dessous</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <span style="background: ${this.COLORS.ACCENT}; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 12px; font-weight: bold;">2</span>
+                        <span>Choisissez un nouveau mot de passe sécurisé</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <span style="background: ${this.COLORS.ACCENT}; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 12px; font-weight: bold;">3</span>
+                        <span>Reconnectez-vous avec vos nouveaux identifiants</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA Principal -->
             <div style="text-align: center; margin: 35px 0;">
                 <a href="${resetUrl}" 
-                   style="display: inline-block; background: linear-gradient(135deg, ${this.COLORS.WARNING} 0%, #c82333 100%); 
-                          color: ${this.COLORS.WHITE}; padding: 16px 32px; text-decoration: none; border-radius: 30px; 
-                          font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(220,53,69,0.3);">
-                    🔒 Réinitialiser mon mot de passe
+                   style="display: inline-block; background: linear-gradient(135deg, ${this.COLORS.PRIMARY} 0%, #0056b3 100%); 
+                          color: ${this.COLORS.WHITE}; padding: 18px 36px; text-decoration: none; border-radius: 30px; 
+                          font-weight: 600; font-size: 18px; box-shadow: 0 4px 15px rgba(0,123,255,0.3);">
+                    � Réinitialiser mon mot de passe
+                </a>
+                <p style="color: ${this.COLORS.MUTED}; margin: 15px 0 0; font-size: 14px;">
+                    ⏰ Ce lien expire dans <strong>${expirationTime}</strong>
+                </p>
+            </div>
+
+            <!-- Conseils sécurité -->
+            <div style="background: linear-gradient(135deg, #e8f4fd 0%, #d1ecf1 100%); border-radius: 12px; padding: 20px; margin: 25px 0;">
+                <h4 style="color: ${this.COLORS.PRIMARY}; margin: 0 0 15px; font-size: 16px;">💡 Conseils pour un mot de passe sécurisé</h4>
+                <ul style="color: ${this.COLORS.TEXT}; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    <li>Au moins 8 caractères avec majuscules, minuscules, chiffres</li>
+                    <li>Utilisez un mot de passe unique pour KADOC</li>
+                    <li>Évitez les informations personnelles évidentes</li>
+                </ul>
+            </div>
+    `;
+
+    return this.getBaseTemplate(content, {
+      title: 'Réinitialisation de mot de passe - KADOC',
+      headerTitle: 'KADOC',
+      headerSubtitle: 'Récupération de compte',
+      headerIcon: '🔐'
+    });
+  }
+
+  /**
+   * Template Notification Échange (ÉTAPE USAGE : ACTIVITÉ COMMUNAUTÉ)
+   */
+  static getExchangeNotificationTemplate(userName, exchangeDetails, actionUrl) {
+    const { type, objectName, partnerName, status, message } = exchangeDetails;
+    
+    let title, icon, statusColor, statusText, actionText;
+    
+    switch (type) {
+      case 'request':
+        title = '🤝 Nouvelle demande d\'échange';
+        icon = '📥';
+        statusColor = this.COLORS.PRIMARY;
+        statusText = 'Demande reçue';
+        actionText = 'Voir la demande';
+        break;
+      case 'accepted':
+        title = '✅ Échange accepté';
+        icon = '🎉';
+        statusColor = this.COLORS.SUCCESS;
+        statusText = 'Accepté';
+        actionText = 'Organiser la rencontre';
+        break;
+      case 'declined':
+        title = '❌ Échange refusé';
+        icon = '😔';
+        statusColor = this.COLORS.WARNING;
+        statusText = 'Refusé';
+        actionText = 'Voir d\'autres objets';
+        break;
+      case 'completed':
+        title = '🏆 Échange terminé';
+        icon = '✨';
+        statusColor = this.COLORS.SUCCESS;
+        statusText = 'Terminé';
+        actionText = 'Laisser un avis';
+        break;
+      default:
+        title = '📬 Notification KADOC';
+        icon = '📱';
+        statusColor = this.COLORS.PRIMARY;
+        statusText = 'Notification';
+        actionText = 'Voir les détails';
+    }
+
+    const content = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="background: linear-gradient(135deg, ${statusColor}15 0%, ${statusColor}25 100%); border-radius: 50px; width: 80px; height: 80px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 40px;">${icon}</span>
+                </div>
+                <h2 style="color: ${statusColor}; margin: 0 0 15px; font-size: 28px;">
+                    ${title}
+                </h2>
+                <p style="color: ${this.COLORS.MUTED}; margin: 0; font-size: 18px; line-height: 1.6;">
+                    Salut <strong style="color: ${this.COLORS.PRIMARY};">${userName}</strong> ! 👋<br>
+                    ${partnerName} a une actualité concernant votre échange.
+                </p>
+            </div>
+
+            <!-- Détails échange -->
+            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                    <h3 style="color: ${this.COLORS.PRIMARY}; margin: 0; font-size: 20px;">📦 ${objectName}</h3>
+                    <span style="background: ${statusColor}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600;">
+                        ${statusText}
+                    </span>
+                </div>
+                
+                <div style="background: ${this.COLORS.WHITE}; border-radius: 8px; padding: 20px; border-left: 4px solid ${statusColor};">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <div style="background: ${statusColor}20; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: ${statusColor}; font-size: 18px;">👤</span>
+                        </div>
+                        <div>
+                            <strong style="color: ${this.COLORS.PRIMARY};">${partnerName}</strong><br>
+                            <span style="color: ${this.COLORS.MUTED}; font-size: 14px;">Membre de votre communauté</span>
+                        </div>
+                    </div>
+                    
+                    ${message ? `
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                        <p style="margin: 0; color: ${this.COLORS.TEXT}; font-style: italic; line-height: 1.6;">
+                            "${message}"
+                        </p>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- CTA Principal -->
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="${actionUrl}" 
+                   style="display: inline-block; background: linear-gradient(135deg, ${statusColor} 0%, ${statusColor}dd 100%); 
+                          color: ${this.COLORS.WHITE}; padding: 18px 36px; text-decoration: none; border-radius: 30px; 
+                          font-weight: 600; font-size: 18px; box-shadow: 0 4px 15px ${statusColor}30;">
+                    ${actionText}
                 </a>
             </div>
 
-            <!-- Info expiration -->
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; text-align: center;">
-                <p style="color: ${this.COLORS.MUTED}; margin: 0; font-size: 14px;">
-                    ⏱️ Ce lien expire dans <strong>1 heure</strong> pour votre sécurité.
+            <!-- Encouragement communauté -->
+            <div style="background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%); border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+                <h4 style="color: #155724; margin: 0 0 10px; font-size: 16px;">🌟 Communauté active !</h4>
+                <p style="color: #155724; margin: 0; font-size: 14px;">
+                    C'est génial de voir les échanges se multiplier ! Continuez à partager et découvrir.
                 </p>
             </div>
     `;
 
     return this.getBaseTemplate(content, {
-      title: 'Réinitialisation mot de passe KADOC',
+      title: `${title} - KADOC`,
       headerTitle: 'KADOC',
-      headerSubtitle: 'Sécurité du compte',
-      headerIcon: '🔐'
+      headerSubtitle: 'Activité communauté',
+      headerIcon: icon
     });
   }
 

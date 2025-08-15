@@ -91,7 +91,23 @@ const userSchema = new mongoose.Schema({
   stripeSubscriptionId: { type: String, default: null },
   lastPaymentDate: { type: Date, default: null },
   
-  // 🛡️ SYSTÈME D'ADMINISTRATION GRANULAIRE
+  // � SYSTÈME DE VÉRIFICATION EMAIL ET TÉLÉPHONE
+  emailVerified: { type: Boolean, default: false },
+  phoneVerified: { type: Boolean, default: false },
+  verified: { type: Boolean, default: false }, // true quand email ET téléphone vérifiés
+  
+  // Tokens et codes de vérification
+  emailVerificationToken: { type: String, default: null },
+  emailVerificationExpires: { type: Date, default: null },
+  phoneVerificationCode: { type: String, default: null },
+  phoneVerificationExpires: { type: Date, default: null },
+  phoneVerificationAttempts: { type: Number, default: 0 },
+  
+  // Email de bienvenue
+  welcomeEmailSent: { type: Boolean, default: false },
+  welcomeEmailSentAt: { type: Date, default: null },
+  
+  // �🛡️ SYSTÈME D'ADMINISTRATION GRANULAIRE
   role: { 
     type: String, 
     enum: ['user', 'moderator', 'admin_events', 'admin_users', 'admin_trades', 'admin_content', 'super_admin'], 
