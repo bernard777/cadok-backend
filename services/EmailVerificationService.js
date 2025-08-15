@@ -1,6 +1,9 @@
 /**
- * 📧 SERVICE DE VÉRIFICATION EMAIL - CADOK
- * Mode Hybride : Essaie Resend → Fallback Simulation si erreur
+ * 📧 SERVICE EMAIL UNIFIÉ CADOK
+ * ==============================
+ * 
+ * Template unique basé sur CadokEmailTemplates.js
+ * Mode hybride : Essaie Resend → Fallback Simulation si erreur
  */
 
 // Chargement des variables d'environnement
@@ -8,6 +11,7 @@ require('dotenv').config();
 
 const { Resend } = require('resend');
 const crypto = require('crypto');
+const CadokEmailTemplates = require('./CadokEmailTemplates');
 
 class EmailVerificationService {
   constructor() {
@@ -120,7 +124,7 @@ class EmailVerificationService {
         from: this.fromEmail,
         to: email,
         subject: '🎉 Bienvenue sur CADOK !',
-        html: this.getWelcomeEmailTemplate(userPseudo)
+        html: CadokEmailTemplates.getWelcomeTemplate(userPseudo, 'https://cadok.com/login')
       };
 
       console.log(`\n🔄 [HYBRIDE] Traitement email pour: ${email} (${userPseudo})`);
@@ -315,7 +319,7 @@ class EmailVerificationService {
         from: this.fromEmail,
         to: user.email,
         subject: '✅ Vérifiez votre email - CADOK',
-        html: this.getVerificationEmailTemplate(user.pseudo, verificationLink)
+        html: CadokEmailTemplates.getVerificationTemplate(user.pseudo, token.substring(0, 6), verificationLink, user.email)
       };
 
       console.log(`\n🔄 [HYBRIDE] Email de vérification pour: ${user.email}`);
@@ -359,63 +363,15 @@ class EmailVerificationService {
     }
   }
 
-  /**
-   * Template email de vérification
+    /**
+   * TEMPLATES UNIFIÉS
+   * =================
+   * 
+   * Tous les templates ont été déplacés vers CadokEmailTemplates.js
+   * pour maintenir la cohérence visuelle et éviter les confusions.
+   * 
+   * Design de référence : EmailTemplates.js (2-email-templates-verification)
    */
-  getVerificationEmailTemplate(pseudo, verificationLink) {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Vérifiez votre email - CADOK</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          
-          <div style="background: linear-gradient(135deg, #022601, #2E7D32); color: white; padding: 30px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px;">🔐 CADOK</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Vérification de votre email</p>
-          </div>
-          
-          <div style="padding: 40px;">
-            <h2 style="color: #022601; margin: 0 0 20px 0;">Bonjour ${pseudo} !</h2>
-            
-            <p style="color: #333; font-size: 16px; line-height: 1.6;">
-              Merci de vous être inscrit sur CADOK ! Pour activer votre compte, 
-              veuillez cliquer sur le bouton ci-dessous :
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${verificationLink}" 
-                 style="background: linear-gradient(135deg, #FF8F00, #ff9f1a); 
-                        color: white; 
-                        padding: 15px 30px; 
-                        text-decoration: none; 
-                        border-radius: 25px; 
-                        font-weight: bold; 
-                        font-size: 16px;
-                        display: inline-block;">
-                ✅ Vérifier mon email
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #666; margin: 30px 0 0 0;">
-              Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
-              <span style="word-break: break-all; color: #FF8F00;">${verificationLink}</span>
-            </p>
-          </div>
-          
-          <div style="background: #022601; color: white; padding: 20px; text-align: center;">
-            <p style="margin: 0; font-size: 12px;">
-              © 2025 CADOK - Plateforme d'échange et de troc
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
 }
 
 module.exports = EmailVerificationService;
