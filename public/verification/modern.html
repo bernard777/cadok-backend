@@ -213,6 +213,51 @@
             color: #6c757d;
             line-height: 1.5;
         }
+        
+        /* ===== STYLES MODE MOBILE ===== */
+        .mobile-mode {
+            padding: 0;
+            margin: 0;
+        }
+        
+        .mobile-mode .verification-card {
+            border-radius: 0;
+            box-shadow: none;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .mobile-mode .logo-container {
+            margin-bottom: 30px;
+        }
+        
+        .mobile-mode .progress-bar {
+            margin: 20px 0;
+        }
+        
+        .mobile-mode .status-title {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .mobile-mode .status-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            .mobile-mode .verification-card {
+                padding: 15px;
+            }
+            
+            .mobile-mode .status-title {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -417,6 +462,102 @@
         });
         
         console.log('📄 Script loaded successfully!');
+        
+        // ===== COMMUNICATION AVEC L'APP MOBILE =====
+        
+        // Vérifier si on est dans une WebView React Native
+        const isInMobileApp = () => {
+            return window.ReactNativeWebView !== undefined || 
+                   new URLSearchParams(window.location.search).get('mobile') === 'true';
+        };
+        
+        // Envoyer un message à l'app mobile
+        const sendToMobile = (data) => {
+            if (window.ReactNativeWebView) {
+                console.log('📱 Envoi message vers app mobile:', data);
+                window.ReactNativeWebView.postMessage(JSON.stringify(data));
+            } else if (isInMobileApp()) {
+                // Fallback : déclencher un événement personnalisé
+                const event = new CustomEvent('mobile-message', { detail: data });
+                window.dispatchEvent(event);
+            }
+        };
+        
+        // Surcharger changeState pour notifier l'app mobile
+        const originalChangeState = changeState;
+        changeState = function(newState) {
+            console.log('📱 Changement d\'état:', newState);
+            
+            // Appeler la fonction originale
+            originalChangeState(newState);
+            
+            // Notifier l'app mobile
+            if (isInMobileApp()) {
+                sendToMobile({
+                    type: 'VERIFICATION_PROGRESS',
+                    state: newState,
+                    message: states[newState]?.title || 'État mis à jour'
+                });
+                
+                // Si c'est un succès, envoyer un événement spécial
+                if (newState === 'success') {
+                    setTimeout(() => {
+                        sendToMobile({
+                            type: 'VERIFICATION_SUCCESS',
+                            message: 'Vérification terminée avec succès'
+                        });
+                        
+                        // Déclencher aussi un événement DOM pour compatibilité
+                        const successEvent = new CustomEvent('verification-success', {
+                            detail: { state: 'success' }
+                        });
+                        window.dispatchEvent(successEvent);
+                    }, 1500);
+                }
+                
+                // Si c'est une erreur, notifier aussi
+                if (newState === 'error') {
+                    sendToMobile({
+                        type: 'VERIFICATION_ERROR',
+                        message: 'Erreur lors de la vérification'
+                    });
+                    
+                    const errorEvent = new CustomEvent('verification-error', {
+                        detail: { 
+                            state: 'error', 
+                            message: 'Erreur lors de la vérification' 
+                        }
+                    });
+                    window.dispatchEvent(errorEvent);
+                }
+            }
+        };
+        
+        // Pré-remplir les champs si les données sont passées par URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const email = params.get('email');
+            const phone = params.get('phone');
+            const mobile = params.get('mobile');
+            
+            if (mobile === 'true') {
+                console.log('📱 Mode mobile détecté');
+                // Ajouter une classe CSS pour le mode mobile
+                document.body.classList.add('mobile-mode');
+            }
+            
+            if (email) {
+                console.log('📧 Email pré-rempli:', email);
+                // Vous pouvez pré-remplir un champ email ici si nécessaire
+            }
+            
+            if (phone) {
+                console.log('📱 Téléphone pré-rempli:', phone);
+                // Vous pouvez pré-remplir un champ téléphone ici si nécessaire
+            }
+        });
+        
+        // ===== FIN COMMUNICATION MOBILE =====
     </script>
 </body>
 </html>

@@ -70,10 +70,24 @@ router.post(
   SecurityMiddleware.validateUserRegistration(), // Validation sécurisée
   SecurityMiddleware.handleValidationErrors(), // Gestion des erreurs
   async (req, res) => {
-    const { email, password, pseudo, city, firstName, lastName, phoneNumber, address } = req.body;
+    const { email, password, pseudo, city, firstName, lastName, phoneNumber } = req.body;
     
-    console.log('🔍 [SECURE REGISTER] Début inscription sécurisée pour:', email);
+    // Parser l'objet address s'il est sérialisé en JSON
+    let parsedAddress = {};
+    try {
+      if (req.body.address && typeof req.body.address === 'string') {
+        parsedAddress = JSON.parse(req.body.address);
+      } else {
+        parsedAddress = req.body.address || {};
+      }
+    } catch (e) {
+      console.log('� [SECURE REGISTER] Erreur parsing address, utilisation valeurs par défaut:', e.message);
+      parsedAddress = {};
+    }
+    
+    console.log('�🔍 [SECURE REGISTER] Début inscription sécurisée pour:', email);
     console.log('🔍 [SECURE REGISTER] NODE_ENV:', process.env.NODE_ENV);
+    console.log('🔍 [SECURE REGISTER] Address parsée:', parsedAddress);
     
     try {
       console.log('🔍 [SECURE REGISTER] Vérification utilisateur existant...');
@@ -132,11 +146,11 @@ router.post(
         lastName,
         phoneNumber,
         address: {
-          street: address.street,
-          zipCode: address.zipCode,
-          city: address.city,
-          country: address.country,
-          additionalInfo: address.additionalInfo || ''
+          street: parsedAddress.street || 'Non renseigné',
+          zipCode: parsedAddress.zipCode || '00000',
+          city: parsedAddress.city || city,
+          country: parsedAddress.country || 'France',
+          additionalInfo: parsedAddress.additionalInfo || ''
         },
         avatar: avatarUrl,
         status: 'pending', // Utilisateur en attente de vérification
