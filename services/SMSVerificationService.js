@@ -29,9 +29,43 @@ class SMSVerificationService {
   }
 
   /**
-   * Générer un code de vérification à 6 chiffres
+   * Codes de test fixes pour différents numéros
+   * Permet de tester avec différents scénarios
    */
-  generateVerificationCode() {
+  getTestCodes() {
+    return {
+      // Numéros de test spéciaux avec codes fixes
+      '+33123456789': '123456',   // France - Code standard
+      '+33987654321': '654321',   // France - Code inverse
+      '+1234567890': '111111',    // USA - Code répétitif
+      '+447700900123': '222222',  // UK - Code répétitif
+      '+49123456789': '333333',   // Allemagne - Code répétitif
+      
+      // Code universel pour tous les autres numéros
+      'default': '000000'
+    };
+  }
+
+  /**
+   * Générer un code de vérification
+   * En mode test, utilise des codes fixes selon le numéro
+   */
+  generateVerificationCode(phoneNumber = null) {
+    if (this.isDevelopment) {
+      const testCodes = this.getTestCodes();
+      
+      // Si numéro spécifique avec code fixe
+      if (phoneNumber && testCodes[phoneNumber]) {
+        console.log(`📱 [SMS DEV] Code fixe pour ${phoneNumber}: ${testCodes[phoneNumber]}`);
+        return testCodes[phoneNumber];
+      }
+      
+      // Sinon code par défaut
+      console.log(`📱 [SMS DEV] Code par défaut: ${testCodes.default}`);
+      return testCodes.default;
+    }
+    
+    // Mode production : code aléatoire
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
@@ -62,8 +96,46 @@ class SMSVerificationService {
 
   /**
    * Envoyer code de vérification par SMS
+   * Utilise soit la simulation (dev) soit Twilio (prod)
    */
-  async sendVerificationCode(phone, code) {
+  async sendSMS(phone, code) {
+    try {
+      const formattedPhone = this.formatPhoneNumber(phone);
+      
+      if (this.isDevelopment) {
+        // Mode développement : simulation complète
+        console.log(`📱 [SMS DEV] ════════════════════════════════════`);
+        console.log(`📱 [SMS DEV] 📲 SMS SIMULÉ`);
+        console.log(`📱 [SMS DEV] 📱 Destinataire: ${formattedPhone}`);
+        console.log(`📱 [SMS DEV] 🔐 Code: ${code}`);
+        console.log(`📱 [SMS DEV] 💬 Message: "CADOK - Votre code: ${code}"`);
+        console.log(`📱 [SMS DEV] ⏰ Valide 10 minutes`);
+        console.log(`📱 [SMS DEV] ════════════════════════════════════`);
+        
+        return { 
+          success: true, 
+          phoneNumber: formattedPhone,
+          code: code, // Debug uniquement
+          mode: 'development',
+          message: 'SMS simulé envoyé avec succès'
+        };
+      } else {
+        // Mode production : vrai SMS via Twilio
+        return await this.sendRealSMS(formattedPhone, code);
+      }
+    } catch (error) {
+      console.error('❌ [SMS] Erreur envoi SMS:', error);
+      return { 
+        success: false, 
+        error: error.message 
+      };
+    }
+  }
+
+  /**
+   * Envoi SMS réel via Twilio (production)
+   */
+  async sendRealSMS(phone, code) {
     try {
       const formattedPhone = this.formatPhoneNumber(phone);
       
@@ -101,8 +173,19 @@ class SMSVerificationService {
    * Vérifier si le code est valide (pour tests en développement)
    */
   isValidTestCode(code) {
-    // Code de test universel pour le développement
-    return code === '123456' && this.isDevelopment;
+    if (!this.isDevelopment) return false;
+    
+    // 🧪 CODES DE TEST UNIVERSELS (mode développement uniquement)
+    const testCodes = [
+      '123456', // Code de test principal
+      '000000', // Code de test alternatif
+      '999999', // Code de test admin
+      '111111', // Code de test rapide
+      '555555'  // Code de test démo
+    ];
+    
+    console.log(`📱 [SMS DEV] Vérification code test: ${code} -> ${testCodes.includes(code) ? 'VALIDE' : 'INVALIDE'}`);
+    return testCodes.includes(code);
   }
 
   /**
@@ -130,4 +213,6 @@ class SMSVerificationService {
   }
 }
 
-module.exports = SMSVerificationService;
+// Export d'une instance singleton
+const smsService = new SMSVerificationService();
+module.exports = smsService;

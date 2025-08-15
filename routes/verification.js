@@ -7,10 +7,13 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
 const authMiddleware = require('../middlewares/auth');
 const { adminMiddleware } = require('../middlewares/adminAuth');
 const User = require('../models/User');
 const VerificationDocument = require('../models/VerificationDocument');
+const EmailVerificationService = require('../services/EmailVerificationService');
+const SMSVerificationService = require('../services/SMSVerificationService');
 
 // Configuration upload documents
 const storage = multer.diskStorage({
@@ -33,6 +36,192 @@ const upload = multer({
     } else {
       cb(new Error('Seuls les fichiers image (JPG, PNG) et PDF sont autorisés.'));
     }
+  }
+});
+
+/**
+ * POST /api/verification/resend-email
+ * Renvoie un email de vérification
+ */
+router.post('/resend-email', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email déjà vérifié'
+      });
+    }
+
+    // Utilise le service email moderne
+    const emailService = new EmailVerificationService();
+    const result = await emailService.sendVerificationEmail(user.email, user._id);
+
+    if (result.success) {
+      console.log(`📧 Email de vérification renvoyé à ${user.email}`);
+      res.json({
+        success: true,
+        message: 'Email de vérification renvoyé'
+      });
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('❌ Erreur renvoi email vérification:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/verification/send-phone-code
+ * Envoie un code de vérification SMS
+ */
+router.post('/send-phone-code', authMiddleware, async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    const userId = req.user.id;
+
+    // Validation du numéro
+    if (!phoneNumber || !SMSVerificationService.formatPhoneNumber(phoneNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Numéro de téléphone invalide'
+      });
+    }
+
+    // Formate le numéro
+    const formattedPhone = SMSVerificationService.formatPhoneNumber(phoneNumber);
+    console.log(`📱 [SMS] Demande code pour ${formattedPhone} (user: ${userId})`);
+
+    // Génère et envoie le code
+    const verificationCode = SMSVerificationService.generateVerificationCode(formattedPhone);
+    const result = await SMSVerificationService.sendSMS(formattedPhone, verificationCode);
+
+    if (result.success) {
+      // Sauvegarde le code dans la DB avec expiration
+      const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await User.findByIdAndUpdate(userId, {
+        phoneNumber: formattedPhone,
+        phoneVerificationCode: codeHash,
+        phoneVerificationExpires: expiresAt,
+        phoneVerificationAttempts: 0,
+        lastPhoneVerificationSent: new Date()
+      });
+
+      console.log(`📱 [SMS] Code envoyé avec succès à ${formattedPhone}`);
+      
+      // En mode développement, retourne le code pour debug
+      const response = {
+        success: true,
+        message: 'Code de vérification envoyé',
+        phoneNumber: formattedPhone
+      };
+      
+      if (process.env.NODE_ENV === 'development') {
+        response.debugInfo = {
+          testMode: true,
+          code: verificationCode,
+          expiresAt
+        };
+      }
+
+      res.json(response);
+    } else {
+      throw new Error(result.error || 'Échec envoi SMS');
+    }
+  } catch (error) {
+    console.error('❌ Erreur envoi code SMS:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Impossible d\'envoyer le code SMS' 
+    });
+  }
+});
+
+/**
+ * POST /api/verification/verify-phone
+ * Vérifie le code SMS reçu
+ */
+router.post('/verify-phone', authMiddleware, async (req, res) => {
+  try {
+    const { phoneNumber, code } = req.body;
+    const userId = req.user.id;
+
+    if (!phoneNumber || !code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Numéro et code requis'
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    // Vérifie que le numéro correspond
+    if (user.phoneNumber !== SMSVerificationService.formatPhoneNumber(phoneNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Numéro de téléphone non reconnu'
+      });
+    }
+
+    // Vérifie l'expiration
+    if (!user.phoneVerificationExpires || new Date() > user.phoneVerificationExpires) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code de vérification expiré'
+      });
+    }
+
+    // Vérifie le nombre de tentatives
+    if (user.phoneVerificationAttempts >= 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Trop de tentatives. Demandez un nouveau code.'
+      });
+    }
+
+    // Hash du code fourni
+    const codeHash = crypto.createHash('sha256').update(code.toString()).digest('hex');
+
+    // Vérifie le code
+    if (user.phoneVerificationCode === codeHash) {
+      // Code correct - marque comme vérifié
+      await User.findByIdAndUpdate(userId, {
+        phoneVerified: true,
+        phoneVerificationCode: null,
+        phoneVerificationExpires: null,
+        phoneVerificationAttempts: 0
+      });
+
+      console.log(`✅ [SMS] Téléphone vérifié pour ${user.email}: ${phoneNumber}`);
+
+      res.json({
+        success: true,
+        message: 'Numéro de téléphone vérifié avec succès',
+        phoneVerified: true
+      });
+    } else {
+      // Code incorrect - incrémente tentatives
+      await User.findByIdAndUpdate(userId, {
+        $inc: { phoneVerificationAttempts: 1 }
+      });
+
+      console.log(`❌ [SMS] Code incorrect pour ${phoneNumber}, tentative ${user.phoneVerificationAttempts + 1}/5`);
+
+      res.status(400).json({
+        success: false,
+        error: `Code incorrect. Tentative ${user.phoneVerificationAttempts + 1}/5.`
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erreur vérification code SMS:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur lors de la vérification' 
+    });
   }
 });
 
