@@ -162,12 +162,29 @@ router.post(
       
       console.log('📧 [SECURE REGISTER] Envoi de l\'email de vérification...');
       
-      // Envoi de l'email de vérification
+      // Envoi de l'email de vérification avec Resend
       try {
         const EmailVerificationService = require('../services/EmailVerificationService');
         const emailService = new EmailVerificationService();
-        await emailService.sendVerificationEmail(newUser._id);
-        console.log('✅ Email de vérification envoyé à:', email);
+        
+        // Générer token de vérification
+        const verificationToken = emailService.generateVerificationToken();
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
+        
+        // Sauvegarder le token dans l'utilisateur
+        newUser.emailVerificationToken = verificationToken;
+        newUser.emailVerificationExpires = expires;
+        await newUser.save();
+        
+        // Envoyer l'email avec Resend
+        const emailResult = await emailService.sendVerificationEmail(newUser, verificationToken);
+        
+        if (emailResult.success) {
+          console.log('✅ [RESEND] Email de vérification envoyé à:', email);
+          console.log('📧 [RESEND] Service:', emailResult.service);
+        } else {
+          console.error('⚠️ [RESEND] Échec envoi email:', emailResult.error);
+        }
       } catch (emailError) {
         console.error('⚠️ Erreur envoi email de vérification:', emailError.message);
         // On ne fait pas échouer l'inscription pour un problème d'email
