@@ -3,6 +3,7 @@ const router = express.Router();
 const Message = require('../models/Message');
 const Trade = require('../models/Trade');
 const auth = require('../middlewares/auth');
+const socketService = require('../services/socketService');
 
 // Utilitaire pour générer une URL complète pour l'avatar
 function getFullUrl(req, relativePath) {
@@ -190,6 +191,10 @@ router.post('/:tradeId/messages', auth, async (req, res) => {
     }
 
     res.status(201).json(message);
+
+    // 🔌 ÉMETTRE LE NOUVEAU MESSAGE VIA SOCKET.IO
+    socketService.emitNewMessage(tradeId, message, req.user.id);
+
   } catch (error) {
     console.error('Erreur lors de l\'envoi du message:', error);
     res.status(500).json({ message: 'Erreur serveur lors de l\'envoi du message' });

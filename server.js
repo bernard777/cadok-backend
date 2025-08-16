@@ -47,6 +47,10 @@ connectToDatabase(MONGO_URI)
       console.log('🛡️ [SERVEUR] Gestionnaires d\'erreurs globaux activés');
     });
 
+    // Initialiser Socket.io
+    const socketService = require('./services/socketService');
+    socketService.initialize(server);
+
     // Gestionnaire d'erreur pour le serveur HTTP
     server.on('error', (error) => {
       console.error('❌ [SERVEUR] Erreur du serveur HTTP:', error.message);
