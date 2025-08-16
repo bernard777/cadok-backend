@@ -183,6 +183,8 @@ router.post(
       console.log(`   • emailVerified: ${userToReturn.emailVerified}`);
       console.log(`   • phoneVerified: ${userToReturn.phoneVerified}`);
       console.log(`   • verified: ${userToReturn.verified}`);
+      console.log(`   • _id: ${userToReturn._id}`);
+      console.log('🔍 [DEBUG] User structure complète:', JSON.stringify(userToReturn, null, 2));
       
       console.log('📧 [SECURE REGISTER] Envoi de l\'email de vérification...');
       
@@ -608,9 +610,24 @@ router.post('/verify-phone', authLimiter, async (req, res) => {
 router.get('/verification-status/:userId', authLimiter, async (req, res) => {
   const { userId } = req.params;
   
+  console.log('🔍 [VERIFICATION_STATUS] Request reçue pour userId:', userId);
+  console.log('🔍 [VERIFICATION_STATUS] Type userId:', typeof userId);
+  
   try {
     const user = await User.findById(userId).select('emailVerified phoneVerified verified status');
+    
+    console.log('🔍 [VERIFICATION_STATUS] User trouvé:', !!user);
+    if (user) {
+      console.log('🔍 [VERIFICATION_STATUS] User data:', {
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
+        verified: user.verified,
+        status: user.status
+      });
+    }
+    
     if (!user) {
+      console.log('❌ [VERIFICATION_STATUS] User non trouvé avec ID:', userId);
       return res.status(404).json({ 
         success: false,
         error: 'Utilisateur non trouvé'

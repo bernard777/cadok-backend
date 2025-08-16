@@ -1,7 +1,6 @@
 const express = require('express');
-const cors = require('cors');// Ajout de la route d'authentification
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);tenv = require('dotenv');
+const cors = require('cors');
+const dotenv = require('dotenv');
 const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
