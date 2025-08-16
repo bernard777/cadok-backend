@@ -45,9 +45,7 @@ const ObjectSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Index géospatial pour recherche rapide par proximité
-ObjectSchema.index({ "location.coordinates": "2dsphere" });
-// Index composé pour recherche optimisée
+// Index composé pour recherche optimisée (l'index 2dsphere est déjà défini dans le schéma)
 ObjectSchema.index({ "location.address.city": 1, "status": 1, "createdAt": -1 });
 ObjectSchema.index({ "location.address.zipCode": 1, "status": 1 });
 

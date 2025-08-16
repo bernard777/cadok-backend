@@ -39,8 +39,8 @@ const deliverySchema = new mongoose.Schema({
   
   // Informations de suivi
   trackingNumber: {
-    type: String,
-    sparse: true // Permet les valeurs null sans créer de conflit d'index unique
+    type: String
+    // L'option sparse est définie dans l'index pour éviter les doublons
   },
   
   carrier: {
@@ -243,7 +243,7 @@ const deliverySchema = new mongoose.Schema({
 
 // Index pour les requêtes fréquentes
 deliverySchema.index({ tradeId: 1 });
-deliverySchema.index({ trackingNumber: 1 });
+deliverySchema.index({ trackingNumber: 1 }, { sparse: true }); // Cohérent avec la définition du champ
 deliverySchema.index({ status: 1 });
 deliverySchema.index({ createdAt: -1 });
 deliverySchema.index({ 'addresses.recipient.postalCode': 1 });
