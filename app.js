@@ -67,17 +67,8 @@ console.log('✅ [APP] Fichiers statiques configurés (/uploads, /public)');
 
 // Ajout de la route d'authentification
 const authRoutes = require('./routes/auth');
+// Routes d'authentification (inclut les routes de vérification email/SMS)
 app.use('/api/auth', authRoutes);
-
-// Ajout des routes de vérification
-const verificationRoutePath = path.join(__dirname, 'routes', 'verificationSystem.js');
-if (fs.existsSync(verificationRoutePath)) {
-  const verificationRoutes = require('./routes/verificationSystem');
-  app.use('/api/verification', verificationRoutes);
-  console.log('✅ [APP] Routes /api/verification enregistrées avec succès');
-} else {
-  console.warn("Warning: './routes/verificationSystem.js' not found. '/api/verification' route not registered.");
-}
 
 // Ajout de la route des objets
 const objectsRoutePath = path.join(__dirname, 'routes', 'objects.js');
@@ -268,16 +259,6 @@ if (fs.existsSync(adminAnalyticsRoutePath)) {
   console.log('✅ Admin Analytics routes registered: /api/admin/analytics');
 } else {
   console.warn("Warning: './routes/admin/analytics.js' not found. '/api/admin/analytics' route not registered.");
-}
-
-// 🎨 Routes de vérification avec pages KADOC thématiques
-const kadocVerificationRoutePath = path.join(__dirname, 'routes', 'verification-routes.js');
-if (fs.existsSync(kadocVerificationRoutePath)) {
-  const verificationRoutes = require('./routes/verification-routes');
-  app.use('/', verificationRoutes);
-  console.log('✅ Verification routes registered: /verification');
-} else {
-  console.warn("Warning: './routes/verification-routes.js' not found. Verification routes not registered.");
 }
 
 // Routes
