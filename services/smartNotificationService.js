@@ -8,6 +8,7 @@ const Trade = require('../models/Trade');
 const ObjectModel = require('../models/Object');
 const Notification = require('../models/Notification');
 const moment = require('moment');
+const socketService = require('./socketService');
 
 class SmartNotificationService {
 
@@ -583,8 +584,10 @@ class SmartNotificationService {
 
       const saved = await notification.save();
       
-      // Ici on pourrait intégrer avec un service de push (Firebase, OneSignal, etc.)
-      console.log(`📱 Notification créée: ${notificationData.title} -> User ${notificationData.userId}`);
+      // 🔌 SOCKET.IO - Envoyer notification en temps réel
+      socketService.emitNotification(notificationData.userId, saved);
+      
+      console.log(`📱 Notification créée et envoyée en temps réel: ${notificationData.title} -> User ${notificationData.userId}`);
       
       return saved;
     } catch (error) {
