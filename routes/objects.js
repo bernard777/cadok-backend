@@ -128,25 +128,41 @@ router.post('/',
     processedImages = imageValidation.processedImages;
   }
 
-  // Convert category name to ObjectId
+  // Convert category name to ObjectId or validate existing ObjectId
   let categoryId = category;
   console.log('📋 Conversion catégorie - input:', category, typeof category);
   
   if (category && typeof category === 'string') {
     try {
-      console.log('🔍 Recherche catégorie par nom:', category);
-      const categoryDoc = await Category.findOne({ name: category });
-      console.log('📄 Catégorie trouvée:', categoryDoc);
-      
-      if (!categoryDoc) {
-        console.error('❌ Catégorie non trouvée:', category);
-        return res.status(400).json({ 
-          error: 'Catégorie non trouvée',
-          category: category
-        });
+      // Vérifier si c'est déjà un ObjectId valide
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        console.log('🔍 ID catégorie valide détecté:', category);
+        const categoryDoc = await Category.findById(category);
+        if (!categoryDoc) {
+          console.error('❌ Catégorie non trouvée avec ID:', category);
+          return res.status(400).json({ 
+            error: 'Catégorie non trouvée',
+            category: category
+          });
+        }
+        categoryId = categoryDoc._id;
+        console.log('✅ Catégorie trouvée par ID:', categoryDoc.name);
+      } else {
+        // Sinon, chercher par nom
+        console.log('🔍 Recherche catégorie par nom:', category);
+        const categoryDoc = await Category.findOne({ name: category });
+        console.log('📄 Catégorie trouvée:', categoryDoc);
+        
+        if (!categoryDoc) {
+          console.error('❌ Catégorie non trouvée:', category);
+          return res.status(400).json({ 
+            error: 'Catégorie non trouvée',
+            category: category
+          });
+        }
+        categoryId = categoryDoc._id;
+        console.log('✅ Conversion catégorie réussie:', category, '-> ObjectId:', categoryId);
       }
-      categoryId = categoryDoc._id;
-      console.log('✅ Conversion catégorie réussie:', category, '-> ObjectId:', categoryId);
     } catch (err) {
       console.error('❌ Erreur lors de la recherche de catégorie:', err);
       return res.status(500).json({ error: 'Erreur lors de la recherche de catégorie' });
@@ -163,6 +179,26 @@ router.post('/',
   });
 
   try {
+    // Récupérer les informations complètes de l'utilisateur pour la localisation
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(401).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Préparer la localisation de l'objet basée sur celle de l'utilisateur
+    const objectLocation = {
+      address: {
+        city: user.address?.city || user.city, // Utiliser l'adresse ou la ville du profil
+        zipCode: user.address?.zipCode,
+        country: user.address?.country || 'France'
+      },
+      precision: 'city_only',
+      isPublic: true,
+      searchRadius: 10
+    };
+
+    console.log('📍 Localisation de l\'objet:', objectLocation);
+
     const newObject = new ObjectModel({
       title,
       description,
@@ -170,7 +206,8 @@ router.post('/',
       imageUrl,
       images: processedImages,
       owner: req.user.id,
-      attributes: attributes || {}
+      attributes: attributes || {},
+      location: objectLocation
     });
     console.log('📋 ObjectModel créé, tentative de sauvegarde...');
     const saved = await newObject.save();

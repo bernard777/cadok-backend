@@ -644,4 +644,118 @@ router.post('/:userId/reactivate', authMiddleware, adminMiddleware, async (req, 
   }
 });
 
+/**
+ * 🔧 GET /api/admin/users/verification-code/:email
+ * Récupère le code de vérification d'un utilisateur spécifique
+ * UNIQUEMENT pour les tests et le développement
+ */
+router.get('/verification-code/:email', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    // Sécurité: Seulement en mode développement
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Route disponible uniquement en développement' 
+      });
+    }
+
+    const { email } = req.params;
+    console.log(`🔧 [DEV] Recherche code pour: ${email}`);
+
+    const user = await User.findOne({ email }).select('pseudo email emailVerificationToken phoneVerificationCode emailVerificationExpires phoneVerificationExpires emailVerified phoneVerified');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Utilisateur non trouvé'
+      });
+    }
+
+    const emailCode = user.emailVerificationToken ? user.emailVerificationToken.slice(-6) : null;
+    const phoneCode = user.phoneVerificationCode;
+
+    console.log(`🔧 [DEV] Code email pour ${user.pseudo}: ${emailCode}`);
+    console.log(`🔧 [DEV] Code phone pour ${user.pseudo}: ${phoneCode}`);
+
+    res.json({
+      success: true,
+      data: {
+        pseudo: user.pseudo,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
+        codes: {
+          email: emailCode,
+          emailExpires: user.emailVerificationExpires,
+          phone: phoneCode,
+          phoneExpires: user.phoneVerificationExpires
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur récupération code utilisateur:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * 🔧 GET /api/admin/users/verification-codes
+ * Récupère les codes de vérification en mode développement
+ * UNIQUEMENT pour les tests et le développement
+ */
+router.get('/verification-codes', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    // Sécurité: Seulement en mode développement
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Route disponible uniquement en développement' 
+      });
+    }
+
+    console.log('🔧 [DEV] Récupération des codes de vérification...');
+
+    // Récupérer tous les utilisateurs avec des codes de vérification en attente
+    const usersWithCodes = await User.find({
+      $or: [
+        { emailVerificationToken: { $ne: null, $exists: true } },
+        { phoneVerificationCode: { $ne: null, $exists: true } }
+      ]
+    }).select('pseudo email phoneNumber emailVerificationToken phoneVerificationCode emailVerificationExpires phoneVerificationExpires emailVerified phoneVerified');
+
+    const verificationCodes = usersWithCodes.map(user => {
+      const emailCode = user.emailVerificationToken ? user.emailVerificationToken.slice(-6) : null;
+      const phoneCode = user.phoneVerificationCode;
+      
+      return {
+        pseudo: user.pseudo,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
+        codes: {
+          email: emailCode,
+          emailExpires: user.emailVerificationExpires,
+          phone: phoneCode,
+          phoneExpires: user.phoneVerificationExpires
+        }
+      };
+    });
+
+    console.log(`🔧 [DEV] ${verificationCodes.length} utilisateurs avec codes trouvés`);
+
+    res.json({
+      success: true,
+      message: 'Codes de vérification récupérés (mode développement)',
+      data: verificationCodes,
+      count: verificationCodes.length
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur récupération codes:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

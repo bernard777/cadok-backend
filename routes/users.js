@@ -784,4 +784,114 @@ router.get('/:id/reviews', async (req, res) => {
   }
 });
 
+// Route de développement pour récupérer les codes de vérification (SANS AUTH)
+router.get('/dev/verification-codes', async (req, res) => {
+  try {
+    console.log('🔧 [DEV] Récupération des codes de vérification');
+    console.log('🔧 [DEV] NODE_ENV:', process.env.NODE_ENV);
+    
+    const users = await User.find({ 
+      emailVerificationToken: { $exists: true, $ne: null } 
+    }).select('email pseudo emailVerificationToken emailVerified');
+
+    const codes = users.map(user => ({
+      email: user.email,
+      pseudo: user.pseudo,
+      emailVerified: user.emailVerified,
+      verificationCode: user.emailVerificationToken ? user.emailVerificationToken.slice(-6) : null,
+      fullToken: user.emailVerificationToken
+    }));
+
+    console.log(`🔧 [DEV] ${codes.length} codes trouvés`);
+    res.json({ codes });
+  } catch (error) {
+    console.error('❌ [DEV] Erreur récupération codes:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Route de développement pour récupérer le code d'un utilisateur spécifique
+router.get('/dev/verification-code/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    console.log('🔧 [DEV] Récupération code pour:', email);
+    console.log('🔧 [DEV] NODE_ENV:', process.env.NODE_ENV);
+
+    const user = await User.findOne({ email }).select('email pseudo emailVerificationToken emailVerified');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    const code = user.emailVerificationToken ? user.emailVerificationToken.slice(-6) : null;
+    
+    console.log(`🔧 [DEV] Code trouvé pour ${email}: ${code}`);
+    res.json({
+      email: user.email,
+      pseudo: user.pseudo,
+      emailVerified: user.emailVerified,
+      verificationCode: code,
+      fullToken: user.emailVerificationToken
+    });
+  } catch (error) {
+    console.error('❌ [DEV] Erreur récupération code:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Route de développement pour récupérer les codes de vérification SMS
+router.get('/dev/sms-verification-codes', async (req, res) => {
+  try {
+    console.log('🔧 [DEV] Récupération des codes de vérification SMS');
+    console.log('🔧 [DEV] NODE_ENV:', process.env.NODE_ENV);
+    
+    const users = await User.find({ 
+      phoneVerificationCode: { $exists: true, $ne: null } 
+    }).select('email pseudo phoneNumber phoneVerificationCode phoneVerified phoneVerificationExpires');
+
+    const codes = users.map(user => ({
+      email: user.email,
+      pseudo: user.pseudo,
+      phoneNumber: user.phoneNumber,
+      phoneVerified: user.phoneVerified,
+      smsVerificationCode: user.phoneVerificationCode,
+      expiresAt: user.phoneVerificationExpires
+    }));
+
+    console.log(`🔧 [DEV] ${codes.length} codes SMS trouvés`);
+    res.json({ codes });
+  } catch (error) {
+    console.error('❌ [DEV] Erreur récupération codes SMS:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Route de développement pour récupérer le code SMS d'un utilisateur spécifique
+router.get('/dev/sms-verification-code/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    console.log('🔧 [DEV] Récupération code SMS pour:', email);
+    console.log('🔧 [DEV] NODE_ENV:', process.env.NODE_ENV);
+
+    const user = await User.findOne({ email }).select('email pseudo phoneNumber phoneVerificationCode phoneVerified phoneVerificationExpires');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    console.log(`🔧 [DEV] Code SMS trouvé pour ${email}: ${user.phoneVerificationCode}`);
+    res.json({
+      email: user.email,
+      pseudo: user.pseudo,
+      phoneNumber: user.phoneNumber,
+      phoneVerified: user.phoneVerified,
+      smsVerificationCode: user.phoneVerificationCode,
+      expiresAt: user.phoneVerificationExpires
+    });
+  } catch (error) {
+    console.error('❌ [DEV] Erreur récupération code SMS:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
