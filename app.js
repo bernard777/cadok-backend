@@ -1,6 +1,8 @@
 const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
+const cors = require('cors');// Ajout de la route d'authentification
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);tenv = require('dotenv');
+const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
 
@@ -29,7 +31,8 @@ const { connectToDatabase } = require('./db');
 if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
   connectToDatabase().catch(error => {
     console.error('❌ [APP] Erreur connexion MongoDB:', error.message);
-    process.exit(1);
+    console.warn('⚠️ [APP] Le serveur continue sans MongoDB - certaines fonctionnalités peuvent être limitées');
+    // Supprimé: process.exit(1); pour éviter l'arrêt du serveur
   });
   console.log('🔗 [APP] Connexion MongoDB initialisée pour mode production');
 } else {
@@ -39,7 +42,7 @@ if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
 // 🛡️ MIDDLEWARE DE SÉCURITÉ (APPLIQUÉS EN PREMIER)
 console.log('🛡️ [APP] Configuration des middlewares de sécurité...');
 
-// Headers sécurisés avec Helmet
+// Headers sécurisés avec Helmet - Configuration stricte uniquement
 app.use(SecurityMiddleware.setupHelmet());
 
 // Rate limiting global
@@ -58,6 +61,10 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// 📄 SERVIR LES FICHIERS STATIQUES (images, uploads, etc.)
+app.use('/public', express.static(path.join(__dirname, 'public')));
+console.log('✅ [APP] Fichiers statiques configurés (/uploads, /public)');
 
 // Ajout de la route d'authentification
 const authRoutes = require('./routes/auth');

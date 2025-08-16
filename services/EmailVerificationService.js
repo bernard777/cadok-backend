@@ -294,17 +294,24 @@ class EmailVerificationService {
   }
 
   /**
-   * Générer un token de vérification
+   * Générer un token de vérification avec code à 6 chiffres
    */
   generateVerificationToken() {
-    return crypto.randomBytes(32).toString('hex');
+    // Générer token principal (pour le lien)
+    const mainToken = crypto.randomBytes(32).toString('hex');
+    
+    // Générer code à 6 chiffres pour saisie manuelle
+    const sixDigitCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Retourner le token avec le code à 6 chiffres à la fin
+    return mainToken + sixDigitCode;
   }
 
   /**
    * Créer le lien de vérification
    */
   createVerificationLink(token) {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = process.env.FRONTEND_URL || 'http://192.168.1.16:5000';
     return `${baseUrl}/verify-email/${token}`;
   }
 
@@ -318,8 +325,8 @@ class EmailVerificationService {
       const emailData = {
         from: this.fromEmail,
         to: user.email,
-        subject: '✅ Vérifiez votre email - CADOK',
-        html: CadokEmailTemplates.getVerificationTemplate(user.pseudo, token.substring(0, 6), verificationLink, user.email)
+        subject: '✅ Vérifiez votre email - KADOC',
+        html: CadokEmailTemplates.getVerificationTemplate(user.pseudo, token.slice(-6), verificationLink, user.email)
       };
 
       console.log(`\n🔄 [HYBRIDE] Email de vérification pour: ${user.email}`);

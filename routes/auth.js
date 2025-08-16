@@ -427,7 +427,269 @@ router.get('/profile', auth, async (req, res) => {
   }
 });
 
-// 🔑 CHANGEMENT DE MOT DE PASSE SÉCURISÉ
+// � VÉRIFICATION EMAIL AVEC CODE À 6 CHIFFRES
+router.post('/verify-email', authLimiter, async (req, res) => {
+  const { email, code } = req.body;
+  
+  console.log('📧 [EMAIL_VERIFICATION] Tentative vérification email pour:', email, 'avec code:', code);
+  
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Utilisateur non trouvé',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    // Vérifier le token et l'expiration
+    if (!user.emailVerificationToken || user.emailVerificationExpires < new Date()) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Code expiré ou invalide',
+        code: 'EXPIRED_CODE'
+      });
+    }
+
+    // Vérifier le code (les 6 derniers caractères du token)
+    const tokenCode = user.emailVerificationToken.slice(-6);
+    if (tokenCode !== code) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Code incorrect',
+        code: 'INVALID_CODE'
+      });
+    }
+
+    // Marquer l'email comme vérifié
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    console.log('✅ [EMAIL_VERIFICATION] Email vérifié avec succès pour:', email);
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Email vérifié avec succès'
+    });
+
+  } catch (err) {
+    console.error('❌ [EMAIL_VERIFICATION] Erreur:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur serveur',
+      code: 'SERVER_ERROR'
+    });
+  }
+});
+
+// 📱 ENVOI CODE SMS VÉRIFICATION
+router.post('/send-sms-verification', authLimiter, async (req, res) => {
+  const { userId, phone } = req.body;
+  
+  console.log('📱 [SMS_VERIFICATION] Envoi SMS pour utilisateur:', userId, 'téléphone:', phone);
+  
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Utilisateur non trouvé',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    // Générer code à 6 chiffres
+    const smsCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Sauvegarder le code
+    user.phoneVerificationCode = smsCode;
+    user.phoneVerificationExpires = expires;
+    await user.save();
+
+    // TODO: Intégrer un vrai service SMS (Twilio, etc.)
+    // Pour l'instant, simulation
+    console.log('📱 [SMS_SIMULATION] Code envoyé:', smsCode, 'pour:', phone);
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Code SMS envoyé avec succès',
+      // En développement, renvoyer le code (à retirer en production)
+      ...(process.env.NODE_ENV === 'development' && { devCode: smsCode })
+    });
+
+  } catch (err) {
+    console.error('❌ [SMS_VERIFICATION] Erreur:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur lors de l\'envoi du SMS',
+      code: 'SERVER_ERROR'
+    });
+  }
+});
+
+// 📱 VÉRIFICATION CODE SMS
+router.post('/verify-phone', authLimiter, async (req, res) => {
+  const { userId, phone, code } = req.body;
+  
+  console.log('📱 [PHONE_VERIFICATION] Vérification téléphone pour:', userId, 'code:', code);
+  
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Utilisateur non trouvé',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    // Vérifier le code et l'expiration
+    if (!user.phoneVerificationCode || user.phoneVerificationExpires < new Date()) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Code SMS expiré',
+        code: 'EXPIRED_CODE'
+      });
+    }
+
+    if (user.phoneVerificationCode !== code) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Code SMS incorrect',
+        code: 'INVALID_CODE'
+      });
+    }
+
+    // Marquer le téléphone comme vérifié et activer le compte
+    user.phoneVerified = true;
+    user.phoneVerificationCode = undefined;
+    user.phoneVerificationExpires = undefined;
+    user.verified = true; // Compte entièrement vérifié
+    user.status = 'active'; // Activer le compte
+    await user.save();
+
+    console.log('✅ [PHONE_VERIFICATION] Téléphone vérifié avec succès pour:', userId);
+    console.log('🎉 [ACCOUNT_ACTIVATION] Compte entièrement activé pour:', user.email);
+
+    // Envoyer email de bienvenue
+    try {
+      const EmailVerificationService = require('../services/EmailVerificationService');
+      const emailService = new EmailVerificationService();
+      await emailService.sendWelcomeEmail(user);
+      console.log('📧 [WELCOME_EMAIL] Email de bienvenue envoyé à:', user.email);
+    } catch (emailError) {
+      console.error('⚠️ [WELCOME_EMAIL] Erreur envoi email de bienvenue:', emailError);
+    }
+
+    // Retourner l'utilisateur mis à jour
+    const userToReturn = await User.findById(userId).select('-password').lean();
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Téléphone vérifié avec succès',
+      user: userToReturn
+    });
+
+  } catch (err) {
+    console.error('❌ [PHONE_VERIFICATION] Erreur:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur serveur',
+      code: 'SERVER_ERROR'
+    });
+  }
+});
+
+// 🔍 STATUT DE VÉRIFICATION (pour polling)
+router.get('/verification-status/:userId', authLimiter, async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const user = await User.findById(userId).select('emailVerified phoneVerified verified status');
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Utilisateur non trouvé'
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      email_verified: user.emailVerified || false,
+      phone_verified: user.phoneVerified || false,
+      fully_verified: user.verified || false,
+      status: user.status
+    });
+
+  } catch (err) {
+    console.error('❌ [VERIFICATION_STATUS] Erreur:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur serveur'
+    });
+  }
+});
+
+// 📧 RENVOYER CODE EMAIL
+router.post('/resend-verification', authLimiter, async (req, res) => {
+  const { email } = req.body;
+  
+  console.log('📧 [RESEND_VERIFICATION] Renvoi code pour:', email);
+  
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Utilisateur non trouvé'
+      });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Email déjà vérifié'
+      });
+    }
+
+    // Générer nouveau token
+    const EmailVerificationService = require('../services/EmailVerificationService');
+    const emailService = new EmailVerificationService();
+    const verificationToken = emailService.generateVerificationToken();
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
+
+    // Sauvegarder le nouveau token
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationExpires = expires;
+    await user.save();
+
+    // Envoyer l'email
+    const emailResult = await emailService.sendVerificationEmail(user, verificationToken);
+
+    if (emailResult.success) {
+      console.log('✅ [RESEND_VERIFICATION] Nouveau code envoyé à:', email);
+      res.status(200).json({ 
+        success: true,
+        message: 'Nouveau code envoyé'
+      });
+    } else {
+      throw new Error(emailResult.error);
+    }
+
+  } catch (err) {
+    console.error('❌ [RESEND_VERIFICATION] Erreur:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur lors du renvoi'
+    });
+  }
+});
+
+// �🔑 CHANGEMENT DE MOT DE PASSE SÉCURISÉ
 router.post(
   '/change-password',
   auth,
