@@ -91,7 +91,7 @@ router.post('/', auth, async (req, res) => {
       toUser: ownerId,
       requestedObjects,
       offeredObjects: offeredObjects || [], // ← Ajouter les objets offerts
-      status: riskAnalysis.constraints.photosRequired ? 'photos_required' : TRADE_STATUS.PENDING,
+      status: TRADE_STATUS.PENDING,
       security: {
         trustScores: {
           sender: riskAnalysis.fromUserScore,
@@ -281,134 +281,6 @@ router.get('/notifications', auth, async (req, res) => {
   }
 });
 
-// ========== ACCEPTER UNE PROPOSITION ==========
-router.put('/:id/accept', auth, async (req, res) => {
-  try {
-    const trade = await Trade.findById(req.params.id)
-      .populate([
-        { path: 'fromUser', select: 'pseudo city avatar' },
-        { path: 'toUser', select: 'pseudo city avatar' }
-      ]);
-
-    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
-
-    console.log('🔧 [DEBUG] Accept trade - User:', req.user.id);
-    console.log('🔧 [DEBUG] Accept trade - fromUser:', trade.fromUser._id.toString());
-    console.log('🔧 [DEBUG] Accept trade - toUser:', trade.toUser._id.toString());
-    console.log('🔧 [DEBUG] Accept trade - status:', trade.status);
-
-    // Déterminer qui peut accepter selon le statut
-    let canAccept = false;
-    let notificationUser = null;
-    let notificationMessage = '';
-
-    // RÈGLE STRICTE : Seul User1 (fromUser) peut accepter une proposition (statut proposed/photos_required)
-    // User2 (toUser) ne peut JAMAIS accepter directement une demande pending
-    if (trade.status === TRADE_STATUS.PROPOSED || trade.status === 'photos_required') {
-      // User1 (fromUser) peut accepter une proposition en proposed ou photos_required
-      if (trade.fromUser._id.toString() === req.user.id) {
-        canAccept = true;
-        notificationUser = trade.toUser._id;
-        notificationMessage = "Votre proposition de troc a été acceptée.";
-      }
-    }
-
-    if (!canAccept) {
-      return res.status(403).json({ message: 'You can only accept a proposed trade as the initiator.' });
-    }
-
-    // Vérification des objets pour un trade proposed
-    if (trade.offeredObjects && trade.offeredObjects.length === 0) {
-      return res.status(400).json({ message: 'No offered objects to accept.' });
-    }
-    
-    // Récupérer les objets offerts et demandés pour vérification
-    const offeredObjects = await ObjectModel.find({ _id: { $in: trade.offeredObjects } });
-    const requestedObjects = await ObjectModel.find({ _id: { $in: trade.requestedObjects } });
-
-    // Vérif: objets toujours disponibles
-    const allObjects = [...offeredObjects, ...requestedObjects];
-    if (!allObjects.every(obj => obj.status === OBJECT_STATUS.AVAILABLE)) {
-      return res.status(400).json({ message: 'One or more objects are no longer available.' });
-    }
-
-    // Valider le trade et MAJ objets
-    trade.status = TRADE_STATUS.ACCEPTED;
-    trade.acceptedAt = new Date();
-    await trade.save();
-
-    // Marquer les objets comme tradés
-    for (const obj of allObjects) {
-      obj.status = OBJECT_STATUS.TRADED;
-      await obj.save();
-    }
-
-    // Notification à l'autre utilisateur
-    await Notification.create({
-      user: notificationUser,
-      title: "Notification",
-      message: notificationMessage,
-      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
-      trade: trade._id
-    });
-
-    // Retourner la structure adaptée
-    const responseData = {
-      _id: trade._id,
-      status: trade.status,
-      message: trade.message,
-      createdAt: trade.createdAt,
-      acceptedAt: trade.acceptedAt,
-      requester: (trade.fromUser._id || trade.fromUser).toString(),
-      requested: (trade.toUser._id || trade.toUser).toString(),
-      fromUser: trade.fromUser,
-      toUser: trade.toUser,
-      requestedObjects: trade.requestedObjects,
-      offeredObjects: trade.offeredObjects,
-      deliveryMethod: trade.deliveryMethod,
-      deliveryCost: trade.deliveryCost
-    };
-
-    res.json({ success: true, message: 'Trade accepted.', trade: responseData });
-
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// ========== REFUSER UNE DEMANDE DE TROC ==========
-router.put('/:id/refuse', auth, async (req, res) => {
-  try {
-    const trade = await Trade.findById(req.params.id);
-
-    if (!trade) return res.status(404).json({ message: 'Trade not found.' });
-    
-    // Seul le destinataire peut refuser
-    if (trade.toUser.toString() !== req.user.id)
-      return res.status(403).json({ message: 'Vous ne pouvez refuser que les trocs qui vous sont destinés.' });
-
-    if (!['pending', 'photos_required', 'proposed'].includes(trade.status))
-      return res.status(400).json({ message: 'Ce troc ne peut plus être refusé.' });
-
-    trade.status = TRADE_STATUS.REFUSED;
-    await trade.save();
-
-    // Notification pour User 1 (celui qui avait fait la demande)
-    await Notification.create({
-      user: trade.fromUser,
-      title: "Troc refusé",
-      message: "Votre demande de troc a été refusée.",
-      type: NOTIFICATION_TYPE.TRADE_REFUSED,
-      trade: trade._id
-    });
-
-    res.json({ message: 'Demande de troc refusée.', trade });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ========== REFUSER UNE DEMANDE DE TROC (ALIAS) ==========
 router.put('/:id/reject', auth, async (req, res) => {
   try {
@@ -424,7 +296,7 @@ router.put('/:id/reject', auth, async (req, res) => {
     if (trade.toUser._id.toString() !== req.user.id)
       return res.status(403).json({ message: 'Vous ne pouvez refuser que les trocs qui vous sont destinés.' });
 
-    if (!['pending', 'photos_required', 'proposed'].includes(trade.status))
+    if (!['pending', 'proposed'].includes(trade.status))
       return res.status(400).json({ message: 'Ce troc ne peut plus être refusé.' });
 
     trade.status = TRADE_STATUS.REFUSED;
@@ -472,7 +344,7 @@ router.put('/:id/propose', auth, async (req, res) => {
     if (!trade || trade.toUser.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not allowed." });
     }
-    if (!['pending', 'photos_required'].includes(trade.status)) {
+    if (!['pending'].includes(trade.status)) {
       return res.status(400).json({ message: "Ce troc n'est pas en attente de proposition." });
     }
     if (!Array.isArray(offeredObjects) || offeredObjects.length !== trade.requestedObjects.length) {
@@ -732,8 +604,8 @@ router.patch('/:id/accept', auth, async (req, res) => {
       if (trade.toUser.toString() !== req.user.id) {
         return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter cette demande.' });
       }
-    } else if (trade.status === 'proposed' || trade.status === 'photos_required') {
-      // User 1 peut accepter une proposition (cas le plus courant) ou photos_required
+    } else if (trade.status === 'proposed') {
+      // User 1 peut accepter une proposition (cas le plus courant)
       if (trade.fromUser.toString() !== req.user.id) {
         return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter cette proposition.' });
       }

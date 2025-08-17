@@ -22,25 +22,21 @@ class PureTradeSecurityService {
       // Contraintes de sécurité par niveau de risque
       SECURITY_CONSTRAINTS: {
         VERY_HIGH_RISK: {
-          photosRequired: true,
           trackingRequired: true,
           maxDeliveryDays: 5,
           requiresInsurance: true
         },
         HIGH_RISK: {
-          photosRequired: true,
           trackingRequired: true,
           maxDeliveryDays: 7,
           requiresInsurance: false
         },
         MEDIUM_RISK: {
-          photosRequired: true,
           trackingRequired: false,
           maxDeliveryDays: 10,
           requiresInsurance: false
         },
         LOW_RISK: {
-          photosRequired: false,
           trackingRequired: false,
           maxDeliveryDays: 14,
           requiresInsurance: false
@@ -193,7 +189,7 @@ class PureTradeSecurityService {
         toUser,
         offeredObjects,
         requestedObjects,
-        status: riskAnalysis.constraints.photosRequired ? 'photos_required' : 'accepted',
+        status: 'accepted',
         security: {
           trustScores: {
             sender: riskAnalysis.fromUserScore,
@@ -244,12 +240,8 @@ class PureTradeSecurityService {
         throw new Error('Troc non trouvé');
       }
 
-      if (!trade.security?.pureTradeValidation?.constraints?.photosRequired) {
-        return {
-          success: false,
-          error: 'Les photos ne sont pas requises pour ce troc'
-        };
-      }
+      // Les photos sont maintenant obligatoires dès l'ajout des objets
+      // Plus besoin de vérification séparée
 
       const isFromUser = trade.fromUser.toString() === userId;
       const userType = isFromUser ? 'fromUser' : 'toUser';
@@ -329,15 +321,8 @@ class PureTradeSecurityService {
       const isFromUser = trade.fromUser.toString() === userId;
       const userType = isFromUser ? 'fromUser' : 'toUser';
 
-      // Vérifier que les photos sont soumises si requises
-      if (trade.security?.pureTradeValidation?.constraints?.photosRequired) {
-        if (!trade.security.pureTradeValidation.steps.photosSubmitted[userType]) {
-          return {
-            success: false,
-            error: 'Vous devez d\'abord soumettre les photos de vos objets'
-          };
-        }
-      }
+      // Les photos sont maintenant obligatoires dès l'ajout des objets
+      // Plus besoin de vérification avant expédition
 
       // Marquer l'expédition
       trade.security.pureTradeValidation.steps.shippingConfirmed[userType] = true;

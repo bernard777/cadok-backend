@@ -9,7 +9,6 @@ const TRADE_STATUS = {
   SECURED: 'secured', // Avec dépôt de garantie
   // Nouveaux statuts pour le système de sécurité pur
   SECURITY_PENDING: 'security_pending', // En attente des preuves de sécurité
-  PHOTOS_REQUIRED: 'photos_required', // Photos requises avant expédition
   SHIPPING_PREPARED: 'shipping_prepared', // Bordereau généré, prêt à expédier
   SHIPPING_CONFIRMED: 'shipping_confirmed', // Expédition confirmée
   SHIPPED: 'shipped', // Colis en transit
