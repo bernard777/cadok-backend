@@ -9,6 +9,7 @@ const Message = require('../models/Message');
 const sanitizeHtml = require('sanitize-html');
 const PureTradeSecurityService = require('../services/pureTradeSecurityService');
 const DeliveryLabelService = require('../services/deliveryLabelService');
+const socketService = require('../services/socketService');
 
 // Initialiser les services
 const securityService = new PureTradeSecurityService();
@@ -17,6 +18,8 @@ const labelService = new DeliveryLabelService();
 // Utilitaire pour générer une URL complète pour l'avatar
 function getFullUrl(req, relativePath) {
   if (!relativePath) return '';
+  // Si l'URL commence déjà par http, la retourner telle quelle
+  if (relativePath.startsWith('http')) return relativePath;
   const host = req.protocol + '://' + req.get('host');
   return relativePath.startsWith('/') ? host + relativePath : host + '/' + relativePath;
 }
@@ -154,6 +157,20 @@ router.post('/', auth, async (req, res) => {
       deliveryMethod: saved.deliveryMethod,
       deliveryCost: saved.deliveryCost
     };
+
+    // 🔌 SOCKET.IO - Notifier les utilisateurs connectés que les trades ont été mis à jour
+    console.log('🔄 [SOCKET] Émission événement trade-created pour:', {
+      fromUser: saved.fromUser._id,
+      toUser: saved.toUser._id
+    });
+    
+    // Notifier les deux utilisateurs concernés
+    socketService.emitToUsers([saved.fromUser._id.toString(), saved.toUser._id.toString()], 'conversation-updated', {
+      type: 'trade-created',
+      tradeId: saved._id,
+      fromUser: saved.fromUser._id,
+      toUser: saved.toUser._id
+    });
 
     res.status(201).json({ success: true, trade: responseData });
   } catch (err) {

@@ -141,6 +141,23 @@ class SocketService {
     }
   }
 
+  // Envoyer un événement à plusieurs utilisateurs spécifiques
+  emitToUsers(userIds, eventName, data) {
+    if (!this.io) return;
+
+    console.log(`📡 [SOCKET] Émission ${eventName} vers:`, userIds);
+    
+    userIds.forEach(userId => {
+      const socketId = this.userSockets.get(userId.toString());
+      if (socketId) {
+        this.io.to(socketId).emit(eventName, data);
+        console.log(`✅ [SOCKET] ${eventName} envoyé à ${userId}`);
+      } else {
+        console.log(`⚠️ [SOCKET] Utilisateur ${userId} non connecté`);
+      }
+    });
+  }
+
   // Vérifier si un utilisateur est en ligne
   isUserOnline(userId) {
     return this.userSockets.has(userId.toString());
