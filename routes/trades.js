@@ -877,6 +877,54 @@ router.patch('/:id/ask-different', auth, async (req, res) => {
   }
 });
 
+// Annuler/supprimer un troc (DELETE) - uniquement pour l'initiateur
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) {
+      return res.status(404).json({ message: 'Trade introuvable' });
+    }
+
+    console.log('🗑️ [DEBUG] Cancel trade - User:', req.user.id);
+    console.log('🗑️ [DEBUG] Cancel trade - fromUser:', trade.fromUser.toString());
+    console.log('🗑️ [DEBUG] Cancel trade - status:', trade.status);
+
+    // Seul l'initiateur (fromUser) peut annuler sa demande
+    if (trade.fromUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Seul l\'initiateur peut annuler sa demande.' });
+    }
+
+    // Ne peut annuler que si le troc est encore en attente ou proposé
+    if (!['pending', 'proposed'].includes(trade.status)) {
+      return res.status(400).json({ message: 'Ce troc ne peut plus être annulé.' });
+    }
+
+    // Créer notification pour l'autre utilisateur
+    const NOTIFICATION_TYPE = {
+      TRADE_CANCELLED: 'trade_cancelled',
+      TRADE_REFUSED: 'trade_refused'
+    };
+
+    await Notification.create({
+      user: trade.toUser,
+      title: "Demande annulée",
+      message: "Une demande de troc vous concernant a été annulée.",
+      type: NOTIFICATION_TYPE.TRADE_CANCELLED,
+      trade: trade._id
+    });
+
+    // Supprimer le troc et tous les messages associés
+    await Message.deleteMany({ trade: trade._id });
+    await Trade.findByIdAndDelete(req.params.id);
+
+    console.log('✅ Trade cancelled and deleted successfully');
+    res.json({ success: true, message: 'Demande de troc annulée avec succès.' });
+  } catch (error) {
+    console.error('Erreur cancel trade:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ========== ROUTES DU SYSTÈME DE SÉCURITÉ PURE TRADE ==========
 
 // Analyser un troc proposé (analyse de risque)

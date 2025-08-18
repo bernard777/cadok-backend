@@ -12,7 +12,7 @@ async function auth(req, res, next) {
     const userId = verified.id || verified.userId || verified._id;
     
     // Vérifier si l'utilisateur existe encore et son statut
-    const user = await User.findById(userId).select('status bannedUntil bannedAt deactivatedAt');
+    const user = await User.findById(userId).select('status pseudo bannedUntil bannedAt deactivatedAt');
     
     if (!user) {
       return res.status(401).json({ message: 'Utilisateur non trouvé' });
@@ -53,6 +53,7 @@ async function auth(req, res, next) {
     req.user = {
       id: userId,
       userId: userId,
+      pseudo: user.pseudo,
       ...verified,
       status: user.status
     };

@@ -163,6 +163,7 @@ router.post(
         { 
           id: newUser._id,
           email: newUser.email,
+          pseudo: newUser.pseudo,
           role: newUser.role || 'user',
           isAdmin: newUser.isAdmin || false
         },
@@ -316,6 +317,7 @@ router.post(
         { 
           id: user._id,
           email: user.email,
+          pseudo: user.pseudo,
           role: user.role || 'user',
           isAdmin: user.isAdmin || false
         },

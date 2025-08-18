@@ -261,7 +261,11 @@ const createNotification = async (userId, message, type, tradeId = null) => {
  */
 router.get('/smart', authMiddleware, async (req, res) => {
   try {
-    const notifications = await notificationService.getSmartNotifications(req.user.id);
+    // Récupérer les notifications standard pour cet utilisateur
+    const notifications = await Notification.find({ user: req.user.id })
+      .populate('trade', 'status requestedObjects offeredObjects')
+      .sort({ createdAt: -1 })
+      .limit(20); // Limiter à 20 notifications pour les "intelligentes"
     
     res.json({
       success: true,

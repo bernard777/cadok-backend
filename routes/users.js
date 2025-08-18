@@ -349,7 +349,7 @@ router.post('/me/favorite-objects/:objectId', auth, async (req, res) => {
           objectId,               // ID de l'objet
           object.title,           // Nom de l'objet
           userId,                 // ID de celui qui ajoute en favori
-          req.user.pseudo || 'Un utilisateur',  // Nom de celui qui ajoute
+          req.user.pseudo,        // Nom de celui qui ajoute
           'favorite'              // Type d'intérêt
         );
         console.log(`🔔 Notification envoyée: ${req.user.pseudo} a ajouté "${object.title}" en favori`);

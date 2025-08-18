@@ -283,11 +283,15 @@ class SmartNotificationService {
    */
   async sendPersonalizedNotification(userId, type, customData = {}) {
     try {
+      console.log(`📱 [DEBUG] sendPersonalizedNotification appelée: ${type} pour ${userId}`);
+      
       const user = await User.findById(userId);
       if (!user || !this.canReceiveNotification(user, type)) {
+        console.log(`❌ [DEBUG] Utilisateur ne peut pas recevoir cette notification: ${userId}`);
         return { success: false, reason: 'User cannot receive this notification' };
       }
 
+      console.log(`✅ [DEBUG] Utilisateur peut recevoir la notification: ${type}`);
       let notification;
 
       switch (type) {
@@ -307,6 +311,7 @@ class SmartNotificationService {
           notification = await this.createTradeUpdateNotification(userId, customData);
           break;
         case 'object_interest':
+          console.log(`📱 [DEBUG] Création notification object_interest...`);
           notification = await this.createObjectInterestNotification(userId, customData);
           break;
         case 'community_update':
@@ -316,6 +321,7 @@ class SmartNotificationService {
           throw new Error(`Unknown notification type: ${type}`);
       }
 
+      console.log(`📱 [DEBUG] Notification créée, retour: ${notification ? 'success' : 'failed'}`);
       return { success: true, notification };
 
     } catch (error) {
@@ -373,6 +379,7 @@ class SmartNotificationService {
    * 👀 Notification intérêt pour objet
    */
   async createObjectInterestNotification(userId, data) {
+    console.log(`📱 [DEBUG] createObjectInterestNotification: ${JSON.stringify(data)}`);
     return this.createNotification({
       userId,
       type: 'object_interest',
@@ -584,9 +591,12 @@ class SmartNotificationService {
 
       const saved = await notification.save();
       
+      console.log(`📱 [DEBUG] Notification sauvée, envoi Socket.io à ${notificationData.userId}...`);
+      
       // 🔌 SOCKET.IO - Envoyer notification en temps réel
       socketService.emitNotification(notificationData.userId, saved);
       
+      console.log(`✅ [DEBUG] Socket.io appelé pour ${notificationData.userId}`);
       console.log(`📱 Notification créée et envoyée en temps réel: ${notificationData.title} -> User ${notificationData.userId}`);
       
       return saved;
