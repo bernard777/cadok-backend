@@ -10,6 +10,7 @@ const sanitizeHtml = require('sanitize-html');
 const PureTradeSecurityService = require('../services/pureTradeSecurityService');
 const DeliveryLabelService = require('../services/deliveryLabelService');
 const socketService = require('../services/socketService');
+const { notificationTriggers } = require('../middleware/notificationTriggers');
 
 // Initialiser les services
 const securityService = new PureTradeSecurityService();
@@ -29,7 +30,9 @@ const TRADE_STATUS = {
   PENDING: 'pending',
   ACCEPTED: 'accepted',
   REFUSED: 'refused',
-  PROPOSED: 'proposed'
+  PROPOSED: 'proposed',
+  CANCELLED: 'cancelled',
+  COMPLETED: 'completed'
 };
 const OBJECT_STATUS = {
   AVAILABLE: 'available',
@@ -125,22 +128,29 @@ router.post('/', auth, async (req, res) => {
       { path: 'offeredObjects' }
     ]);
 
-    // Notification pour l'utilisateur 2
-    const notificationMessage = riskAnalysis.constraints.photosRequired 
-      ? "Vous avez reçu une demande de troc sécurisé. Photos requises avant validation."
-      : "Vous avez reçu une nouvelle demande de troc sur plusieurs objets.";
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notification pour l'utilisateur destinataire
+    const objectsCount = trade.requestedObjects.length + trade.offeredObjects.length;
+    const requesterName = saved.fromUser.pseudo || saved.fromUser.firstName || 'Un utilisateur';
+    const isSecure = riskAnalysis.constraints.photosRequired;
 
-    const notificationTitle = riskAnalysis.constraints.photosRequired
-      ? "Demande de troc sécurisé"
-      : "Nouvelle demande de troc";
-
-    await Notification.create({
-      user: ownerId,
-      title: notificationTitle,
-      message: notificationMessage,
-      type: NOTIFICATION_TYPE.TRADE_REQUEST,
-      trade: saved._id
-    });
+    try {
+      await notificationTriggers.triggerTradeRequest(
+        ownerId,           // Destinataire de la notification
+        saved._id,         // ID du troc
+        requesterName,     // Nom du demandeur
+        objectsCount,      // Nombre d'objets
+        isSecure          // Si c'est un troc sécurisé
+      );
+      console.log('✅ Notification de demande de troc envoyée:', {
+        destinataire: ownerId,
+        demandeur: requesterName,
+        tradeId: saved._id,
+        isSecure
+      });
+    } catch (notifError) {
+      console.error('❌ Erreur notification demande de troc:', notifError);
+      // Ne pas faire échouer la création du troc pour une erreur de notification
+    }
 
     // Retourner une structure adaptée pour le frontend
     const responseData = {
@@ -239,6 +249,15 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Accès non autorisé à cet échange' });
     }
 
+    // Vérifier si le troc est annulé (mais pas refusé - refusé doit rester accessible pour voir les détails)
+    if (['cancelled'].includes(trade.status)) {
+      return res.status(410).json({ 
+        message: 'Cet échange a été annulé', 
+        status: trade.status,
+        cancelledAt: trade.cancelledAt
+      });
+    }
+
     // Convertir les avatars en URLs complètes
     if (trade.fromUser && trade.fromUser.avatar) {
       trade.fromUser.avatar = getFullUrl(req, trade.fromUser.avatar);
@@ -303,14 +322,19 @@ router.put('/:id/reject', auth, async (req, res) => {
     trade.refusedAt = new Date();
     await trade.save();
 
-    // Notification pour User 1 (celui qui avait fait la demande)
-    await Notification.create({
-      user: trade.fromUser._id,
-      title: "Troc refusé",
-      message: "Votre demande de troc a été refusée.",
-      type: NOTIFICATION_TYPE.TRADE_REFUSED,
-      trade: trade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier le demandeur du refus
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        trade._id,
+        trade.fromUser._id,
+        'rejected',
+        trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification de refus de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification refus de troc:', notifError);
+      // Ne pas faire échouer le refus pour une erreur de notification
+    }
 
     // Retourner la structure adaptée
     const responseData = {
@@ -363,14 +387,19 @@ router.put('/:id/propose', auth, async (req, res) => {
     trade.status = TRADE_STATUS.PROPOSED;
     await trade.save();
 
-    // Notification pour l'utilisateur 1
-    await Notification.create({
-      user: trade.fromUser,
-      title: "Proposition de troc",
-      message: "Une contre-proposition de troc a été faite.",
-      type: NOTIFICATION_TYPE.TRADE_PROPOSED,
-      trade: trade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier la proposition
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        trade._id,
+        trade.fromUser._id,
+        'proposed',
+        trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification de proposition de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification proposition de troc:', notifError);
+      // Ne pas faire échouer la proposition pour une erreur de notification
+    }
 
     res.json(trade);
   } catch (err) {
@@ -418,13 +447,19 @@ router.put('/:id/confirm', auth, async (req, res) => {
     await Promise.all([...offered, ...requested].map(obj => obj.save()));
     await trade.save();
 
-    await Notification.create({
-      user: trade.toUser,
-      title: "Troc accepté",
-      message: "Votre proposition de troc a été acceptée.",
-      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
-      trade: trade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier le demandeur de l'acceptation
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        trade._id,
+        trade.fromUser._id,
+        'accepted',
+        trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification d\'acceptation de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification acceptation de troc:', notifError);
+      // Ne pas faire échouer l'acceptation pour une erreur de notification
+    }
 
     res.json({ message: 'Trade confirmed and accepted.', trade });
 
@@ -453,13 +488,19 @@ router.put('/:id/cancel', auth, async (req, res) => {
     trade.status = TRADE_STATUS.REFUSED;
     await trade.save();
 
-    await Notification.create({
-      user: trade.toUser,
-      title: "Troc refusé",
-      message: "Votre proposition de troc a été refusée.",
-      type: NOTIFICATION_TYPE.TRADE_REFUSED,
-      trade: trade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier le demandeur du refus
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        trade._id,
+        trade.toUser._id,
+        'refused',
+        trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification de refus de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification refus de troc:', notifError);
+      // Ne pas faire échouer le refus pour une erreur de notification
+    }
 
     res.json({ message: 'Trade cancelled by initiator.', trade });
 
@@ -487,12 +528,19 @@ router.put('/:id/retry', auth, async (req, res) => {
     trade.offeredObjects = []; // Vider les objets proposés précédemment
     await trade.save();
 
-    await Notification.create({
-      user: trade.toUser,
-      message: "L'utilisateur a refusé votre proposition, veuillez proposer d'autres objets à la place.",
-      type: NOTIFICATION_TYPE.TRADE_RETRY,
-      trade: trade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier le demandeur de la relance
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        trade._id,
+        trade.toUser._id,
+        'retry',
+        trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification de relance de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification relance de troc:', notifError);
+      // Ne pas faire échouer la relance pour une erreur de notification
+    }
 
     res.json({ message: 'Trade proposal refused, waiting for a new selection.', trade });
 
@@ -574,8 +622,22 @@ router.post('/:id/messages', auth, async (req, res) => {
 router.get('/:id/messages', auth, async (req, res) => {
   try {
     const trade = await Trade.findById(req.params.id);
-    if (!trade || (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id))
-      return res.status(403).json({ message: "Not allowed." });
+    if (!trade) {
+      return res.status(404).json({ message: "Échange introuvable." });
+    }
+    
+    if (trade.fromUser.toString() !== req.user.id && trade.toUser.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Accès non autorisé à cet échange." });
+    }
+
+    // Vérifier si le troc est annulé ou refusé - empêcher l'accès aux messages
+    if (['cancelled', 'refused'].includes(trade.status)) {
+      return res.status(410).json({ 
+        message: 'Cet échange a été ' + (trade.status === 'cancelled' ? 'annulé' : 'refusé') + '. Les messages ne sont plus accessibles.',
+        status: trade.status
+      });
+    }
+
     const messages = await Message.find({ trade: trade._id }).populate('from', 'pseudo').sort('createdAt');
     res.json(messages);
   } catch (err) {
@@ -646,13 +708,20 @@ router.patch('/:id/accept', auth, async (req, res) => {
     await trade.save();
 
     if (notificationUser) {
-      await Notification.create({
-      user: notificationUser,
-      title: "Notification",
-      message: notificationMessage,
-      type: NOTIFICATION_TYPE.TRADE_ACCEPTED,
-      trade: trade._id
-    });
+      // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier l'acceptation
+      try {
+        await notificationTriggers.triggerTradeUpdate(
+          trade._id,
+          notificationUser._id,
+          'accepted',
+          trade.status === 'pending' ? trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur' 
+                                     : trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+        );
+        console.log('✅ Notification d\'acceptation de troc envoyée');
+      } catch (notifError) {
+        console.error('❌ Erreur notification acceptation de troc:', notifError);
+        // Ne pas faire échouer l'acceptation pour une erreur de notification
+      }
     }
 
     res.json({ message: 'Troc accepté avec succès.', trade });
@@ -708,13 +777,20 @@ router.patch('/:id/decline', auth, async (req, res) => {
     await trade.save();
 
     if (notificationUser) {
-      await Notification.create({
-      user: notificationUser,
-      title: "Notification",
-      message: notificationMessage,
-      type: NOTIFICATION_TYPE.TRADE_REFUSED,
-      trade: trade._id
-    });
+      // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier le refus
+      try {
+        await notificationTriggers.triggerTradeUpdate(
+          trade._id,
+          notificationUser._id,
+          'refused',
+          trade.status === 'pending' ? trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur' 
+                                     : trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+        );
+        console.log('✅ Notification de refus de troc envoyée');
+      } catch (notifError) {
+        console.error('❌ Erreur notification refus de troc:', notifError);
+        // Ne pas faire échouer le refus pour une erreur de notification
+      }
     }
 
     res.json({ message: 'Troc refusé.', trade });
@@ -795,14 +871,19 @@ router.post('/:id/make-proposal', auth, async (req, res) => {
     originalTrade.status = TRADE_STATUS.PROPOSED;
     await originalTrade.save();
 
-    // Notification pour User 1
-    await Notification.create({
-      user: originalTrade.fromUser,
-      title: "Proposition de troc",
-      message: `Une proposition a été faite pour votre demande de troc.`,
-      type: NOTIFICATION_TYPE.TRADE_PROPOSED,
-      trade: originalTrade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier la proposition
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        originalTrade._id,
+        originalTrade.fromUser._id,
+        'proposed',
+        originalTrade.toUser.pseudo || originalTrade.toUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification de proposition de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification proposition de troc:', notifError);
+      // Ne pas faire échouer la proposition pour une erreur de notification
+    }
 
     // Re-fetch le trade avec toutes les données peuplées pour le retourner
     const updatedTrade = await Trade.findById(originalTrade._id)
@@ -899,19 +980,19 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(400).json({ message: 'Ce troc ne peut plus être annulé.' });
     }
 
-    // Créer notification pour l'autre utilisateur
-    const NOTIFICATION_TYPE = {
-      TRADE_CANCELLED: 'trade_cancelled',
-      TRADE_REFUSED: 'trade_refused'
-    };
-
-    await Notification.create({
-      user: trade.toUser,
-      title: "Demande annulée",
-      message: "Une demande de troc vous concernant a été annulée.",
-      type: NOTIFICATION_TYPE.TRADE_CANCELLED,
-      trade: trade._id
-    });
+    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier l'autre utilisateur de l'annulation
+    try {
+      await notificationTriggers.triggerTradeUpdate(
+        trade._id,
+        trade.toUser,
+        'cancelled',
+        trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+      );
+      console.log('✅ Notification d\'annulation de troc envoyée');
+    } catch (notifError) {
+      console.error('❌ Erreur notification annulation de troc:', notifError);
+      // Ne pas faire échouer l'annulation pour une erreur de notification
+    }
 
     // Supprimer le troc et tous les messages associés
     await Message.deleteMany({ trade: trade._id });

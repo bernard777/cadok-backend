@@ -60,6 +60,31 @@ class NotificationTriggers {
   }
 
   /**
+   * 🔄 Déclencher notification nouvelle demande d'échange
+   */
+  async triggerTradeRequest(recipientId, tradeId, requesterName, objectsCount, isSecure = false) {
+    try {
+      console.log(`🔔 Déclenchement notification trade request: ${tradeId} de ${requesterName}`);
+      
+      const result = await this.smartNotificationService.sendPersonalizedNotification(
+        recipientId,
+        'trade_request',
+        {
+          tradeId,
+          requesterName,
+          objectsCount,
+          isSecure
+        }
+      );
+
+      return result;
+    } catch (error) {
+      console.error('❌ Erreur déclenchement notification demande échange:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * 👀 Déclencher notification intérêt objet
    */
   async triggerObjectInterest(ownerId, objectId, objectName, interestedUserId, interestedUserName, interestType = 'view') {

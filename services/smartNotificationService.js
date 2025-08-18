@@ -295,6 +295,9 @@ class SmartNotificationService {
         case 'trade_match':
           notification = await this.createTradeMatchNotification(userId, customData);
           break;
+        case 'trade_request':
+          notification = await this.createTradeRequestNotification(userId, customData);
+          break;
         case 'price_drop':
           notification = await this.createPriceDropNotification(userId, customData);
           break;
@@ -344,12 +347,40 @@ class SmartNotificationService {
   }
 
   /**
+   * 🔄 Notification nouvelle demande d'échange
+   */
+  async createTradeRequestNotification(userId, data) {
+    const isSecure = data.isSecure;
+    const objectsCount = data.objectsCount || 1;
+    const objectsText = objectsCount > 1 ? `${objectsCount} objets` : 'un objet';
+    
+    return this.createNotification({
+      userId,
+      type: 'trade_request',
+      title: isSecure ? '🔒 Demande de troc sécurisé' : '🔄 Nouvelle demande de troc',
+      message: isSecure 
+        ? `${data.requesterName} vous propose un troc sécurisé pour ${objectsText}. Photos requises.`
+        : `${data.requesterName} vous propose un troc pour ${objectsText}`,
+      data: {
+        tradeId: data.tradeId,
+        requesterName: data.requesterName,
+        objectsCount: data.objectsCount,
+        isSecure: data.isSecure
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
    * 🔄 Notification mise à jour d'échange
    */
   async createTradeUpdateNotification(userId, data) {
     const statusTexts = {
       'accepted': 'accepté',
       'rejected': 'refusé',
+      'refused': 'refusé',
+      'proposed': 'proposé - nouvelle contre-offre reçue',
+      'retry': 'remis en attente - nouvelle proposition requise',
       'completed': 'finalisé',
       'cancelled': 'annulé'
     };

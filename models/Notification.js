@@ -25,7 +25,13 @@ const notificationSchema = new mongoose.Schema({
       'price_drop',
       'milestone',
       'trade_request',
+      'trade_proposed',
       'trade_accepted',
+      'trade_declined',
+      'trade_refused',
+      'trade_retry',
+      'trade_cancelled',
+      'trade_completed',
       'system',
       
       // Nouveaux types pour les notifications personnalisées
