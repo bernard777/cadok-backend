@@ -134,13 +134,10 @@ class SocketService {
   emitNotification(userId, notification) {
     if (!this.io) return;
 
-    console.log(`🔔 [SOCKET] Tentative envoi notification à userId: ${userId}`);
-    console.log(`🔔 [SOCKET] Utilisateurs connectés:`, Array.from(this.userSockets.keys()));
-
     const socketId = this.userSockets.get(userId.toString());
     if (socketId) {
       this.io.to(socketId).emit('new-notification', notification);
-      console.log(`✅ [SOCKET] Notification envoyée à ${userId} (socket: ${socketId})`);
+      console.log(`🔔 [SOCKET] Notification envoyée à ${userId}`);
     } else {
       console.log(`❌ [SOCKET] Utilisateur ${userId} non connecté en Socket.io`);
     }
