@@ -894,4 +894,31 @@ router.get('/dev/sms-verification-code/:email', async (req, res) => {
   }
 });
 
+// 📱 GESTION TOKEN PUSH NOTIFICATIONS
+router.post('/push-token', auth, async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+    
+    if (!pushToken) {
+      return res.status(400).json({ message: 'Token push requis' });
+    }
+
+    // Mettre à jour le token push de l'utilisateur
+    await User.findByIdAndUpdate(req.user.id, {
+      pushToken: pushToken,
+      pushTokenUpdatedAt: new Date()
+    });
+
+    console.log(`📱 Token push enregistré pour ${req.user.email}: ${pushToken.substring(0, 20)}...`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Token push enregistré avec succès' 
+    });
+  } catch (error) {
+    console.error('❌ Erreur enregistrement token push:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

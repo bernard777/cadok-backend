@@ -103,6 +103,10 @@ const userSchema = new mongoose.Schema({
   phoneVerificationExpires: { type: Date, default: null },
   phoneVerificationAttempts: { type: Number, default: 0 },
   
+  // 📱 TOKEN PUSH NOTIFICATIONS
+  pushToken: { type: String, default: null }, // Token Expo pour notifications push
+  pushTokenUpdatedAt: { type: Date, default: null },
+  
   // Email de bienvenue
   welcomeEmailSent: { type: Boolean, default: false },
   welcomeEmailSentAt: { type: Date, default: null },

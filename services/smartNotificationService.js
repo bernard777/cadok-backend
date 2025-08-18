@@ -9,6 +9,7 @@ const ObjectModel = require('../models/Object');
 const Notification = require('../models/Notification');
 const moment = require('moment');
 const socketService = require('./socketService');
+const pushNotificationService = require('./pushNotificationService');
 
 class SmartNotificationService {
 
@@ -584,10 +585,52 @@ class SmartNotificationService {
 
       const saved = await notification.save();
       
-      // 🔌 SOCKET.IO - Envoyer notification en temps réel
+      // 🔌 SOCKET.IO - Envoyer notification en temps réel (si app ouverte)
       socketService.emitNotification(notificationData.userId, saved);
       
-      console.log(`📱 Notification créée et envoyée en temps réel: ${notificationData.title} -> User ${notificationData.userId}`);
+      // 📱 PUSH NOTIFICATION - Envoyer notification push (même si app fermée)
+      try {
+        const targetUser = await User.findById(notificationData.userId).select('pushToken');
+        if (targetUser && targetUser.pushToken) {
+          // Envoyer notification push selon le type
+          switch (notificationData.type) {
+            case 'object_favorite':
+              await pushNotificationService.sendFavoriteNotification(
+                targetUser.pushToken,
+                notificationData.fromUser?.pseudo || 'Un utilisateur',
+                notificationData.object?.title || 'votre objet',
+                notificationData.userId
+              );
+              break;
+            case 'trade_request':
+            case 'trade_accepted':
+            case 'trade_declined':
+              const action = notificationData.type.replace('trade_', '');
+              await pushNotificationService.sendTradeNotification(
+                targetUser.pushToken,
+                notificationData.fromUser?.pseudo || 'Un utilisateur',
+                action,
+                notificationData.userId
+              );
+              break;
+            default:
+              await pushNotificationService.sendPushNotification(
+                targetUser.pushToken,
+                notificationData.title,
+                notificationData.message,
+                { type: notificationData.type },
+                notificationData.userId
+              );
+          }
+        } else {
+          console.log(`📱 Pas de token push pour l'utilisateur ${notificationData.userId}`);
+        }
+      } catch (pushError) {
+        console.error('❌ Erreur notification push:', pushError);
+        // Continue même si push échoue - Socket.IO fonctionne toujours
+      }
+      
+      console.log(`📱 Notification créée et envoyée (Socket.IO + Push): ${notificationData.title} -> User ${notificationData.userId}`);
       
       return saved;
     } catch (error) {
