@@ -8,11 +8,18 @@ node_modules/
 mongodb-binaries/
 *.exe
 
-# Test files
+# Test files et fichiers de débogage
 *.log
 test-*.js
 auth-*.test.js
 diagnostic-*.js
+debug-*.js
+*-debug*.js
+analyze-*.js
+fix-*.js
+list-*.js
+reset-*.js
+explication-*.js
 
 # Admin creation scripts (sécurité)
 create-super-admin*.js
