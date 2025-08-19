@@ -330,8 +330,42 @@ class AnalyticsService {
 
   calculateAvgObjectValue(objects) {
     if (objects.length === 0) return 0;
-    // Pour un système de troc pur, on supprime les calculs basés sur la valeur monétaire
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    
+    // Calcul d'un score d'attractivité basé sur des critères réels
+    let totalScore = 0;
+    
+    objects.forEach(object => {
+      let objectScore = 50; // Score de base
+      
+      // Bonus pour les objets avec images (+20 points)
+      if (object.images && object.images.length > 0) {
+        objectScore += 20;
+      }
+      
+      // Bonus pour description détaillée (+15 points)
+      if (object.description && object.description.length > 50) {
+        objectScore += 15;
+      }
+      
+      // Bonus pour l'état de l'objet (+10 points pour "excellent")
+      if (object.condition === 'excellent') {
+        objectScore += 10;
+      } else if (object.condition === 'bon') {
+        objectScore += 5;
+      }
+      
+      // Malus pour les objets anciens (-5 points si plus de 6 mois)
+      if (object.createdAt) {
+        const ageInMonths = (Date.now() - new Date(object.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30);
+        if (ageInMonths > 6) {
+          objectScore -= 5;
+        }
+      }
+      
+      totalScore += Math.max(0, objectScore); // Score minimum de 0
+    });
+    
+    return Math.round(totalScore / objects.length);
   }
 
   getUserCategory(percentile) {

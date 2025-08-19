@@ -280,11 +280,33 @@ router.get('/content-metrics', requireAuth, requirePermission('moderate_content'
     ]);
 
     // Objets les plus populaires (par vues)
-    const popularObjects = await Object.find({ isActive: true })
+    const popularObjects = await ObjectModel.find({ isActive: true })
       .select('title category views owner')
       .populate('owner', 'pseudo')
       .sort({ views: -1 })
       .limit(10);
+
+    // Calcul du score d'attractivité moyen global
+    const allActiveObjects = await ObjectModel.find({ isActive: true });
+    const AnalyticsService = require('../../services/analyticsService');
+    const analyticsService = new AnalyticsService();
+    const globalAvgAttractiveness = analyticsService.calculateAvgObjectValue(allActiveObjects);
+
+    // Distribution des scores d'attractivité par tranches
+    const attractivenessDistribution = {
+      'Très attractifs (80-100)': 0,
+      'Attractifs (60-79)': 0,
+      'Moyens (40-59)': 0,
+      'Peu attractifs (0-39)': 0
+    };
+
+    allActiveObjects.forEach(obj => {
+      const score = analyticsService.calculateAvgObjectValue([obj]);
+      if (score >= 80) attractivenessDistribution['Très attractifs (80-100)']++;
+      else if (score >= 60) attractivenessDistribution['Attractifs (60-79)']++;
+      else if (score >= 40) attractivenessDistribution['Moyens (40-59)']++;
+      else attractivenessDistribution['Peu attractifs (0-39)']++;
+    });
 
     // Événements par statut
     const eventsByStatus = await Event.aggregate([
@@ -310,6 +332,11 @@ router.get('/content-metrics', requireAuth, requirePermission('moderate_content'
           views: obj.views || 0,
           owner: obj.owner?.pseudo || 'Utilisateur supprimé'
         })),
+        attractivenessMetrics: {
+          globalAverage: Math.round(globalAvgAttractiveness),
+          distribution: attractivenessDistribution,
+          totalObjects: allActiveObjects.length
+        },
         eventsByStatus: {
           active: eventsByStatus.find(e => e._id === true)?.count || 0,
           inactive: eventsByStatus.find(e => e._id === false)?.count || 0
