@@ -261,6 +261,16 @@ if (fs.existsSync(adminAnalyticsRoutePath)) {
   console.warn("Warning: './routes/admin/analytics.js' not found. '/api/admin/analytics' route not registered.");
 }
 
+// 🌤️ Routes Cloudinary - Gestion des médias
+const cloudinaryRoutePath = path.join(__dirname, 'routes', 'cloudinary.js');
+if (fs.existsSync(cloudinaryRoutePath)) {
+  const cloudinaryRoutes = require('./routes/cloudinary');
+  app.use('/api/media', cloudinaryRoutes);
+  console.log('✅ Cloudinary routes registered: /api/media');
+} else {
+  console.warn("Warning: './routes/cloudinary.js' not found. '/api/media' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');
