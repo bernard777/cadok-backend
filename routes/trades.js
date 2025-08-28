@@ -1384,4 +1384,72 @@ router.post('/:id/rating', auth, async (req, res) => {
   }
 });
 
+// ========== AJOUTER DES PREUVES D'ÉCHANGE ==========
+router.patch('/:tradeId/proof-images', auth, async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const { proofImages } = req.body;
+
+    if (!proofImages || !Array.isArray(proofImages)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Liste de preuves invalide'
+      });
+    }
+
+    // Vérifier que le trade existe et que l'utilisateur y participe
+    const trade = await Trade.findById(tradeId);
+    if (!trade) {
+      return res.status(404).json({
+        success: false,
+        message: 'Échange non trouvé'
+      });
+    }
+
+    const currentUserId = req.user.id || req.user._id;
+    const isParticipant = trade.fromUser.toString() === currentUserId.toString() || 
+                         trade.toUser.toString() === currentUserId.toString();
+
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à modifier cet échange'
+      });
+    }
+
+    // Ajouter les nouvelles preuves (ne pas écraser les existantes)
+    if (!trade.proofImages) {
+      trade.proofImages = [];
+    }
+    
+    trade.proofImages.push(...proofImages);
+    
+    // Limiter à 10 preuves maximum
+    if (trade.proofImages.length > 10) {
+      trade.proofImages = trade.proofImages.slice(-10);
+    }
+
+    await trade.save();
+
+    console.log(`✅ Preuves ajoutées au trade ${tradeId}:`, {
+      userId: currentUserId,
+      newProofs: proofImages.length,
+      totalProofs: trade.proofImages.length
+    });
+
+    res.json({
+      success: true,
+      message: `${proofImages.length} preuve(s) ajoutée(s) avec succès`,
+      proofImages: trade.proofImages
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur ajout preuves échange:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'ajout des preuves'
+    });
+  }
+});
+
 module.exports = router;
