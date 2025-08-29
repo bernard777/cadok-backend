@@ -271,6 +271,16 @@ if (fs.existsSync(cloudinaryRoutePath)) {
   console.warn("Warning: './routes/cloudinary.js' not found. '/api/media' route not registered.");
 }
 
+// 🎧 Routes Support - Aide et Support Utilisateur
+const supportRoutePath = path.join(__dirname, 'routes', 'support.js');
+if (fs.existsSync(supportRoutePath)) {
+  const supportRoutes = require('./routes/support');
+  app.use('/api/support', supportRoutes);
+  console.log('✅ Support routes registered: /api/support');
+} else {
+  console.warn("Warning: './routes/support.js' not found. '/api/support' route not registered.");
+}
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');

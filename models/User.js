@@ -193,6 +193,16 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['active', 'canceled', 'expired'], required: true },
     amount: { type: Number, required: true }
   }],
+
+  // 🎓 SYSTÈME DE SUPPORT ET APPRENTISSAGE
+  tutorialsViewed: [{
+    tutorial: { type: mongoose.Schema.Types.ObjectId, ref: 'Tutorial', required: true },
+    viewedAt: { type: Date, default: Date.now },
+    completionRate: { type: Number, default: 100, min: 0, max: 100 }, // Pourcentage visionné
+    rating: { type: Number, min: 1, max: 5 } // Note optionnelle du tutoriel
+  }],
+  supportTicketsCount: { type: Number, default: 0 },
+  helpfulFAQVotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FAQ' }],
   
   // Statistiques pour le système de réputation (troc pur)
   tradeStats: {

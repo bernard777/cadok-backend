@@ -40,6 +40,15 @@ connectToDatabase(MONGO_URI)
       console.error('⚠️ Erreur lors de l\'initialisation des catégories:', error.message);
       // Ne pas arrêter le serveur pour autant
     }
+
+    // Initialiser les données de support (FAQ, Tutoriels)
+    try {
+      const { initializeSupportData } = require('./utils/initSupportData');
+      await initializeSupportData();
+    } catch (error) {
+      console.error('⚠️ Erreur lors de l\'initialisation des données de support:', error.message);
+      // Ne pas arrêter le serveur pour autant
+    }
     
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Serveur lancé sur le port ${PORT}`);
