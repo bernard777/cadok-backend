@@ -6,6 +6,7 @@
 const User = require('../models/User');
 const Trade = require('../models/Trade');
 const ObjectModel = require('../models/Object');
+const Category = require('../models/Category');
 const moment = require('moment');
 
 class AnalyticsService {
@@ -126,18 +127,68 @@ class AnalyticsService {
    * 🏆 Classement communautaire
    */
   async getCommunityRanking(userId) {
-    // Classement basé sur le score de confiance
-    const allUsers = await User.find({}, 'trustScore').sort({ trustScore: -1 });
-    const userPosition = allUsers.findIndex(u => u._id.toString() === userId.toString()) + 1;
-    const totalUsers = allUsers.length;
-    const percentile = Math.round((1 - (userPosition / totalUsers)) * 100);
+    // Calculer le score de classement pour tous les utilisateurs
+    const allUsers = await User.find({});
+    
+    const userScores = await Promise.all(allUsers.map(async (user) => {
+      // Calculer les métriques de trading pour chaque utilisateur
+      const completedTrades = await Trade.countDocuments({
+        $or: [{ fromUser: user._id }, { toUser: user._id }],
+        status: 'completed'
+      });
+      
+      const totalTrades = await Trade.countDocuments({
+        $or: [{ fromUser: user._id }, { toUser: user._id }]
+      });
+      
+      const userObjects = await ObjectModel.countDocuments({
+        owner: user._id
+      });
+      
+      // Score composite basé sur l'activité réelle
+      const activityScore = (completedTrades * 50) + (totalTrades * 20) + (userObjects * 10);
+      const trustScore = user.trustScore || 0;
+      
+      // Score final : 70% activité + 30% confiance
+      const finalScore = Math.round((activityScore * 0.7) + (trustScore * 0.3));
+      
+      return {
+        userId: user._id,
+        pseudo: user.pseudo,
+        finalScore,
+        completedTrades,
+        totalTrades,
+        userObjects,
+        trustScore
+      };
+    }));
+    
+    // Trier par score final
+    userScores.sort((a, b) => b.finalScore - a.finalScore);
+    
+    // Trouver la position de l'utilisateur actuel
+    const userPosition = userScores.findIndex(u => u.userId.toString() === userId.toString()) + 1;
+    const totalUsers = userScores.length;
+    const percentile = totalUsers > 0 ? Math.round((1 - (userPosition / totalUsers)) * 100) : 0;
+    
+    // Utilisateur actuel
+    const currentUser = userScores.find(u => u.userId.toString() === userId.toString());
 
     return {
       position: userPosition,
       totalUsers,
       percentile,
       category: this.getUserCategory(percentile),
-      nextMilestone: this.getNextMilestone(userPosition)
+      nextMilestone: this.getNextMilestone(userPosition),
+      score: currentUser ? currentUser.finalScore : 0,
+      completedTrades: currentUser ? currentUser.completedTrades : 0,
+      // Top 5 pour référence
+      topUsers: userScores.slice(0, 5).map((user, index) => ({
+        position: index + 1,
+        pseudo: user.pseudo || `Utilisateur ${user.userId.toString().substring(0, 8)}`,
+        score: user.finalScore,
+        completedTrades: user.completedTrades
+      }))
     };
   }
 
@@ -253,22 +304,51 @@ class AnalyticsService {
   async getFavoriteCategories(userId) {
     const trades = await Trade.find({
       $or: [{ fromUser: userId }, { toUser: userId }]
-    }).populate('fromObject toObject', 'category');
+    }).populate('offeredObjects requestedObjects', 'category');
 
     const categories = {};
     trades.forEach(trade => {
-      if (trade.fromObject?.category) {
-        categories[trade.fromObject.category] = (categories[trade.fromObject.category] || 0) + 1;
+      // Traiter les objets offerts
+      if (trade.offeredObjects) {
+        trade.offeredObjects.forEach(obj => {
+          if (obj?.category) {
+            categories[obj.category] = (categories[obj.category] || 0) + 1;
+          }
+        });
       }
-      if (trade.toObject?.category) {
-        categories[trade.toObject.category] = (categories[trade.toObject.category] || 0) + 1;
+      // Traiter les objets demandés
+      if (trade.requestedObjects) {
+        trade.requestedObjects.forEach(obj => {
+          if (obj?.category) {
+            categories[obj.category] = (categories[obj.category] || 0) + 1;
+          }
+        });
       }
     });
 
-    return Object.entries(categories)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 3)
-      .map(([category, count]) => ({ category, count }));
+    // Convertir les IDs de catégories en noms et compter
+    const categoryResults = [];
+    for (const [categoryId, count] of Object.entries(categories)) {
+      try {
+        const categoryDoc = await Category.findById(categoryId);
+        categoryResults.push({
+          category: categoryId,
+          name: categoryDoc ? categoryDoc.name : `Catégorie ${categoryId.substring(0, 8)}`,
+          count
+        });
+      } catch (error) {
+        // Si la catégorie n'existe pas, utiliser un nom par défaut
+        categoryResults.push({
+          category: categoryId,
+          name: `Catégorie ${categoryId.substring(0, 8)}`,
+          count
+        });
+      }
+    }
+
+    return categoryResults
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
   }
 
   async getBestTradingDay(userId) {
@@ -369,10 +449,10 @@ class AnalyticsService {
   }
 
   getUserCategory(percentile) {
-    if (percentile >= 90) return 'Elite Trader';
+    if (percentile >= 90) return 'Elite Troqueur';
     if (percentile >= 75) return 'Expert';
-    if (percentile >= 50) return 'Trader Confirmé';
-    if (percentile >= 25) return 'Trader';
+    if (percentile >= 50) return 'Troqueur Confirmé';
+    if (percentile >= 25) return 'Troqueur';
     return 'Débutant';
   }
 

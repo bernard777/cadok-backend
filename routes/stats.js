@@ -14,9 +14,9 @@ router.get('/', async (req, res) => {
       _id: { $in: await Object.distinct('owner') }
     });
 
-    // Compter les échanges réalisés (status: 'accepted')
+    // Compter les échanges réalisés (status: 'completed')
     const completedTradesCount = await Trade.countDocuments({ 
-      status: 'accepted' 
+      status: 'completed' 
     });
 
     // Compter les objets disponibles
