@@ -1,6 +1,10 @@
 // Utilitaire pour générer une URL complète pour l'avatar
 function getFullUrl(req, relativePath) {
   if (!relativePath) return '';
+  // Si c'est déjà une URL complète (http/https), la retourner telle quelle
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    return relativePath;
+  }
   const host = req.protocol + '://' + req.get('host');
   return relativePath.startsWith('/') ? host + relativePath : host + '/' + relativePath;
 }
@@ -357,12 +361,13 @@ router.put(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    const { pseudo, email, city } = req.body;
+    const { pseudo, email, city, avatar } = req.body;
     try {
       const updates = {};
       if (pseudo) updates.pseudo = pseudo;
       if (email) updates.email = email;
       if (city) updates.city = city;
+      if (avatar !== undefined) updates.avatar = avatar; // Support avatar URL Cloudinary
 
       // Vérifie que l'email n'est pas déjà utilisé par un autre utilisateur
       if (email) {
@@ -370,11 +375,15 @@ router.put(
         if (existing) return res.status(400).json({ message: 'Email déjà utilisé.' });
       }
 
-      const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+      const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password').lean();
       if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+
+      // Appliquer l'URL complète si nécessaire
+      user.avatar = getFullUrl(req, user.avatar);
 
       res.json({ user });
     } catch (err) {
+      console.error('❌ [AUTH/UPDATE] Erreur:', err);
       res.status(500).json({ message: 'Erreur serveur', error: err.message });
     }
   }
