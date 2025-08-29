@@ -234,6 +234,54 @@ const userSchema = new mongoose.Schema({
     notifications: { type: Boolean, default: true },
     eco: { type: Boolean, default: true },
     gaming: { type: Boolean, default: true }
+  },
+
+  // 🎮 SYSTÈME DE GAMIFICATION
+  gamification: {
+    level: { type: Number, default: 1 },
+    totalXP: { type: Number, default: 0 },
+    currentLevelXP: { type: Number, default: 0 },
+    title: { type: String, default: 'Nouveau Troqueur' },
+    lastLevelUp: { type: Date, default: null },
+    
+    // Achievements débloqués
+    achievements: [{
+      id: { type: String, required: true },
+      title: { type: String, required: true },
+      description: String,
+      unlockedAt: { type: Date, default: Date.now },
+      xpReward: { type: Number, default: 0 },
+      rarity: { type: String, enum: ['common', 'uncommon', 'rare', 'epic', 'legendary'], default: 'common' }
+    }],
+    
+    // Système de streaks
+    streaks: {
+      current: { type: Number, default: 0 },
+      best: { type: Number, default: 0 },
+      lastActive: { type: Date, default: null },
+      lastCalculated: { type: Date, default: Date.now }
+    },
+    
+    // Statistiques de performance
+    statistics: {
+      totalLogins: { type: Number, default: 0 },
+      totalTimeSpent: { type: Number, default: 0 }, // en minutes
+      perfectTradesStreak: { type: Number, default: 0 },
+      fastestTrade: { type: Number, default: null }, // en heures
+      lastCalculatedAt: { type: Date, default: Date.now },
+      monthlyProgress: {
+        currentMonth: { type: String, default: () => new Date().toISOString().slice(0, 7) }, // YYYY-MM
+        tradesThisMonth: { type: Number, default: 0 },
+        objectsThisMonth: { type: Number, default: 0 },
+        xpThisMonth: { type: Number, default: 0 }
+      }
+    },
+    
+    // Cache des calculs pour performance
+    cachedData: {
+      lastUpdated: { type: Date, default: Date.now },
+      needsRecalculation: { type: Boolean, default: true }
+    }
   }
 }, { timestamps: true });
 

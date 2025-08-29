@@ -1,59 +1,100 @@
 /**
- * 🎮 ROUTES GAMIFICATION - CADOK
- * API pour la gamification avancée
+ * 🎮 ROUTES GAMIFICATION AVEC SAUVEGARDE
+ * API endpoints pour le système de gamification persistant
  */
 
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
-const GamificationService = require('../services/gamificationService');
-const { 
-  validateEventParticipation, 
-  requireEventParticipation 
-} = require('../middlewares/eventValidation');
-
-const gamificationService = new GamificationService();
+const GamificationPersistenceService = require('../services/gamificationPersistence');
+const GamificationMiddleware = require('../middleware/gamificationMiddleware');
+const { calculateGamificationFromRealData, formatForGamificationScreen, formatForHomeScreen } = require('../utils/gamificationCalculator');
 
 /**
- * GET /api/gamification/
- * Route racine - redirige vers le dashboard
+ * 📊 GET /api/gamification - Données complètes de gamification
  */
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    console.log('🎮 [GAMIFICATION] Appel route racine pour utilisateur:', req.user.id);
-    const result = await gamificationService.getUserGamificationDashboard(req.user.id);
-    res.json(result);
-  } catch (error) {
-    console.error('❌ Erreur gamification racine:', error);
-    res.status(500).json({ error: 'Erreur serveur gamification' });
-  }
-});
+    const userId = req.user.id || req.user._id;
+    console.log('📊 [API] Récupération gamification pour:', userId);
 
-/**
- * GET /api/gamification/dashboard
- * Dashboard gamification complet
- */
-router.get('/dashboard', authMiddleware, async (req, res) => {
-  try {
-    const result = await gamificationService.getUserGamificationDashboard(req.user.id);
-    res.json(result);
-  } catch (error) {
-    console.error('❌ Erreur dashboard gamification:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
+    // 1. Vérifier si recalcul nécessaire
+    const savedData = await GamificationPersistenceService.getUserGamificationData(userId);
+    
+    let gamificationData;
+    
+    if (!savedData || savedData.needsRecalculation) {
+      console.log('🔄 [API] Recalcul nécessaire');
+      
+      // Recalculer depuis les données réelles
+      gamificationData = await calculateGamificationFromRealData(userId);
+      
+      if (gamificationData) {
+        // Sauvegarder les nouveaux calculs
+        await GamificationPersistenceService.saveUserProgress(userId, gamificationData);
+        
+        // Sauvegarder les achievements
+        if (gamificationData.achievements) {
+          for (const achievement of gamificationData.achievements) {
+            await GamificationPersistenceService.saveAchievement(userId, achievement);
+          }
+        }
+      }
+    } else {
+      console.log('💾 [API] Utilisation données sauvegardées');
+      // Utiliser les données sauvegardées
+      gamificationData = {
+        level: savedData.level,
+        title: savedData.title,
+        currentXP: savedData.currentLevelXP,
+        totalXP: savedData.totalXP,
+        achievements: savedData.achievements || [],
+        stats: {
+          objectsCount: 0, // Sera calculé si nécessaire
+          completedTradesCount: 0,
+          totalTradesCount: 0
+        }
+      };
+    }
 
-/**
- * GET /api/gamification/profile
- * Profil de joueur détaillé
- */
-router.get('/profile', authMiddleware, async (req, res) => {
-  try {
-    const result = await gamificationService.getUserProfile(req.user.id);
-    res.json(result);
+    // Enrichir avec classement
+    const ranking = await GamificationPersistenceService.getUserRanking(userId);
+    const leaderboard = await GamificationPersistenceService.getLeaderboard(10);
+
+    // Formater pour GamificationScreen
+    const formattedData = formatForGamificationScreen(gamificationData);
+    
+    // Ajouter les données de classement
+    if (ranking) {
+      formattedData.ranking = ranking;
+    }
+    
+    if (leaderboard.length > 0) {
+      formattedData.leaderboard = leaderboard.map(user => ({
+        rank: user.rank,
+        pseudo: user.pseudo,
+        level: user.level,
+        xp: user.totalXP,
+        isCurrentUser: user.pseudo === req.user.pseudo
+      }));
+    }
+
+    res.json({
+      success: true,
+      gamification: formattedData,
+      metadata: {
+        lastUpdated: savedData?.lastUpdated || new Date(),
+        fromCache: !!savedData && !savedData.needsRecalculation
+      }
+    });
+
   } catch (error) {
-    console.error('❌ Erreur profil gamification:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
+    console.error('❌ [API] Erreur gamification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des données de gamification',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

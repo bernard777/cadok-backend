@@ -313,11 +313,13 @@ router.get('/usage', auth, async (req, res) => {
     
     const [objectsCount, tradesCount] = await Promise.all([
       Object.countDocuments({ owner: req.user.id }),
+      // ✅ CORRECTION: Compter seulement les échanges RÉUSSIS pour les quotas
       Trade.countDocuments({ 
         $or: [
           { fromUser: req.user.id },
           { toUser: req.user.id }
-        ]
+        ],
+        status: 'completed' // ✅ Seulement les échanges complétés comptent pour les quotas
       })
     ]);
     

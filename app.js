@@ -132,6 +132,16 @@ if (fs.existsSync(notificationsRoutePath)) {
   console.warn("Warning: './routes/notifications.js' not found. '/api/notifications' route not registered.");
 }
 
+// Ajout des routes notifications intelligentes
+const smartNotificationsRoutePath = path.join(__dirname, 'routes', 'smart-notifications.js');
+if (fs.existsSync(smartNotificationsRoutePath)) {
+  const smartNotificationRoutes = require('./routes/smart-notifications');
+  app.use('/api/notifications', smartNotificationRoutes);
+  console.log('✅ [APP] Routes Smart Notifications enregistrées avec succès');
+} else {
+  console.warn("Warning: './routes/smart-notifications.js' not found. Smart notifications route not registered.");
+}
+
 // Ajout de la route des conversations
 const conversationsRoutePath = path.join(__dirname, 'routes', 'conversations.js');
 
@@ -172,13 +182,14 @@ if (fs.existsSync(ecoRoutePath)) {
   console.warn("Warning: './routes/eco.js' not found. '/api/eco' route not registered.");
 }
 
-// Ajout des routes Gamification
-const gamificationRoutePath = path.join(__dirname, 'routes', 'gamification.js');
-if (fs.existsSync(gamificationRoutePath)) {
-  const gamificationRoutes = require('./routes/gamification');
-  app.use('/api/gamification', gamificationRoutes);
+// Ajout des routes Gamification avec sauvegarde
+const gamificationPersistentRoutePath = path.join(__dirname, 'routes', 'gamificationPersistent.js');
+if (fs.existsSync(gamificationPersistentRoutePath)) {
+  const gamificationPersistentRoutes = require('./routes/gamificationPersistent');
+  app.use('/api/gamification', gamificationPersistentRoutes);
+  console.log('✅ Gamification routes with persistence registered: /api/gamification');
 } else {
-  console.warn("Warning: './routes/gamification.js' not found. '/api/gamification' route not registered.");
+  console.warn("Warning: './routes/gamificationPersistent.js' not found. '/api/gamification' route not registered.");
 }
 
 // Ajout des routes Admin Événements
