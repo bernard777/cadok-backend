@@ -68,7 +68,12 @@ router.get('/', requireAuth, requirePermission('manageTrades'), async (req, res)
       .lean();
 
     // Transformation des donnÃ©es pour l'interface mobile
-    const formattedTrades = trades.map(trade => {
+    const allTrades = trades.map(trade => {
+    // Vérification null safety
+    if (!trade.fromUser || !trade.toUser) {
+      console.log('⚠️  Trade avec user null:', trade._id);
+      return null;
+    }
       const requestedObject = trade.requestedObjects?.[0];
       const offeredObject = trade.offeredObjects?.[0];
 
@@ -112,6 +117,9 @@ router.get('/', requireAuth, requirePermission('manageTrades'), async (req, res)
         constraints: trade.security?.constraints
       };
     });
+
+    const formattedTrades = allTrades.filter(t => t !== null);
+
 
     console.log(`âœ… [ADMIN TRADES] ${formattedTrades.length} Ã©changes rÃ©cupÃ©rÃ©s`);
 

@@ -16,7 +16,8 @@ const ROLE_PERMISSIONS = {
   
   // Modérateur - modération de contenu seulement
   moderator: {
-    permissions: ['moderateContent', 'manageReports'],
+    permissions: ['moderateContent', 'manageReports',
+                  'viewObjects', 'viewReviews', 'moderateReviews'],
     description: 'Modération de contenu et gestion des signalements',
     premiumAccess: true
   },
@@ -51,7 +52,8 @@ const ROLE_PERMISSIONS = {
   
   // Super Admin - accès complet
   super_admin: {
-    permissions: ['*'], // Toutes les permissions
+    permissions: ['*',
+      'manageObjects', 'viewObjects', 'moderateObjects', 'manageReviews', 'viewReviews', 'moderateReviews'], // Toutes les permissions
     description: 'Administration complète du système',
     premiumAccess: true
   }
