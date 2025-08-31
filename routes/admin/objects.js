@@ -97,7 +97,9 @@ router.get('/', requireAuth, requirePermission('manageObjects'), async (req, res
       success: true,
       objects: formattedObjects,
       pagination: {
-        total: totalObjects,
+        totalPages: Math.ceil(totalObjects / parseInt(limit)),
+        totalItems: totalObjects,
+        currentPage: Math.floor(parseInt(skip) / parseInt(limit)) + 1,
         limit: parseInt(limit),
         skip: parseInt(skip),
         hasMore: totalObjects > (parseInt(skip) + parseInt(limit))

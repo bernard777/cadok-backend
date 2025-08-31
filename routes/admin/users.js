@@ -79,6 +79,79 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/users/:userId
+ * Récupérer les détails d'un utilisateur spécifique
+ */
+router.get('/:userId', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    console.log(`👤 [ADMIN USERS] Récupération utilisateur ${userId}...`);
+
+    const user = await User.findById(userId)
+      .select('-password -resetPasswordToken -resetPasswordExpire')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Enrichir avec des statistiques d'activité si nécessaire
+    // (nombre d'objets publiés, échanges, etc.)
+    const Trade = require('../../models/Trade');
+    const ObjectModel = require('../../models/Object');
+    const Review = require('../../models/Review');
+
+    const [
+      objectsCount,
+      tradesCount,
+      reviewsGiven,
+      reviewsReceived,
+      avgRating
+    ] = await Promise.all([
+      ObjectModel.countDocuments({ owner: userId }),
+      Trade.countDocuments({ 
+        $or: [{ requester: userId }, { owner: userId }] 
+      }),
+      Review.countDocuments({ reviewer: userId }),
+      Review.countDocuments({ reviewee: userId }),
+      Review.aggregate([
+        { $match: { reviewee: user._id } },
+        { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+      ])
+    ]);
+
+    const enrichedUser = {
+      ...user,
+      stats: {
+        objectsPosted: objectsCount,
+        tradesCompleted: tradesCount,
+        reviewsGiven,
+        reviewsReceived,
+        averageRating: avgRating[0]?.avgRating || 0
+      }
+    };
+
+    console.log(`✅ [ADMIN USERS] Utilisateur ${userId} récupéré avec statistiques`);
+
+    res.json({
+      success: true,
+      user: enrichedUser
+    });
+
+  } catch (error) {
+    console.error('❌ [ADMIN USERS] Erreur récupération utilisateur:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur serveur lors de la récupération de l\'utilisateur'
+    });
+  }
+});
+
+/**
  * POST /api/admin/users/:userId/promote
  * Promouvoir un utilisateur (user → moderator → admin)
  */
