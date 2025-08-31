@@ -282,6 +282,16 @@ if (fs.existsSync(eventsRoutePath)) {
   console.warn("Warning: './routes/events.js' not found. '/api/events' route not registered.");
 }
 
+// 🎯 Routes Tasks - Tâches quotidiennes d'événements
+const tasksRoutePath = path.join(__dirname, 'routes', 'tasks.js');
+if (fs.existsSync(tasksRoutePath)) {
+  const tasksRoutes = require('./routes/tasks');
+  app.use('/api/tasks', tasksRoutes);
+  console.log('✅ Tasks routes registered: /api/tasks');
+} else {
+  console.warn("Warning: './routes/tasks.js' not found. '/api/tasks' route not registered.");
+}
+
 // 📊 Ajout des routes Admin Analytics - Statistiques Plateforme
 const adminAnalyticsRoutePath = path.join(__dirname, 'routes', 'admin', 'analytics.js');
 if (fs.existsSync(adminAnalyticsRoutePath)) {

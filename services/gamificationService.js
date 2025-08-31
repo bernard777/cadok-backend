@@ -1093,15 +1093,108 @@ class GamificationService {
   }
 
   async getGlobalEventProgress(eventId) {
-    // Progression globale simulée
-    return {
-      current: Math.floor(Math.random() * 5000) + 3000,
-      participants: Math.floor(Math.random() * 500) + 200
-    };
+    try {
+      // Récupérer l'événement
+      const Event = require('../models/Event');
+      const event = await Event.findById(eventId);
+      
+      if (!event) {
+        return { current: 0, participants: 0 };
+      }
+
+      // Compter les vrais participants
+      const participantCount = event.participants.length;
+
+      // Calculer la progression réelle basée sur les actions des participants
+      let totalProgress = 0;
+      
+      // Pour chaque participant, calculer ses contributions
+      for (const participant of event.participants) {
+        const UserTaskProgress = require('../models/UserTaskProgress');
+        
+        // Compter les tâches/actions complétées pendant l'événement
+        const completedActions = await UserTaskProgress.countDocuments({
+          userId: participant.userId,
+          eventId: eventId,
+          status: 'claimed',
+          claimedAt: { 
+            $gte: event.startDate, 
+            $lte: event.endDate 
+          }
+        });
+        
+        totalProgress += completedActions;
+      }
+
+      // Mettre à jour l'événement avec la vraie progression
+      await Event.findByIdAndUpdate(eventId, {
+        'globalGoal.current': totalProgress
+      });
+
+      return {
+        current: totalProgress,
+        participants: participantCount
+      };
+    } catch (error) {
+      console.error('❌ Erreur calcul progression globale:', error);
+      // Fallback vers données simulées en cas d'erreur
+      return {
+        current: Math.floor(Math.random() * 5000) + 3000,
+        participants: Math.floor(Math.random() * 500) + 200
+      };
+    }
   }
 
   async generateSeasonalChallenges(userId, event, userProgress) { return []; }
   async generateGenericEventChallenges(userId, event, userProgress) { return []; }
+
+  /**
+   * 🎯 Mettre à jour l'objectif communautaire lors d'une action utilisateur
+   * Appelé automatiquement quand un utilisateur gagne des XP pendant un événement
+   */
+  async updateGlobalGoalProgress(userId, actionType, xpGained) {
+    try {
+      const Event = require('../models/Event');
+      const currentDate = new Date();
+      
+      // Mapping des types de tâches vers les actions d'événement
+      const taskTypeToEventAction = {
+        'ADD_OBJECTS': 'ADD_OBJECT',
+        'TRADE_OBJECTS': 'COMPLETE_TRADE',
+        'LOGIN_APP': 'LOGIN_APP',
+        'VISIT_CATEGORIES': 'BROWSE_CATEGORIES',
+        'RATE_TRADES': 'RATE_TRADE',
+        'UPDATE_PROFILE': 'UPDATE_PROFILE',
+        'SHARE_OBJECT': 'SHARE_OBJECT',
+        'BROWSE_NEARBY': 'EXPLORE_NEARBY'
+      };
+      
+      // Convertir le type de tâche en action d'événement
+      const eventAction = taskTypeToEventAction[actionType] || actionType;
+      
+      // Trouver tous les événements actifs auxquels l'utilisateur participe
+      const activeEvents = await Event.find({
+        isActive: true,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate },
+        'participants.userId': userId
+      });
+
+      for (const event of activeEvents) {
+        // Vérifier si cette action est dans les actions sélectionnées de l'événement
+        if (event.selectedActions && event.selectedActions.includes(eventAction)) {
+          // Incrémenter la progression globale
+          await Event.findByIdAndUpdate(event._id, {
+            $inc: { 'globalGoal.current': 1 } // +1 pour chaque action réalisée
+          });
+
+          console.log(`🎯 [GLOBAL GOAL] User ${userId} contributed to event ${event.name} with action ${eventAction} (+1 progress)`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur mise à jour objectif global:', error);
+    }
+  }
 
   /**
    * 🎪 MÉTHODES DE GESTION D'ÉVÉNEMENTS

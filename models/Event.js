@@ -20,7 +20,7 @@ const eventSchema = new mongoose.Schema({
   theme: {
     type: String,
     required: true,
-    enum: ['ecology', 'seasonal', 'education', 'competition', 'custom'],
+    enum: ['ecology', 'seasonal', 'education', 'competition', 'community', 'custom'],
     default: 'ecology'
   },
   
@@ -59,11 +59,34 @@ const eventSchema = new mongoose.Schema({
   
   isActive: {
     type: Boolean,
-    default: false
+    default: true
   },
   
   categories: [{
     type: String
+  }],
+  
+  // Actions XP sélectionnées pour bénéficier du multiplicateur
+  selectedActions: [{
+    type: String,
+    enum: [
+      // Actions de base
+      'LOGIN_APP', 'FIRST_LOGIN',
+      // Actions objets
+      'ADD_OBJECT', 'ADD_MULTIPLE_OBJECTS', 'UPDATE_OBJECT', 'ADD_OBJECT_PHOTO',
+      // Actions échanges
+      'INITIATE_TRADE', 'ACCEPT_TRADE', 'COMPLETE_TRADE', 'RATE_TRADE',
+      // Actions sociales
+      'SEND_MESSAGE', 'RECEIVE_POSITIVE_RATING', 'GIVE_RATING',
+      // Actions exploration
+      'BROWSE_OBJECTS', 'SEARCH_OBJECTS', 'VIEW_OBJECT_DETAILS', 'USE_FILTERS',
+      // Actions profil
+      'COMPLETE_PROFILE', 'ADD_PROFILE_PHOTO', 'UPDATE_PREFERENCES',
+      // Actions achievements
+      'UNLOCK_ACHIEVEMENT', 'REACH_LEVEL',
+      // Actions spéciales écologie
+      'ECO_TRADE', 'SUSTAINABLE_ACTION', 'GREEN_TRANSPORT', 'WASTE_REDUCTION'
+    ]
   }],
   
   specialRewards: {
@@ -128,6 +151,30 @@ const eventSchema = new mongoose.Schema({
     totalXPAwarded: {
       type: Number,
       default: 0
+    }
+  },
+  
+  // Informations sur l'événement réel correspondant
+  realWorldEvent: {
+    name: {
+      type: String,
+      default: ''
+    },
+    officialDate: {
+      type: String,
+      default: ''
+    },
+    organizer: {
+      type: String,
+      default: ''
+    },
+    website: {
+      type: String,
+      default: ''
+    },
+    description: {
+      type: String,
+      default: ''
     }
   },
   

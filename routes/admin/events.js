@@ -71,7 +71,8 @@ router.get('/', authMiddleware, requireEventManagement, async (req, res) => {
       isActive: event.isActive,
       participants: Array.isArray(event.participants) ? event.participants.length : 0,
       completedChallenges: event.statistics?.totalTrades || 0,
-      specialRewards: event.specialRewards
+      specialRewards: event.specialRewards,
+      realWorldEvent: event.realWorldEvent // Informations sur l'événement réel
     });
     
     const response = {
@@ -106,6 +107,8 @@ router.post('/', authMiddleware, requireEventManagement, async (req, res) => {
     eventData.createdBy = req.user.id;
     
     console.log('🎪 [DEBUG] Création événement avec createdBy:', req.user.id);
+    console.log('🎪 [DEBUG] Données reçues:', JSON.stringify(eventData, null, 2));
+    console.log('🎪 [DEBUG] selectedActions reçues:', eventData.selectedActions);
     
     // Validation des données
     const validationErrors = validateEventData(eventData);
@@ -196,6 +199,37 @@ router.post('/:eventId/activate', authMiddleware, requireEventManagement, async 
     res.json({ success: true, event: result });
   } catch (error) {
     console.error('❌ Erreur activation événement:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * PATCH /api/admin/events/:eventId/toggle-activation
+ * Toggle l'état d'activation d'un événement
+ */
+router.patch('/:eventId/toggle-activation', authMiddleware, requireEventManagement, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    // Récupérer l'événement actuel pour connaître son état
+    const currentEvent = await gamificationService.getEventById(eventId);
+    if (!currentEvent) {
+      return res.status(404).json({ success: false, error: 'Événement non trouvé' });
+    }
+    
+    // Toggle le statut
+    const newStatus = !currentEvent.isActive;
+    const result = await gamificationService.toggleEventStatus(eventId, newStatus);
+    
+    // Log d'activation/désactivation
+    logAdminAction(req, 'event_status_toggled', 
+      `Event "${result.name}" ${newStatus ? 'activated' : 'deactivated'}`, 
+      { eventId, newStatus }
+    );
+    
+    res.json({ success: true, event: result });
+  } catch (error) {
+    console.error('❌ Erreur toggle activation événement:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });

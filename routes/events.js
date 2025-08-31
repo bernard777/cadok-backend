@@ -70,6 +70,7 @@ router.get('/', requireAuth, async (req, res) => {
       globalGoal: event.globalGoal,
       specialRewards: event.specialRewards,
       statistics: event.statistics,
+      realWorldEvent: event.realWorldEvent, // Informations sur l'événement réel
       canParticipate: event.isActive && now >= event.startDate && now <= event.endDate,
       isParticipating: userParticipations[event._id.toString()] || false
     });
@@ -105,7 +106,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 /**
  * GET /api/events/:eventId
- * Récupérer les détails d'un événement spécifique
+ * Récupérer les détails d'un événement spécifique avec ses tâches
  */
 router.get('/:eventId', [
   requireAuth,
@@ -135,6 +136,49 @@ router.get('/:eventId', [
       });
     }
 
+    // Récupérer les tâches quotidiennes pour cet événement
+    const DailyTaskService = require('../services/DailyTaskService');
+    const dailyTaskService = new DailyTaskService();
+    
+    const today = new Date().toISOString().split('T')[0];
+    let dailyTasks = [];
+    let userTaskProgress = [];
+    
+    try {
+      // Générer les tâches du jour si elles n'existent pas
+      if (event.isActive) {
+        await dailyTaskService.generateDailyTasksForEvent(eventId, today);
+      }
+      
+      // Récupérer les tâches utilisateur pour cet événement
+      const UserTaskProgress = require('../models/UserTaskProgress');
+      userTaskProgress = await UserTaskProgress.find({ userId, eventId })
+        .populate('taskId', 'title description taskType targetValue difficulty rewards date')
+        .sort({ date: -1 });
+      
+      // Formater les tâches du jour
+      const todayProgress = userTaskProgress.filter(p => p.date === today);
+      dailyTasks = todayProgress.map(progress => ({
+        id: progress.taskId._id,
+        title: progress.taskId.title,
+        description: progress.taskId.description,
+        taskType: progress.taskId.taskType,
+        difficulty: progress.taskId.difficulty,
+        targetValue: progress.targetValue,
+        currentProgress: progress.currentProgress,
+        status: progress.status,
+        rewards: progress.taskId.calculateReward(event.bonusMultiplier),
+        progressPercentage: Math.round((progress.currentProgress / progress.targetValue) * 100),
+        canClaim: progress.status === 'completed',
+        completedAt: progress.completedAt,
+        claimedAt: progress.claimedAt
+      }));
+      
+    } catch (taskError) {
+      console.error('⚠️ Erreur récupération tâches événement:', taskError);
+      // Continue sans les tâches en cas d'erreur
+    }
+
     // Vérifier la participation de l'utilisateur
     const userParticipation = event.participants.find(p => 
       p.userId._id.toString() === userId
@@ -155,9 +199,11 @@ router.get('/:eventId', [
         bonusMultiplier: event.bonusMultiplier,
         isActive: event.isActive,
         categories: event.categories,
+        selectedActions: event.selectedActions, // Actions affectées par le multiplicateur
         globalGoal: event.globalGoal,
         specialRewards: event.specialRewards,
         statistics: event.statistics,
+        realWorldEvent: event.realWorldEvent, // Informations sur l'événement réel
         createdBy: {
           id: event.createdBy._id,
           pseudo: event.createdBy.pseudo,
@@ -183,7 +229,29 @@ router.get('/:eventId', [
           daysRemaining: Math.max(0, Math.ceil((event.endDate - now) / (1000 * 60 * 60 * 24)))
         },
         userProgress: userParticipation ? userParticipation.progress : null
-      }
+      },
+      // Tâches quotidiennes
+      dailyTasks,
+      taskStats: {
+        today: dailyTasks.length,
+        completed: dailyTasks.filter(t => t.status === 'completed' || t.status === 'claimed').length,
+        claimed: dailyTasks.filter(t => t.status === 'claimed').length,
+        totalXPAvailable: dailyTasks.reduce((sum, t) => sum + t.rewards.xp, 0),
+        totalXPEarned: dailyTasks.filter(t => t.status === 'claimed').reduce((sum, t) => sum + t.rewards.xp, 0)
+      },
+      // Historique des tâches
+      taskHistory: userTaskProgress.map(progress => ({
+        date: progress.date,
+        task: {
+          id: progress.taskId._id,
+          title: progress.taskId.title,
+          difficulty: progress.taskId.difficulty
+        },
+        currentProgress: progress.currentProgress,
+        targetValue: progress.targetValue,
+        status: progress.status,
+        rewardsReceived: progress.rewardsReceived
+      }))
     };
 
     res.json(response);
