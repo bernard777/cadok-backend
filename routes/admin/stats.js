@@ -1,47 +1,102 @@
 /**
- * 📊 ROUTES ADMIN - STATISTIQUES SIMPLIFIÉES
+ * 📊 ROUTES ADMIN - STATISTIQUES RÉELLES
  */
 
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requirePermission } = require('../../middleware/roleBasedAccess');
 
-// Route racine simple pour /api/admin/stats
+// Modèles
+const User = require('../../models/User');
+const Trade = require('../../models/Trade');
+const ObjectModel = require('../../models/Object');
+const Event = require('../../models/Event');
+const Review = require('../../models/Review');
+
+// Route racine pour /api/admin/stats avec données réelles
 router.get('/', requireAuth, requirePermission('viewAnalytics'), async (req, res) => {
   try {
-    console.log('📊 [STATS] Route racine appelée...');
+    console.log('📊 [STATS] Récupération des statistiques réelles...');
     
-    // Stats simplifiées pour éviter les erreurs
+    // Récupération des statistiques réelles depuis la base de données
+    const [
+      totalUsers,
+      totalTrades,
+      totalObjects,
+      totalEvents,
+      totalReviews,
+      activeUsers,
+      completedTrades,
+      availableObjects,
+      activeEvents
+    ] = await Promise.all([
+      User.countDocuments(),
+      Trade.countDocuments(),
+      ObjectModel.countDocuments(),
+      Event.countDocuments(),
+      Review.countDocuments(),
+      User.countDocuments({ status: 'active' }),
+      Trade.countDocuments({ status: 'completed' }),
+      ObjectModel.countDocuments({ status: 'available' }),
+      Event.countDocuments({ isActive: true })
+    ]);
+
+    console.log('📊 [STATS] Données calculées:', {
+      totalUsers, totalTrades, totalObjects, totalEvents, totalReviews
+    });
+
+    // Stats formatées pour l'interface frontend
     const stats = {
       success: true,
+      totalUsers,
+      totalTrades,
+      totalObjects,
+      totalEvents,
+      totalReviews,
+      // Données détaillées réelles
       data: {
         users: {
-          total: 150,
-          active: 120,
-          newThisMonth: 15
+          total: totalUsers,
+          active: activeUsers,
+          newThisMonth: await User.countDocuments({
+            createdAt: { 
+              $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) 
+            }
+          })
         },
         trades: {
-          total: 85,
-          completed: 60,
-          pending: 25
+          total: totalTrades,
+          completed: completedTrades,
+          pending: await Trade.countDocuments({ status: { $in: ['pending', 'accepted'] } })
         },
         objects: {
-          total: 300,
-          available: 180,
-          traded: 120
+          total: totalObjects,
+          available: availableObjects,
+          traded: await Trade.countDocuments({ status: 'completed' })
+        },
+        events: {
+          total: totalEvents,
+          active: activeEvents
         },
         reviews: {
-          total: 45,
-          averageRating: 4.2,
-          thisMonth: 8
+          total: totalReviews,
+          averageRating: await Review.aggregate([
+            { $group: { _id: null, avgRating: { $avg: '$overallRating' } } }
+          ]).then(result => result[0]?.avgRating || 0),
+          thisMonth: await Review.countDocuments({
+            createdAt: { 
+              $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) 
+            }
+          })
         }
       },
       generated: new Date().toISOString()
     };
     
+    console.log('✅ [STATS] Statistiques réelles envoyées');
     res.json(stats);
   } catch (error) {
-    console.error('❌ [STATS] Erreur:', error);
+    console.error('❌ [STATS] Erreur récupération stats réelles:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Erreur récupération statistiques' 

@@ -206,7 +206,7 @@ if (fs.existsSync(adminEventsRoutePath)) {
 const adminStatsRoutePath = path.join(__dirname, 'routes', 'admin', 'stats.js');
 if (fs.existsSync(adminStatsRoutePath)) {
   const adminStatsRoutes = require('./routes/admin/stats');
-  app.use('/api/admin', adminStatsRoutes);
+  app.use('/api/admin/stats', adminStatsRoutes);
   console.log('✅ Admin Stats routes registered: /api/admin/stats');
 } else {
   console.warn("Warning: './routes/admin/stats.js' not found. '/api/admin/stats' route not registered.");

@@ -292,11 +292,11 @@ router.put('/:id/status', requireAuth, requirePermission('moderateContent'), asy
     const { id } = req.params;
     const { status, reason } = req.body;
 
-    const validStatuses = ['available', 'inactive', 'reserved', 'blocked'];
+    const validStatuses = ['available', 'traded', 'reserved'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        error: 'Statut invalide'
+        error: 'Statut invalide. Statuts autorisés: ' + validStatuses.join(', ')
       });
     }
 

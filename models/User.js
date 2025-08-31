@@ -142,7 +142,17 @@ const userSchema = new mongoose.Schema({
     // Analytics et système
     viewAnalytics: { type: Boolean, default: false },
     systemConfig: { type: Boolean, default: false },
-    manageAdmins: { type: Boolean, default: false }
+    manageAdmins: { type: Boolean, default: false },
+    
+    // Gestion des objets
+    manageObjects: { type: Boolean, default: false },
+    viewObjects: { type: Boolean, default: false },
+    moderateObjects: { type: Boolean, default: false },
+    
+    // Gestion des avis
+    manageReviews: { type: Boolean, default: false },
+    viewReviews: { type: Boolean, default: false },
+    moderateReviews: { type: Boolean, default: false }
   },
   adminActivatedAt: { type: Date, default: null },
   adminActivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
