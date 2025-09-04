@@ -28,4 +28,26 @@ process.env.EMAIL_USER = 'test@example.com';
 process.env.EMAIL_PASS = 'test';
 process.env.FRONTEND_URL = 'http://localhost:3000';
 
+// ===== UTILITAIRES GLOBAUX =====
+global.createMockRequest = (overrides = {}) => ({
+  body: {},
+  params: {},
+  query: {},
+  headers: {},
+  user: { id: 'mock_user_id', role: 'user' },
+  ...overrides
+});
+
+global.createMockResponse = () => {
+  const res = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  res.send = jest.fn().mockReturnValue(res);
+  res.end = jest.fn().mockReturnValue(res);
+  res.redirect = jest.fn().mockReturnValue(res);
+  return res;
+};
+
+global.createMockNext = () => jest.fn();
+
 console.log('✅ Setup simple configuré');

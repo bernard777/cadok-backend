@@ -2,9 +2,9 @@
 🎉 RAPPORT FINAL - TESTS E2E NOUVELLES FONCTIONNALITÉS CADOK
 ================================================================
 
-📅 Date d'exécution: 2025-08-13T15:28:50.076Z
+📅 Date d'exécution: 2025-09-04T15:34:41.737Z
 🏷️  Version: Nouvelles Fonctionnalités Complètes
-⏱️  Durée: 1755098930076 ms
+⏱️  Durée: 1757000081737 ms
 
 📊 RÉSULTATS GLOBAUX:
 --------------------

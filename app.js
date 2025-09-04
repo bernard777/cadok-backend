@@ -5,8 +5,14 @@ const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
 
-// �️ IMPORTATION MIDDLEWARE DE SÉCURITÉ
+// 🛡️ IMPORTATION MIDDLEWARE DE SÉCURITÉ
 const SecurityMiddleware = require('./middleware/security');
+
+// 📊 IMPORTATION NOUVEAUX MIDDLEWARES
+const { requestCorrelation, errorLogging } = require('./middleware/requestCorrelation');
+const { globalErrorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } = require('./middleware/errorHandler');
+const { handleValidationErrors } = require('./middleware/validation');
+const { logger } = require('./utils/logger');
 
 // �🔧 CONFIGURATION INTELLIGENTE D'ENVIRONNEMENT
 // Charger le bon fichier .env selon le contexte
@@ -77,7 +83,6 @@ if (fs.existsSync(objectsRoutePath)) {
   const objectRoutes = require('./routes/objects');
   app.use('/api/objects', objectRoutes);
 } else {
-  console.warn("Warning: './routes/objects.js' not found. '/api/objects' route not registered.");
 }
 
 // Ajout de la route des échanges
@@ -87,7 +92,6 @@ if (fs.existsSync(tradesRoutePath)) {
   const tradeRoutes = require('./routes/trades');
   app.use('/api/trades', tradeRoutes);
 } else {
-  console.warn("Warning: './routes/trades.js' not found. '/api/trades' route not registered.");
 }
 
 // Ajout de la route des utilisateurs
@@ -129,7 +133,6 @@ if (fs.existsSync(notificationsRoutePath)) {
   const notificationRoutes = require('./routes/notifications');
   app.use('/api/notifications', notificationRoutes);
 } else {
-  console.warn("Warning: './routes/notifications.js' not found. '/api/notifications' route not registered.");
 }
 
 // Ajout des routes notifications intelligentes
@@ -139,7 +142,6 @@ if (fs.existsSync(smartNotificationsRoutePath)) {
   app.use('/api/notifications', smartNotificationRoutes);
   console.log('✅ [APP] Routes Smart Notifications enregistrées avec succès');
 } else {
-  console.warn("Warning: './routes/smart-notifications.js' not found. Smart notifications route not registered.");
 }
 
 // Ajout de la route des conversations
@@ -149,7 +151,6 @@ if (fs.existsSync(conversationsRoutePath)) {
   const conversationRoutes = require('./routes/conversations');
   app.use('/api/conversations', conversationRoutes);
 } else {
-  console.warn("Warning: './routes/conversations.js' not found. '/api/conversations' route not registered.");
 }
 
 // 🚀 NOUVELLES FONCTIONNALITÉS AVANCÉES
@@ -161,7 +162,6 @@ if (fs.existsSync(featuresRoutePath)) {
   app.use('/api/features', featuresRoutes);
   console.log('✅ [APP] Routes /api/features enregistrées avec succès');
 } else {
-  console.warn("Warning: './routes/features.js' not found. '/api/features' route not registered.");
 }
 
 // Ajout des routes Analytics
@@ -170,7 +170,6 @@ if (fs.existsSync(analyticsRoutePath)) {
   const analyticsRoutes = require('./routes/analytics');
   app.use('/api/analytics', analyticsRoutes);
 } else {
-  console.warn("Warning: './routes/analytics.js' not found. '/api/analytics' route not registered.");
 }
 
 // Ajout des routes Eco-Impact
@@ -179,7 +178,6 @@ if (fs.existsSync(ecoRoutePath)) {
   const ecoRoutes = require('./routes/eco');
   app.use('/api/eco', ecoRoutes);
 } else {
-  console.warn("Warning: './routes/eco.js' not found. '/api/eco' route not registered.");
 }
 
 // Ajout des routes Gamification avec sauvegarde
@@ -189,7 +187,6 @@ if (fs.existsSync(gamificationPersistentRoutePath)) {
   app.use('/api/gamification', gamificationPersistentRoutes);
   console.log('✅ Gamification routes with persistence registered: /api/gamification');
 } else {
-  console.warn("Warning: './routes/gamificationPersistent.js' not found. '/api/gamification' route not registered.");
 }
 
 // Ajout des routes Admin Événements
@@ -199,17 +196,15 @@ if (fs.existsSync(adminEventsRoutePath)) {
   app.use('/api/admin/events', adminEventsRoutes);
   console.log('✅ Admin Events routes registered: /api/admin/events');
 } else {
-  console.warn("Warning: './routes/admin/events.js' not found. '/api/admin/events' route not registered.");
 }
 
 // Ajout des routes Admin Statistiques
 const adminStatsRoutePath = path.join(__dirname, 'routes', 'admin', 'stats.js');
 if (fs.existsSync(adminStatsRoutePath)) {
   const adminStatsRoutes = require('./routes/admin/stats');
-  app.use('/api/admin/stats', adminStatsRoutes);
+  app.use('/api/admin', adminStatsRoutes);
   console.log('✅ Admin Stats routes registered: /api/admin/stats');
 } else {
-  console.warn("Warning: './routes/admin/stats.js' not found. '/api/admin/stats' route not registered.");
 }
 
 // Ajout des routes Admin Utilisateurs
@@ -219,7 +214,6 @@ if (fs.existsSync(adminUsersRoutePath)) {
   app.use('/api/admin/users', adminUsersRoutes);
   console.log('✅ Admin Users routes registered: /api/admin/users');
 } else {
-  console.warn("Warning: './routes/admin/users.js' not found. '/api/admin/users' route not registered.");
 }
 
 // Ajout des routes Admin Trades
@@ -229,7 +223,6 @@ if (fs.existsSync(adminTradesRoutePath)) {
   app.use('/api/admin/trades', adminTradesRoutes);
   console.log('✅ Admin Trades routes registered: /api/admin/trades');
 } else {
-  console.warn("Warning: './routes/admin/trades.js' not found. '/api/admin/trades' route not registered.");
 }
 
 // Ajout des routes Admin Rôles et Permissions
@@ -239,7 +232,6 @@ if (fs.existsSync(adminRolesRoutePath)) {
   app.use('/api/admin', adminRolesRoutes);
   console.log('✅ Admin Roles routes registered: /api/admin/roles');
 } else {
-  console.warn("Warning: './routes/admin/roles.js' not found. '/api/admin/roles' route not registered.");
 }
 
 // 🔔 Routes Admin Notifications
@@ -249,7 +241,6 @@ if (fs.existsSync(adminNotificationsPath)) {
   app.use('/api/admin/notifications', adminNotificationsRoutes);
   console.log('✅ Admin Notifications routes registered: /api/admin/notifications');
 } else {
-  console.warn("Warning: './routes/admin/notifications.js' not found. '/api/admin/notifications' route not registered.");
 }
 
 // 📢 Routes de Signalements - Modération Communautaire
@@ -259,37 +250,6 @@ if (fs.existsSync(reportsRoutePath)) {
   app.use('/api/reports', reportsRoutes);
   console.log('✅ Reports routes registered: /api/reports');
 } else {
-  console.warn("Warning: './routes/reports.js' not found. '/api/reports' route not registered.");
-}
-
-// ⭐ Routes Reviews - Système d'évaluation
-const reviewsRoutePath = path.join(__dirname, 'routes', 'reviews.js');
-if (fs.existsSync(reviewsRoutePath)) {
-  const reviewsRoutes = require('./routes/reviews');
-  app.use('/api/reviews', reviewsRoutes);
-  console.log('✅ Reviews routes registered: /api/reviews');
-} else {
-  console.warn("Warning: './routes/reviews.js' not found. '/api/reviews' route not registered.");
-}
-
-// 🎪 Routes Events - Événements utilisateurs
-const eventsRoutePath = path.join(__dirname, 'routes', 'events.js');
-if (fs.existsSync(eventsRoutePath)) {
-  const eventsRoutes = require('./routes/events');
-  app.use('/api/events', eventsRoutes);
-  console.log('✅ Events routes registered: /api/events');
-} else {
-  console.warn("Warning: './routes/events.js' not found. '/api/events' route not registered.");
-}
-
-// 🎯 Routes Tasks - Tâches quotidiennes d'événements
-const tasksRoutePath = path.join(__dirname, 'routes', 'tasks.js');
-if (fs.existsSync(tasksRoutePath)) {
-  const tasksRoutes = require('./routes/tasks');
-  app.use('/api/tasks', tasksRoutes);
-  console.log('✅ Tasks routes registered: /api/tasks');
-} else {
-  console.warn("Warning: './routes/tasks.js' not found. '/api/tasks' route not registered.");
 }
 
 // 📊 Ajout des routes Admin Analytics - Statistiques Plateforme
@@ -299,27 +259,20 @@ if (fs.existsSync(adminAnalyticsRoutePath)) {
   app.use('/api/admin/analytics', adminAnalyticsRoutes);
   console.log('✅ Admin Analytics routes registered: /api/admin/analytics');
 } else {
-  console.warn("Warning: './routes/admin/analytics.js' not found. '/api/admin/analytics' route not registered.");
-}
-
-// 📦 Ajout des routes Admin Objects - Gestion des objets
+// 📦 Ajout des routes Admin Objects - Gestion Objets
 const adminObjectsRoutePath = path.join(__dirname, 'routes', 'admin', 'objects.js');
 if (fs.existsSync(adminObjectsRoutePath)) {
   const adminObjectsRoutes = require('./routes/admin/objects');
   app.use('/api/admin/objects', adminObjectsRoutes);
   console.log('✅ Admin Objects routes registered: /api/admin/objects');
 } else {
-  console.warn("Warning: './routes/admin/objects.js' not found. '/api/admin/objects' route not registered.");
-}
-
-// ⭐ Ajout des routes Admin Reviews - Gestion des avis
+// ⭐ Ajout des routes Admin Reviews - Gestion Avis
 const adminReviewsRoutePath = path.join(__dirname, 'routes', 'admin', 'reviews.js');
 if (fs.existsSync(adminReviewsRoutePath)) {
   const adminReviewsRoutes = require('./routes/admin/reviews');
   app.use('/api/admin/reviews', adminReviewsRoutes);
   console.log('✅ Admin Reviews routes registered: /api/admin/reviews');
 } else {
-  console.warn("Warning: './routes/admin/reviews.js' not found. '/api/admin/reviews' route not registered.");
 }
 
 // 🌤️ Routes Cloudinary - Gestion des médias
@@ -329,7 +282,6 @@ if (fs.existsSync(cloudinaryRoutePath)) {
   app.use('/api/media', cloudinaryRoutes);
   console.log('✅ Cloudinary routes registered: /api/media');
 } else {
-  console.warn("Warning: './routes/cloudinary.js' not found. '/api/media' route not registered.");
 }
 
 // 🎧 Routes Support - Aide et Support Utilisateur
@@ -339,7 +291,6 @@ if (fs.existsSync(supportRoutePath)) {
   app.use('/api/support', supportRoutes);
   console.log('✅ Support routes registered: /api/support');
 } else {
-  console.warn("Warning: './routes/support.js' not found. '/api/support' route not registered.");
 }
 
 // Routes
@@ -366,5 +317,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+}
+}
 
 module.exports = app;

@@ -12,6 +12,11 @@ const DeliveryLabelService = require('../services/deliveryLabelService');
 const socketService = require('../services/socketService');
 const { notificationTriggers } = require('../middleware/notificationTriggers');
 
+// 🆕 IMPORTATION NOUVEAUX SERVICES - PHASE 1 CRITIQUE
+const TransactionService = require('../services/transactionService');
+const { ValidationMiddlewares, handleValidationErrors } = require('../middleware/validation');
+const { AppError, NotFoundError, ConflictError } = require('../middleware/errorHandler');
+
 // Initialiser les services
 const securityService = new PureTradeSecurityService();
 const labelService = new DeliveryLabelService();
@@ -49,145 +54,145 @@ const NOTIFICATION_TYPE = {
 };
 
 // ========== PROPOSER UN ÉCHANGE ==========
-router.post('/', auth, async (req, res) => {
-  try {
-    const { requestedObjects, offeredObjects } = req.body;
-    
-    if (!Array.isArray(requestedObjects) || requestedObjects.length === 0) {
-      return res.status(400).json({ message: 'Vous devez sélectionner au moins un objet demandé.' });
-    }
+router.post('/', 
+  auth, 
+  ValidationMiddlewares.mongoId('requestedObjects.*'),
+  ValidationMiddlewares.mongoId('offeredObjects.*'),
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { requestedObjects, offeredObjects, message } = req.body;
+      const logger = req.logger;
+      
+      logger.info('Création d\'un nouveau trade', {
+        fromUser: req.user.id,
+        requestedObjectsCount: requestedObjects?.length || 0,
+        offeredObjectsCount: offeredObjects?.length || 0
+      });
 
-    // Vérifie que tous les objets demandés existent et appartiennent au même utilisateur (utilisateur 2)
-    const requestedObjs = await ObjectModel.find({ _id: { $in: requestedObjects } });
-    if (requestedObjs.length !== requestedObjects.length) {
-      return res.status(404).json({ message: 'Un ou plusieurs objets demandés sont introuvables.' });
-    }
-    
-    const ownerId = requestedObjs[0].owner.toString();
-    if (!requestedObjs.every(obj => obj.owner.toString() === ownerId)) {
-      return res.status(400).json({ message: 'Tous les objets demandés doivent appartenir au même utilisateur.' });
-    }
-    
-    if (ownerId === req.user.id) {
-      return res.status(400).json({ message: 'Impossible de troquer avec soi-même.' });
-    }
+      if (!Array.isArray(requestedObjects) || requestedObjects.length === 0) {
+        throw new AppError('Vous devez sélectionner au moins un objet demandé.', 400);
+      }
 
-    // Vérifier les objets offerts (optionnels)
-    let offeredObjs = [];
-    if (offeredObjects && Array.isArray(offeredObjects) && offeredObjects.length > 0) {
-      offeredObjs = await ObjectModel.find({ _id: { $in: offeredObjects } });
-      if (offeredObjs.length !== offeredObjects.length) {
-        return res.status(404).json({ message: 'Un ou plusieurs objets offerts sont introuvables.' });
+      // Vérifie que tous les objets demandés existent et appartiennent au même utilisateur
+      const requestedObjs = await ObjectModel.find({ _id: { $in: requestedObjects } });
+      if (requestedObjs.length !== requestedObjects.length) {
+        throw new NotFoundError('Un ou plusieurs objets demandés sont introuvables.');
       }
       
-      // Vérifier que les objets offerts appartiennent au demandeur
-      if (!offeredObjs.every(obj => obj.owner.toString() === req.user.id)) {
-        return res.status(400).json({ message: 'Vous ne pouvez offrir que vos propres objets.' });
+      const ownerId = requestedObjs[0].owner.toString();
+      if (!requestedObjs.every(obj => obj.owner.toString() === ownerId)) {
+        throw new AppError('Tous les objets demandés doivent appartenir au même utilisateur.', 400);
       }
-    }
+      
+      if (ownerId === req.user.id) {
+        throw new AppError('Impossible de troquer avec soi-même.', 400);
+      }
 
-    // Analyser le risque du troc avec le nouveau système de sécurité
-    const riskAnalysis = await securityService.analyzeTradeRisk(req.user.id, ownerId);
-
-    const newTrade = new Trade({
-      fromUser: req.user.id,
-      toUser: ownerId,
-      requestedObjects,
-      offeredObjects: offeredObjects || [], // ← Ajouter les objets offerts
-      status: TRADE_STATUS.PENDING,
-      security: {
-        trustScores: {
-          sender: riskAnalysis.fromUserScore,
-          recipient: riskAnalysis.toUserScore
-        },
-        riskLevel: riskAnalysis.riskLevel,
-        pureTradeValidation: {
-          steps: {
-            photosSubmitted: { fromUser: false, toUser: false },
-            shippingConfirmed: { fromUser: false, toUser: false },
-            deliveryConfirmed: { fromUser: false, toUser: false }
-          },
-          constraints: riskAnalysis.constraints,
-          timeline: [{
-            step: 'trade_created',
-            userId: req.user.id,
-            timestamp: new Date(),
-            data: { riskLevel: riskAnalysis.riskLevel, recommendation: riskAnalysis.recommendation }
-          }]
+      // Vérifier les objets offerts (optionnels)
+      let offeredObjs = [];
+      if (offeredObjects && Array.isArray(offeredObjects) && offeredObjects.length > 0) {
+        offeredObjs = await ObjectModel.find({ _id: { $in: offeredObjects } });
+        if (offeredObjs.length !== offeredObjects.length) {
+          throw new NotFoundError('Un ou plusieurs objets offerts sont introuvables.');
+        }
+        
+        // Vérifier que les objets offerts appartiennent au demandeur
+        if (!offeredObjs.every(obj => obj.owner.toString() === req.user.id)) {
+          throw new AppError('Vous ne pouvez offrir que vos propres objets.', 400);
         }
       }
-    });
 
-    const saved = await newTrade.save();
-    
-    // Populer les champs nécessaires pour la réponse
-    await saved.populate([
-      { path: 'fromUser', select: 'pseudo city avatar' },
-      { path: 'toUser', select: 'pseudo city avatar' },
-      { path: 'requestedObjects' },
-      { path: 'offeredObjects' }
-    ]);
+      // Analyser le risque du troc avec le nouveau système de sécurité
+      const riskAnalysis = await securityService.analyzeTradeRisk(req.user.id, ownerId);
 
-    // 🔔 NOTIFICATION SYSTÈME MODERNE - Notification pour l'utilisateur destinataire
-    const objectsCount = trade.requestedObjects.length + trade.offeredObjects.length;
-    const requesterName = saved.fromUser.pseudo || saved.fromUser.firstName || 'Un utilisateur';
-    const isSecure = riskAnalysis.constraints.photosRequired;
-
-    try {
-      await notificationTriggers.triggerTradeRequest(
-        ownerId,           // Destinataire de la notification
-        saved._id,         // ID du troc
-        requesterName,     // Nom du demandeur
-        objectsCount,      // Nombre d'objets
-        isSecure          // Si c'est un troc sécurisé
+      // 🆕 UTILISATION DU SERVICE DE TRANSACTION
+      const result = await TransactionService.createTradeTransaction(
+        {
+          message: sanitizeHtml(message || ''),
+          riskAnalysis: riskAnalysis,
+          createdAt: new Date()
+        },
+        req.user.id,
+        ownerId,
+        requestedObjects,
+        offeredObjects
       );
-      console.log('✅ Notification de demande de troc envoyée:', {
-        destinataire: ownerId,
-        demandeur: requesterName,
-        tradeId: saved._id,
-        isSecure
+
+      const trade = result.results[3]; // Le trade est le 4ème résultat
+
+      // Populer les champs nécessaires pour la réponse
+      await trade.populate([
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' },
+        { path: 'requestedObjects' },
+        { path: 'offeredObjects' }
+      ]);
+
+      logger.info('Trade créé avec succès', {
+        tradeId: trade._id,
+        fromUser: req.user.id,
+        toUser: ownerId,
+        attempt: result.attempt
       });
-    } catch (notifError) {
-      console.error('❌ Erreur notification demande de troc:', notifError);
-      // Ne pas faire échouer la création du troc pour une erreur de notification
+
+      // 🔔 NOTIFICATION SYSTÈME MODERNE - Notification pour l'utilisateur destinataire
+      const objectsCount = trade.requestedObjects.length + trade.offeredObjects.length;
+      const requesterName = trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur';
+      const isSecure = riskAnalysis.constraints.photosRequired;
+
+      try {
+        await notificationTriggers.triggerTradeRequest(
+          ownerId,           // Destinataire de la notification
+          trade._id,         // ID du troc
+          requesterName,     // Nom du demandeur
+          objectsCount,      // Nombre d'objets
+          isSecure          // Si c'est un troc sécurisé
+        );
+        logger.info('✅ Notification de demande de troc envoyée', {
+          destinataire: ownerId,
+          demandeur: requesterName,
+          tradeId: trade._id,
+          isSecure
+        });
+      } catch (notifError) {
+        logger.error('❌ Erreur notification demande de troc', { error: notifError.message });
+        // Ne pas faire échouer la création du troc pour une erreur de notification
+      }
+
+      // Retourner une structure adaptée pour le frontend
+      const responseData = {
+        _id: trade._id,
+        status: trade.status,
+        message: trade.message,
+        createdAt: trade.createdAt,
+        requester: (trade.fromUser._id || trade.fromUser).toString(),
+        requested: (trade.toUser._id || trade.toUser).toString(),
+        fromUser: trade.fromUser,
+        toUser: trade.toUser,
+        requestedObjects: trade.requestedObjects,
+        offeredObjects: trade.offeredObjects,
+        deliveryMethod: trade.deliveryMethod,
+        deliveryCost: trade.deliveryCost,
+        requestId: req.requestId
+      };
+
+      res.status(201).json({
+        success: true,
+        message: 'Échange proposé avec succès !',
+        trade: responseData
+      });
+
+    } catch (error) {
+      req.logger.error('Erreur lors de la création du trade', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user.id
+      });
+      throw error; // Laisse le middleware global gérer l'erreur
     }
-
-    // Retourner une structure adaptée pour le frontend
-    const responseData = {
-      _id: saved._id,
-      status: saved.status,
-      message: saved.message,
-      createdAt: saved.createdAt,
-      requester: (saved.fromUser._id || saved.fromUser).toString(), // ← Convertir en string
-      requested: (saved.toUser._id || saved.toUser).toString(),     // ← Convertir en string
-      fromUser: saved.fromUser,
-      toUser: saved.toUser,
-      requestedObjects: saved.requestedObjects,
-      offeredObjects: saved.offeredObjects,
-      deliveryMethod: saved.deliveryMethod,
-      deliveryCost: saved.deliveryCost
-    };
-
-    // 🔌 SOCKET.IO - Notifier les utilisateurs connectés que les trades ont été mis à jour
-    console.log('🔄 [SOCKET] Émission événement trade-created pour:', {
-      fromUser: saved.fromUser._id,
-      toUser: saved.toUser._id
-    });
-    
-    // Notifier les deux utilisateurs concernés
-    socketService.emitToUsers([saved.fromUser._id.toString(), saved.toUser._id.toString()], 'conversation-updated', {
-      type: 'trade-created',
-      tradeId: saved._id,
-      fromUser: saved.fromUser._id,
-      toUser: saved.toUser._id
-    });
-
-    res.status(201).json({ success: true, trade: responseData });
-  } catch (err) {
-    console.error('❌ Erreur dans POST /trades:', err.message);
-    res.status(500).json({ error: err.message });
   }
-});
+);
 
 // ========== LISTER SES ÉCHANGES ==========
 router.get('/', auth, async (req, res) => {
@@ -648,157 +653,140 @@ router.get('/:id/messages', auth, async (req, res) => {
 // ========== ROUTES PATCH POUR FRONTEND ==========
 
 // PATCH /trades/:id/accept - Accepter un trade (alias pour PUT)
-router.patch('/:id/accept', auth, async (req, res) => {
-  try {
-    const trade = await Trade.findById(req.params.id);
-    if (!trade) {
-      return res.status(404).json({ message: 'Trade introuvable' });
-    }
+router.patch('/:id/accept', 
+  auth, 
+  ValidationMiddlewares.mongoId('id'),
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const logger = req.logger;
+      const tradeId = req.params.id;
+      
+      logger.info('Tentative d\'acceptation de trade', { 
+        tradeId, 
+        userId: req.user.id 
+      });
 
-    console.log('🔧 [DEBUG] PATCH Accept trade - User:', req.user.id);
-    console.log('🔧 [DEBUG] PATCH Accept trade - fromUser:', trade.fromUser.toString());
-    console.log('🔧 [DEBUG] PATCH Accept trade - toUser:', trade.toUser.toString());
-    console.log('🔧 [DEBUG] PATCH Accept trade - status:', trade.status);
+      // 🆕 UTILISATION DU SERVICE DE TRANSACTION
+      const result = await TransactionService.acceptTradeTransaction(tradeId, req.user.id);
+      const trade = result.results[1]; // Le trade mis à jour
 
-    // Logique d'acceptation selon le statut
-    if (trade.status === 'pending') {
-      // User 2 peut accepter une demande initiale (rare, généralement il propose plutôt)
-      if (trade.toUser.toString() !== req.user.id) {
-        return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter cette demande.' });
-      }
-    } else if (trade.status === 'proposed') {
-      // User 1 peut accepter une proposition (cas le plus courant)
-      if (trade.fromUser.toString() !== req.user.id) {
-        return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à accepter cette proposition.' });
-      }
-    } else {
-      return res.status(400).json({ message: 'Ce troc ne peut plus être accepté.' });
-    }
+      // Populer les champs nécessaires pour la réponse
+      await trade.populate([
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' },
+        { path: 'requestedObjects' },
+        { path: 'offeredObjects' }
+      ]);
 
-    // Marquer les objets comme échangés
-    if (trade.requestedObjects && trade.requestedObjects.length > 0) {
-      await ObjectModel.updateMany(
-        { _id: { $in: trade.requestedObjects } },
-        { status: OBJECT_STATUS.TRADED }
-      );
-    }
+      logger.info('Trade accepté avec succès', {
+        tradeId: trade._id,
+        attempt: result.attempt,
+        objectsUpdated: result.results[2]
+      });
 
-    if (trade.offeredObjects && trade.offeredObjects.length > 0) {
-      await ObjectModel.updateMany(
-        { _id: { $in: trade.offeredObjects } },
-        { status: OBJECT_STATUS.TRADED }
-      );
-    }
-
-    // Créer notification pour l'autre utilisateur
-    let notificationUser, notificationMessage;
-    
-    if (trade.status === 'pending') {
-      // User 2 accepte la demande initiale -> notifier User 1
-      notificationUser = trade.fromUser;
-      notificationMessage = "Votre demande de troc a été acceptée !";
-    } else if (trade.status === 'proposed') {
-      // User 1 accepte la proposition -> notifier User 2  
-      notificationUser = trade.toUser;
-      notificationMessage = "Votre proposition de troc a été acceptée !";
-    }
-
-    trade.status = TRADE_STATUS.ACCEPTED;
-    trade.acceptedAt = new Date();
-    await trade.save();
-
-    if (notificationUser) {
-      // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier l'acceptation
+      // 🔔 Notification à l'autre utilisateur
+      const notificationUserId = trade.fromUser._id.toString() === req.user.id 
+        ? trade.toUser._id 
+        : trade.fromUser._id;
+      
       try {
         await notificationTriggers.triggerTradeUpdate(
           trade._id,
-          notificationUser._id,
+          notificationUserId,
           'accepted',
-          trade.status === 'pending' ? trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur' 
-                                     : trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+          req.user.pseudo || req.user.firstName || 'Un utilisateur'
         );
-        console.log('✅ Notification d\'acceptation de troc envoyée');
+        logger.info('Notification d\'acceptation envoyée');
       } catch (notifError) {
-        console.error('❌ Erreur notification acceptation de troc:', notifError);
-        // Ne pas faire échouer l'acceptation pour une erreur de notification
+        logger.error('Erreur notification acceptation', { error: notifError.message });
       }
+
+      res.json({ 
+        success: true, 
+        message: 'Troc accepté avec succès.', 
+        trade,
+        requestId: req.requestId
+      });
+
+    } catch (error) {
+      req.logger.error('Erreur lors de l\'acceptation du trade', {
+        error: error.message,
+        tradeId: req.params.id,
+        userId: req.user.id
+      });
+      throw error;
     }
-
-    res.json({ message: 'Troc accepté avec succès.', trade });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
-});
+);
 
 // PATCH /trades/:id/decline - Refuser un trade (alias pour PUT)
-router.patch('/:id/decline', auth, async (req, res) => {
-  try {
-    const trade = await Trade.findById(req.params.id);
-    if (!trade) {
-      return res.status(404).json({ message: 'Trade introuvable' });
-    }
+router.patch('/:id/decline', 
+  auth, 
+  ValidationMiddlewares.mongoId('id'),
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const logger = req.logger;
+      const tradeId = req.params.id;
+      
+      logger.info('Tentative de refus de trade', { 
+        tradeId, 
+        userId: req.user.id 
+      });
 
-    console.log('🔧 [DEBUG] Decline trade - User:', req.user.id);
-    console.log('🔧 [DEBUG] Decline trade - fromUser:', trade.fromUser.toString());
-    console.log('🔧 [DEBUG] Decline trade - toUser:', trade.toUser.toString());
-    console.log('🔧 [DEBUG] Decline trade - status:', trade.status);
+      // 🆕 UTILISATION DU SERVICE DE TRANSACTION
+      const result = await TransactionService.refuseTradeTransaction(tradeId, req.user.id);
+      const trade = result.results[1]; // Le trade mis à jour
 
-    // Logique de refus selon le statut
-    if (trade.status === 'pending') {
-      // User 2 peut refuser une demande initiale
-      if (trade.toUser.toString() !== req.user.id) {
-        return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à refuser cette demande.' });
-      }
-    } else if (trade.status === 'proposed') {
-      // User 1 peut refuser une proposition
-      if (trade.fromUser.toString() !== req.user.id) {
-        return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à refuser cette proposition.' });
-      }
-    } else {
-      return res.status(400).json({ message: 'Ce troc ne peut plus être refusé.' });
-    }
+      // Populer les champs nécessaires pour la réponse
+      await trade.populate([
+        { path: 'fromUser', select: 'pseudo city avatar' },
+        { path: 'toUser', select: 'pseudo city avatar' },
+        { path: 'requestedObjects' },
+        { path: 'offeredObjects' }
+      ]);
 
-    // Créer notification pour l'autre utilisateur
-    let notificationUser, notificationMessage;
-    
-    if (trade.status === 'pending') {
-      // User 2 refuse la demande initiale -> notifier User 1
-      notificationUser = trade.fromUser;
-      notificationMessage = "Votre demande de troc a été refusée.";
-    } else if (trade.status === 'proposed') {
-      // User 1 refuse la proposition -> notifier User 2  
-      notificationUser = trade.toUser;
-      notificationMessage = "Votre proposition de troc a été refusée.";
-    }
+      logger.info('Trade refusé avec succès', {
+        tradeId: trade._id,
+        attempt: result.attempt,
+        objectsUpdated: result.results[2]
+      });
 
-    trade.status = TRADE_STATUS.REFUSED;
-    trade.refusedAt = new Date();
-    await trade.save();
-
-    if (notificationUser) {
-      // 🔔 NOTIFICATION SYSTÈME MODERNE - Notifier le refus
+      // 🔔 Notification à l'autre utilisateur
+      const notificationUserId = trade.fromUser._id.toString() === req.user.id 
+        ? trade.toUser._id 
+        : trade.fromUser._id;
+      
       try {
         await notificationTriggers.triggerTradeUpdate(
           trade._id,
-          notificationUser._id,
-          'refused',
-          trade.status === 'pending' ? trade.toUser.pseudo || trade.toUser.firstName || 'Un utilisateur' 
-                                     : trade.fromUser.pseudo || trade.fromUser.firstName || 'Un utilisateur'
+          notificationUserId,
+          'rejected',
+          req.user.pseudo || req.user.firstName || 'Un utilisateur'
         );
-        console.log('✅ Notification de refus de troc envoyée');
+        logger.info('Notification de refus envoyée');
       } catch (notifError) {
-        console.error('❌ Erreur notification refus de troc:', notifError);
-        // Ne pas faire échouer le refus pour une erreur de notification
+        logger.error('Erreur notification refus', { error: notifError.message });
       }
+
+      res.json({ 
+        success: true, 
+        message: 'Troc refusé avec succès.', 
+        trade,
+        requestId: req.requestId
+      });
+
+    } catch (error) {
+      req.logger.error('Erreur lors du refus du trade', {
+        error: error.message,
+        tradeId: req.params.id,
+        userId: req.user.id
+      });
+      throw error;
     }
-
-    res.json({ message: 'Troc refusé.', trade });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
-});
+);
 
 // ========== USER 2 PROPOSE SES OBJETS EN ÉCHANGE ==========
 router.post('/:id/make-proposal', auth, async (req, res) => {

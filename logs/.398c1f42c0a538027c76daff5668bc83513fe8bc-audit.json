@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 7
+    },
+    "auditLog": "C:\\Users\\JB\\Music\\cadok-backend\\logs\\.398c1f42c0a538027c76daff5668bc83513fe8bc-audit.json",
+    "files": [
+        {
+            "date": 1756930010695,
+            "name": "C:\\Users\\JB\\Music\\cadok-backend\\logs\\http-2025-09-03.log",
+            "hash": "641bb24ce0841f9b2025f39b478c5e3b51cb6ae4584b358f560b3c1d65c7fe29"
+        },
+        {
+            "date": 1756937153146,
+            "name": "C:\\Users\\JB\\Music\\cadok-backend\\logs\\http-2025-09-04.log",
+            "hash": "0894d62be28ea48e7d3aec4e8d336828d3b5bc1950fdff52c9030da35f39f3bb"
+        }
+    ],
+    "hashType": "sha256"
+}
