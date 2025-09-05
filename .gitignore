@@ -29,6 +29,13 @@ scripts/create-admin-*.js
 # Coverage reports
 coverage/
 
+# Logs et fichiers d'audit Winston
+logs/
+*.log
+*.log.*
+.audit.json
+*audit.json
+
 # Uploads - Images des utilisateurs (ne pas commit)
 uploads/avatars/*.jpg
 uploads/avatars/*.jpeg
