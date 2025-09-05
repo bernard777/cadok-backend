@@ -79,6 +79,72 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/users/stats
+ * Statistiques des utilisateurs et admins (DOIT ÊTRE AVANT /:userId)
+ */
+router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      activeUsers,
+      pendingUsers,
+      inactiveUsers,
+      suspendedUsers,
+      bannedUsers,
+      regularUsers,
+      moderators,
+      admins,
+      superAdmins,
+      recentUsers
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ status: 'active' }),
+      User.countDocuments({ status: 'pending' }),
+      User.countDocuments({ status: 'inactive' }),
+      User.countDocuments({ status: 'suspended' }),
+      User.countDocuments({ status: 'banned' }),
+      User.countDocuments({ $or: [{ role: 'user' }, { role: { $exists: false } }] }),
+      User.countDocuments({ role: 'moderator' }),
+      User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ role: 'super_admin' }),
+      User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        // Totaux
+        totalUsers,
+        recentUsers,
+        
+        // Par statut
+        activeUsers,
+        pendingUsers,
+        inactiveUsers,
+        suspendedUsers,
+        bannedUsers,
+        
+        // Par rôle
+        regularUsers,
+        moderators,
+        admins,
+        superAdmins,
+        
+        // Statistiques dérivées
+        adminPercentage: Math.round(((moderators + admins + superAdmins) / totalUsers) * 100 * 10) / 10,
+        activePercentage: Math.round((activeUsers / totalUsers) * 100 * 10) / 10,
+        
+        // Métadonnées
+        lastUpdated: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur stats utilisateurs:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
  * GET /api/admin/users/:userId
  * Récupérer les détails d'un utilisateur spécifique
  */
@@ -274,72 +340,6 @@ router.post('/:userId/demote', authMiddleware, superAdminMiddleware, async (req,
     });
   } catch (error) {
     console.error('❌ Erreur rétrogradation:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-/**
- * GET /api/admin/users/stats
- * Statistiques des utilisateurs et admins
- */
-router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const [
-      totalUsers,
-      activeUsers,
-      pendingUsers,
-      inactiveUsers,
-      suspendedUsers,
-      bannedUsers,
-      regularUsers,
-      moderators,
-      admins,
-      superAdmins,
-      recentUsers
-    ] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ status: 'active' }),
-      User.countDocuments({ status: 'pending' }),
-      User.countDocuments({ status: 'inactive' }),
-      User.countDocuments({ status: 'suspended' }),
-      User.countDocuments({ status: 'banned' }),
-      User.countDocuments({ $or: [{ role: 'user' }, { role: { $exists: false } }] }),
-      User.countDocuments({ role: 'moderator' }),
-      User.countDocuments({ role: 'admin' }),
-      User.countDocuments({ role: 'super_admin' }),
-      User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
-    ]);
-
-    res.json({
-      success: true,
-      stats: {
-        // Totaux
-        totalUsers,
-        recentUsers,
-        
-        // Par statut
-        activeUsers,
-        pendingUsers,
-        inactiveUsers,
-        suspendedUsers,
-        bannedUsers,
-        
-        // Par rôle
-        regularUsers,
-        moderators,
-        admins,
-        superAdmins,
-        
-        // Statistiques dérivées
-        adminPercentage: Math.round(((moderators + admins + superAdmins) / totalUsers) * 100 * 10) / 10,
-        activePercentage: Math.round((activeUsers / totalUsers) * 100 * 10) / 10,
-        
-        // Métadonnées
-        lastUpdated: new Date()
-      }
-    });
-  } catch (error) {
-    console.error('❌ Erreur stats utilisateurs:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
@@ -641,10 +641,19 @@ router.post('/:userId/activate', authMiddleware, adminMiddleware, async (req, re
       });
     }
 
-    if (user.status !== 'pending') {
+    if (user.status === 'active') {
+      return res.status(200).json({
+        success: true,
+        message: 'Utilisateur déjà actif',
+        user: { status: 'active' }
+      });
+    }
+
+    // Permettre l'activation depuis plusieurs statuts
+    if (!['pending', 'suspended', 'banned', 'inactive'].includes(user.status)) {
       return res.status(400).json({
         success: false,
-        error: 'Seuls les comptes en attente peuvent être activés'
+        error: `Impossible d'activer un compte avec le statut: ${user.status}`
       });
     }
 

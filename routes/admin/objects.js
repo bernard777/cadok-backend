@@ -23,6 +23,7 @@ router.get('/', requireAuth, requirePermission('manageObjects'), async (req, res
       status,
       category,
       search,
+      userId,
       limit = 50,
       skip = 0,
       sortBy = 'createdAt',
@@ -42,6 +43,11 @@ router.get('/', requireAuth, requirePermission('manageObjects'), async (req, res
     // Filtre par catégorie
     if (category && category !== 'all') {
       query.category = category;
+    }
+
+    // Filtre par utilisateur
+    if (userId && userId !== 'all') {
+      query.owner = userId;
     }
 
     // Recherche textuelle
