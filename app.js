@@ -9,12 +9,14 @@ const fs = require('fs');
 const SecurityMiddleware = require('./middleware/security');
 
 // 📊 IMPORTATION NOUVEAUX MIDDLEWARES
+
+// 🚨 MIDDLEWARE DE MONITORING TEMPS RÉEL (Solution MedicalGo)
 const { requestCorrelation, errorLogging } = require('./middleware/requestCorrelation');
 const { globalErrorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } = require('./middleware/errorHandler');
 const { handleValidationErrors } = require('./middleware/validation');
 const { logger } = require('./utils/logger');
 
-// �🔧 CONFIGURATION INTELLIGENTE D'ENVIRONNEMENT
+// 🔧 CONFIGURATION INTELLIGENTE D'ENVIRONNEMENT
 // Charger le bon fichier .env selon le contexte
 if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
   // Mode test : utiliser .env.test
@@ -26,7 +28,21 @@ if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
   console.log('🚀 [APP] Mode production - Configuration .env chargée');
 }
 
+// 🔧 VALIDATION DES VARIABLES D'ENVIRONNEMENT (Solution MedicalGo)
+const { validateEnvironment, displayEnvironmentSummary } = require('./config/validation');
+const validationResult = validateEnvironment();
+
+// Afficher le résumé de configuration
+displayEnvironmentSummary();
+
 const app = express();
+
+// 📊 MIDDLEWARE DE CORRÉLATION DES REQUÊTES (Solution MedicalGo)
+app.use(requestCorrelation);
+
+// 🚨 MIDDLEWARE DE MONITORING TEMPS RÉEL (Solution MedicalGo)
+const { responseTimeMonitoring } = require('./middleware/continuousMonitoring');
+app.use(responseTimeMonitoring);
 
 // 🔗 CONNEXION MONGODB (pour production uniquement)
 const { connectToDatabase } = require('./db');
@@ -50,6 +66,15 @@ console.log('🛡️ [APP] Configuration des middlewares de sécurité...');
 // Headers sécurisés avec Helmet - Configuration stricte uniquement
 app.use(SecurityMiddleware.setupHelmet());
 
+// Headers personnalisés de sécurité (Solution MedicalGo)
+app.use((req, res, next) => {
+  res.setHeader('X-Request-Id', req.requestId);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
 // Rate limiting global
 app.use(SecurityMiddleware.createGlobalRateLimit());
 
@@ -62,7 +87,26 @@ app.use(SecurityMiddleware.detectSQLInjection());
 console.log('✅ [APP] Middlewares de sécurité configurés');
 
 // Middleware standards (APRÈS la sécurité)
-app.use(cors());
+// 🔐 Configuration CORS sécurisée (Solution MedicalGo)
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = (process.env.SOCKET_CORS_ORIGIN || '').split(',').filter(Boolean);
+    
+    // Permettre les requêtes sans origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -202,7 +246,7 @@ if (fs.existsSync(adminEventsRoutePath)) {
 const adminStatsRoutePath = path.join(__dirname, 'routes', 'admin', 'stats.js');
 if (fs.existsSync(adminStatsRoutePath)) {
   const adminStatsRoutes = require('./routes/admin/stats');
-  app.use('/api/admin', adminStatsRoutes);
+  app.use('/api/admin/stats', adminStatsRoutes);
   console.log('✅ Admin Stats routes registered: /api/admin/stats');
 } else {
 }
@@ -258,21 +302,22 @@ if (fs.existsSync(adminAnalyticsRoutePath)) {
   const adminAnalyticsRoutes = require('./routes/admin/analytics');
   app.use('/api/admin/analytics', adminAnalyticsRoutes);
   console.log('✅ Admin Analytics routes registered: /api/admin/analytics');
-} else {
+}
+
 // 📦 Ajout des routes Admin Objects - Gestion Objets
 const adminObjectsRoutePath = path.join(__dirname, 'routes', 'admin', 'objects.js');
 if (fs.existsSync(adminObjectsRoutePath)) {
   const adminObjectsRoutes = require('./routes/admin/objects');
   app.use('/api/admin/objects', adminObjectsRoutes);
   console.log('✅ Admin Objects routes registered: /api/admin/objects');
-} else {
+}
+
 // ⭐ Ajout des routes Admin Reviews - Gestion Avis
 const adminReviewsRoutePath = path.join(__dirname, 'routes', 'admin', 'reviews.js');
 if (fs.existsSync(adminReviewsRoutePath)) {
   const adminReviewsRoutes = require('./routes/admin/reviews');
   app.use('/api/admin/reviews', adminReviewsRoutes);
   console.log('✅ Admin Reviews routes registered: /api/admin/reviews');
-} else {
 }
 
 // 🌤️ Routes Cloudinary - Gestion des médias
@@ -281,7 +326,6 @@ if (fs.existsSync(cloudinaryRoutePath)) {
   const cloudinaryRoutes = require('./routes/cloudinary');
   app.use('/api/media', cloudinaryRoutes);
   console.log('✅ Cloudinary routes registered: /api/media');
-} else {
 }
 
 // 🎧 Routes Support - Aide et Support Utilisateur
@@ -290,7 +334,16 @@ if (fs.existsSync(supportRoutePath)) {
   const supportRoutes = require('./routes/support');
   app.use('/api/support', supportRoutes);
   console.log('✅ Support routes registered: /api/support');
+}
+
+// 🎯 Routes Admin Monitoring - Interface Administration Surveillance
+const adminMonitoringRoutePath = path.join(__dirname, 'routes', 'admin', 'monitoring.js');
+if (fs.existsSync(adminMonitoringRoutePath)) {
+  const adminMonitoringRoutes = require('./routes/admin/monitoring');
+  app.use('/api/admin/monitoring', adminMonitoringRoutes);
+  console.log('✅ Admin Monitoring routes registered: /api/admin/monitoring');
 } else {
+  console.log('ℹ️ Admin Monitoring routes file not found, skipping...');
 }
 
 // Routes
@@ -298,27 +351,75 @@ app.get('/', (req, res) => {
   res.send('Bienvenue sur l API Cadok');
 });
 
-// Route health check pour les tests E2E et la surveillance
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production',
-    port: process.env.PORT || 5000,
-    database: 'connected'
-  });
-});
+// Route health check pour les tests E2E et la surveillance (Temporairement désactivée)
+/*
+app.get('/health', async (req, res) => {
+  try {
+    // Vérifier la connexion MongoDB (Solution MedicalGo)
+    const { checkDatabaseHealth } = require('./db');
+    const dbHealth = await checkDatabaseHealth();
+    
+    const healthCheck = {
+      status: dbHealth.status === 'healthy' ? 'OK' : 'ERROR',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+      },
+      database: dbHealth.status,
+      databaseDetails: dbHealth.message,
+      version: require('./package.json').version,
+      environment: process.env.NODE_ENV,
+      requestId: req.requestId
+    };
 
-// Route pour vérifier l'API
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    api: 'operational',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
+    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(healthCheck);
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    
+    res.status(503).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: error.message,
+      requestId: req.requestId
+    });
+  }
 });
+*/
 
-}
-}
+// Route pour vérifier l'API (Amélioré avec solution MedicalGo)
+/*
+app.get('/api/health', async (req, res) => {
+  try {
+    const { getDatabaseStats } = require('./db');
+    const dbStats = await getDatabaseStats();
+    
+    res.status(200).json({
+      api: 'operational',
+      version: require('./package.json').version,
+      timestamp: new Date().toISOString(),
+      database: dbStats,
+      requestId: req.requestId
+    });
+  } catch (error) {
+    logger.error('API health check failed:', error);
+    
+    res.status(503).json({
+      api: 'degraded',
+      version: require('./package.json').version,
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      requestId: req.requestId
+    });
+  }
+});
+*/
+
+// 🚨 MIDDLEWARE DE GESTION D'ERREURS (Solution MedicalGo)
+app.use(errorLogging);
+app.use(globalErrorHandler);
 
 module.exports = app;

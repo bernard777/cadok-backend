@@ -1,25 +1,104 @@
 // Script de nettoyage de la base de données CADOK
-// À exécuter depuis le dossier cadok-backend avec : node cleanup-database.js
+// CORRECTION SPÉCIFIQUE: Erreur index username_1 dup key
+// À exécuter avec : node cleanup-database.js
 
 const mongoose = require('mongoose');
 
 // Configuration MongoDB (ajustez selon votre configuration)
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cadok';
 
-// Modèles (vous devrez ajuster les chemins selon votre structure)
-const User = require('./models/User');
-const Trade = require('./models/Trade');
-const Object = require('./models/Object');
-const Event = require('./models/Event');
-const Review = require('./models/Review');
+console.log('🔧 CORRECTION ERREUR INDEX USERNAME');
+console.log('===================================');
 
 async function connectDB() {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('📦 Connexion MongoDB établie');
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('✅ Connexion MongoDB établie');
   } catch (error) {
     console.error('❌ Erreur connexion MongoDB:', error);
     process.exit(1);
+  }
+}
+
+// NOUVELLE FONCTION: Corriger l'erreur d'index username
+async function fixUsernameIndexError() {
+  console.log('\n🔧 CORRECTION INDEX USERNAME');
+  console.log('=============================');
+  
+  try {
+    const db = mongoose.connection.db;
+    const usersCollection = db.collection('users');
+    
+    // 1. Supprimer l'index problématique
+    console.log('🗑️ Suppression index username_1...');
+    try {
+      await usersCollection.dropIndex('username_1');
+      console.log('✅ Index username_1 supprimé');
+    } catch (error) {
+      console.log('ℹ️ Index username_1 n\'existait pas ou déjà supprimé');
+    }
+    
+    // 2. Identifier et corriger les données problématiques
+    console.log('🔍 Recherche des utilisateurs avec username null...');
+    const nullUsernameUsers = await usersCollection.find({
+      $or: [
+        { username: null },
+        { username: { $exists: false } },
+        { username: "" }
+      ]
+    }).toArray();
+    
+    console.log(`📊 Trouvé ${nullUsernameUsers.length} utilisateurs avec username null/vide`);
+    
+    // 3. Assigner des usernames uniques
+    if (nullUsernameUsers.length > 0) {
+      console.log('🔧 Attribution usernames uniques...');
+      
+      for (let i = 0; i < nullUsernameUsers.length; i++) {
+        const user = nullUsernameUsers[i];
+        const uniqueUsername = `user_${user._id.toString().slice(-8)}_${Date.now().toString().slice(-6)}`;
+        
+        await usersCollection.updateOne(
+          { _id: user._id },
+          { $set: { username: uniqueUsername } }
+        );
+        
+        console.log(`  ✅ User ${user._id} → username: ${uniqueUsername}`);
+      }
+    }
+    
+    // 4. Recréer l'index de manière sécurisée
+    console.log('🔨 Création nouvel index username sécurisé...');
+    await usersCollection.createIndex(
+      { username: 1 }, 
+      { 
+        unique: true, 
+        sparse: true,  // Ignorer les valeurs null
+        name: 'username_unique_safe',
+        background: true  // Création en arrière-plan
+      }
+    );
+    console.log('✅ Index username sécurisé créé');
+    
+    // 5. Vérification finale
+    console.log('🔍 Vérification finale...');
+    const totalUsers = await usersCollection.countDocuments();
+    const usersWithUsername = await usersCollection.countDocuments({ 
+      username: { $exists: true, $ne: null, $ne: "" } 
+    });
+    
+    console.log(`� Total utilisateurs: ${totalUsers}`);
+    console.log(`✅ Utilisateurs avec username valide: ${usersWithUsername}`);
+    console.log(`🎯 Utilisateurs sans username: ${totalUsers - usersWithUsername}`);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Erreur correction index username:', error.message);
+    return false;
   }
 }
 
@@ -164,6 +243,13 @@ async function main() {
   
   let totalCleaned = 0;
   
+  // PRIORITÉ 1: Corriger l'erreur d'index username
+  console.log('\n🔥 CORRECTION CRITIQUE: Index username');
+  const indexFixed = await fixUsernameIndexError();
+  if (!indexFixed) {
+    console.log('⚠️ Échec correction index - Continuation du nettoyage...');
+  }
+  
   // Nettoyage des différentes collections
   totalCleaned += await cleanupTrades();
   totalCleaned += await cleanupObjects();
@@ -175,9 +261,10 @@ async function main() {
   
   console.log('\n🎯 RÉSULTATS DU NETTOYAGE:');
   console.log(`✅ Total d'éléments supprimés: ${totalCleaned}`);
+  console.log(`🔧 Index username: ${indexFixed ? 'CORRIGÉ' : 'ERREUR'}`);
   
-  if (totalCleaned === 0) {
-    console.log('🎉 Aucun élément orphelin trouvé - Base de données propre !');
+  if (totalCleaned === 0 && indexFixed) {
+    console.log('🎉 Base de données parfaitement propre !');
   } else {
     console.log('🎉 Nettoyage terminé avec succès !');
   }

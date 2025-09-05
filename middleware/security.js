@@ -16,7 +16,7 @@ const DOMPurify = createDOMPurify(window);
 class SecurityMiddleware {
 
   /**
-   * Configuration Helmet pour headers sécurisés
+   * Configuration Helmet pour headers sécurisés (Amélioré avec solution MedicalGo)
    */
   static setupHelmet() {
     return helmet({
@@ -26,7 +26,7 @@ class SecurityMiddleware {
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'"],
+          connectSrc: ["'self'", "wss:", "ws:"],
           fontSrc: ["'self'"],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
@@ -43,35 +43,99 @@ class SecurityMiddleware {
   }
 
   /**
-   * Rate limiting global
+   * Rate limiting global (Amélioré avec solution MedicalGo)
    */
   static createGlobalRateLimit() {
     return rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 1000, // Limite de 1000 requêtes par 15min par IP
+      max: 100, // 100 requêtes par IP (Solution MedicalGo)
       message: {
-        error: 'Trop de requêtes depuis cette IP, réessayez plus tard.',
-        code: 'RATE_LIMIT_EXCEEDED'
+        status: 'error',
+        message: 'Trop de requêtes, réessayez plus tard'
       },
       standardHeaders: true,
       legacyHeaders: false,
+      handler: (req, res) => {
+        const { logger } = require('../utils/logger');
+        logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
+        res.status(429).json({
+          status: 'error',
+          message: 'Trop de requêtes, réessayez plus tard'
+        });
+      }
     });
   }
 
   /**
-   * Rate limiting strict pour inscription/connexion
+   * Rate limiting strict pour inscription/connexion (Amélioré avec solution MedicalGo)
    */
   static createAuthRateLimit() {
     return rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 10, // Seulement 10 tentatives de connexion par 15min
+      max: 5, // 5 tentatives de connexion par IP (Solution MedicalGo)
       message: {
-        error: 'Trop de tentatives de connexion, réessayez dans 15 minutes.',
-        code: 'AUTH_RATE_LIMIT_EXCEEDED'
+        status: 'error',
+        message: 'Trop de tentatives de connexion, réessayez plus tard'
       },
       standardHeaders: true,
       legacyHeaders: false,
-      skipSuccessfulRequests: true
+      skipSuccessfulRequests: true,
+      handler: (req, res) => {
+        const { logger } = require('../utils/logger');
+        logger.warn(`Auth rate limit exceeded for IP: ${req.ip}`);
+        res.status(429).json({
+          status: 'error',
+          message: 'Trop de tentatives de connexion, réessayez plus tard'
+        });
+      }
+    });
+  }
+
+  /**
+   * Rate limiting pour les trades (Solution MedicalGo adaptée à Cadok)
+   */
+  static createTradeRateLimit() {
+    return rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 20, // 20 créations de trades par IP
+      message: {
+        status: 'error',
+        message: 'Trop de créations de trades, réessayez plus tard'
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (req, res) => {
+        const { logger } = require('../utils/logger');
+        logger.warn(`Trade rate limit exceeded for IP: ${req.ip}`);
+        res.status(429).json({
+          status: 'error',
+          message: 'Trop de créations de trades, réessayez plus tard'
+        });
+      }
+    });
+  }
+
+  /**
+   * Rate limiting pour les recherches (Solution MedicalGo adaptée à Cadok)
+   */
+  static createSearchRateLimit() {
+    return rateLimit({
+      windowMs: 1 * 60 * 1000, // 1 minute
+      max: 30, // 30 recherches par minute
+      message: {
+        status: 'error',
+        message: 'Trop de recherches, réessayez plus tard'
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (req, res) => {
+        const { logger } = require('../utils/logger');
+        logger.warn(`Search rate limit exceeded for IP: ${req.ip}`);
+        res.status(429).json({
+          status: 'error',
+          message: 'Trop de recherches, réessayez plus tard'
+        });
+      }
     });
   }
 

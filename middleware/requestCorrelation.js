@@ -7,20 +7,27 @@ const { v4: uuidv4 } = require('uuid');
 const { ContextualLogger, PerformanceMetrics } = require('../utils/logger');
 
 /**
- * Middleware pour ajouter un ID de corrélation à chaque requête
+ * Middleware pour ajouter un ID de corrélation à chaque requête (Amélioré avec solutions MedicalGo)
  */
 function requestCorrelation(req, res, next) {
-  // Générer un ID unique pour cette requête
-  req.requestId = req.headers['x-request-id'] || uuidv4();
+  // Request ID et timestamp (Solution MedicalGo)
+  req.requestTime = new Date().toISOString();
+  req.requestId = req.headers['x-request-id'] || Math.random().toString(36).substring(2, 15);
   
-  // Ajouter l'ID aux headers de réponse
-  res.set('X-Request-ID', req.requestId);
+  // Ajouter les headers de réponse (Solution MedicalGo)
+  res.setHeader('X-Request-Id', req.requestId);
+  res.setHeader('X-Request-Time', req.requestTime);
   
   // Créer un logger contextuel pour cette requête
   req.logger = new ContextualLogger(
     req.requestId, 
     req.user?.id || null
   );
+
+  // Logging détaillé en développement (Solution MedicalGo)
+  if (process.env.NODE_ENV === 'development') {
+    req.logger.debug(`${req.method} ${req.originalUrl} - ${req.ip} - ${req.requestId}`);
+  }
 
   // Démarrer le timer de performance
   PerformanceMetrics.startTimer('request_duration', req.requestId);
