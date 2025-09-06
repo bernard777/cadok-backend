@@ -303,10 +303,10 @@ router.put('/:reportId/assign', requireAuth, requirePermission('moderate_content
 });
 
 /**
- * PUT /api/reports/:reportId/resolve - Résoudre un signalement
+ * POST /api/reports/:reportId/resolve - Résoudre un signalement
  * Accessible aux modérateurs et admins content
  */
-router.put('/:reportId/resolve', requireAuth, requirePermission('moderate_content'), async (req, res) => {
+router.post('/:reportId/resolve', requireAuth, requirePermission('moderate_content'), async (req, res) => {
   try {
     const { reportId } = req.params;
     const { resolutionType, notes, actionTaken } = req.body;
@@ -341,11 +341,98 @@ router.put('/:reportId/resolve', requireAuth, requirePermission('moderate_conten
       await report.save();
     }
 
-    res.json({ message: 'Signalement résolu avec succès' });
+    res.json({ 
+      success: true,
+      message: 'Signalement résolu avec succès',
+      report: report
+    });
 
   } catch (error) {
     console.error('Erreur résolution signalement:', error);
     res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/reports/:reportId/investigate - Assigner un signalement pour investigation
+ * Accessible aux modérateurs et admins content
+ */
+router.post('/:reportId/investigate', requireAuth, requirePermission('moderate_content'), async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const { adminNotes, assignedTo } = req.body;
+
+    const report = await Report.findById(reportId);
+
+    if (!report) {
+      return res.status(404).json({ message: 'Signalement introuvable' });
+    }
+
+    // Mettre à jour le statut et assigner
+    report.status = 'investigating';
+    report.assignedTo = assignedTo || req.user._id;
+    
+    if (adminNotes) {
+      if (!report.adminReview) {
+        report.adminReview = {};
+      }
+      report.adminReview.notes = adminNotes;
+      report.adminReview.reviewedBy = req.user._id;
+      report.adminReview.reviewedAt = new Date();
+    }
+
+    await report.save();
+
+    res.json({ 
+      success: true,
+      message: 'Signalement assigné pour investigation',
+      report: report
+    });
+
+  } catch (error) {
+    console.error('Erreur investigation signalement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/reports/:reportId/dismiss - Rejeter un signalement
+ * Accessible aux modérateurs et admins content
+ */
+router.post('/:reportId/dismiss', requireAuth, requirePermission('moderate_content'), async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const { reason, adminNotes } = req.body;
+
+    const report = await Report.findById(reportId);
+
+    if (!report) {
+      return res.status(404).json({ message: 'Signalement introuvable' });
+    }
+
+    // Marquer comme rejeté
+    report.status = 'dismissed';
+    
+    if (!report.adminReview) {
+      report.adminReview = {};
+    }
+    
+    report.adminReview.notes = adminNotes || reason;
+    report.adminReview.reviewedBy = req.user._id;
+    report.adminReview.reviewedAt = new Date();
+    report.adminReview.actionTaken = 'dismissed';
+
+    await report.save();
+
+    res.json({ 
+      success: true,
+      message: 'Signalement rejeté',
+      report: report
+    });
+
+  } catch (error) {
+    console.error('Erreur rejet signalement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

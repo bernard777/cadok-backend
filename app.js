@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 // 🛡️ IMPORTATION MIDDLEWARE DE SÉCURITÉ
-const SecurityMiddleware = require('./middleware/security');
+const securityMiddleware = require('./middleware/security');
 
 // 📊 IMPORTATION NOUVEAUX MIDDLEWARES
 
@@ -64,7 +64,7 @@ if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
 console.log('🛡️ [APP] Configuration des middlewares de sécurité...');
 
 // Headers sécurisés avec Helmet - Configuration stricte uniquement
-app.use(SecurityMiddleware.setupHelmet());
+app.use(securityMiddleware.setupHelmet());
 
 // Headers personnalisés de sécurité (Solution MedicalGo)
 app.use((req, res, next) => {
@@ -76,13 +76,13 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting global
-app.use(SecurityMiddleware.createGlobalRateLimit());
+app.use(securityMiddleware.createGlobalRateLimit());
 
 // Sanitisation des entrées (appliqué AVANT les autres middlewares)
-app.use(SecurityMiddleware.sanitizeInput());
+app.use(securityMiddleware.sanitizeInput());
 
 // Détection d'injections SQL
-app.use(SecurityMiddleware.detectSQLInjection());
+app.use(securityMiddleware.detectSQLInjection());
 
 console.log('✅ [APP] Middlewares de sécurité configurés');
 
@@ -115,9 +115,19 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 console.log('✅ [APP] Fichiers statiques configurés (/uploads, /public)');
 
+// 🔧 Middlewares de contrôle des paramètres système
+const maintenanceCheck = require('./middleware/maintenanceCheck');
+const registrationCheck = require('./middleware/registrationCheck');
+const tradingCheck = require('./middleware/tradingCheck');
+
+// Appliquer le middleware de maintenance globalement (sauf pour les routes exemptées)
+app.use(maintenanceCheck);
+
 // Ajout de la route d'authentification
 const authRoutes = require('./routes/auth');
 // Routes d'authentification (inclut les routes de vérification email/SMS)
+// Appliquer le contrôle d'inscription seulement sur la route de création de compte
+app.use('/api/auth/register', registrationCheck);
 app.use('/api/auth', authRoutes);
 
 // Ajout de la route des objets
@@ -134,7 +144,8 @@ const tradesRoutePath = path.join(__dirname, 'routes', 'trades.js');
 
 if (fs.existsSync(tradesRoutePath)) {
   const tradeRoutes = require('./routes/trades');
-  app.use('/api/trades', tradeRoutes);
+  // Appliquer le contrôle de trading aux routes d'échange
+  app.use('/api/trades', tradingCheck, tradeRoutes);
 } else {
 }
 
@@ -267,15 +278,27 @@ if (fs.existsSync(adminTradesRoutePath)) {
   app.use('/api/admin/trades', adminTradesRoutes);
   console.log('✅ Admin Trades routes registered: /api/admin/trades');
 } else {
+  console.log('⚠️ Admin Trades route not found');
 }
 
 // Ajout des routes Admin Rôles et Permissions
 const adminRolesRoutePath = path.join(__dirname, 'routes', 'admin', 'roles.js');
 if (fs.existsSync(adminRolesRoutePath)) {
   const adminRolesRoutes = require('./routes/admin/roles');
-  app.use('/api/admin', adminRolesRoutes);
+  app.use('/api/admin/roles', adminRolesRoutes);
   console.log('✅ Admin Roles routes registered: /api/admin/roles');
 } else {
+  console.log('⚠️ Admin Roles routes not found');
+}
+
+// Ajout des routes Admin Settings
+const adminSettingsRoutePath = path.join(__dirname, 'routes', 'admin', 'settings.js');
+if (fs.existsSync(adminSettingsRoutePath)) {
+  const adminSettingsRoutes = require('./routes/admin/settings');
+  app.use('/api/admin/settings', adminSettingsRoutes);
+  console.log('✅ Admin Settings routes registered: /api/admin/settings');
+} else {
+  console.log('❌ Admin Settings routes file not found');
 }
 
 // 🔔 Routes Admin Notifications

@@ -9,7 +9,7 @@ const User = require('../../models/User');
 const { requireAuth, requirePermission, getAvailableRoles, hasPermission } = require('../../middleware/roleBasedAccess');
 
 // 🎯 GET /api/admin/roles - Liste des rôles disponibles
-router.get('/roles', requireAuth, requirePermission('manageAdmins'), async (req, res) => {
+router.get('/', requireAuth, requirePermission('manageAdmins'), async (req, res) => {
   try {
     const roles = getAvailableRoles();
     

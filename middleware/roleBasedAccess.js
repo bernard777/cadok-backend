@@ -10,12 +10,14 @@ const User = require('../models/User');
 const ROLE_PERMISSIONS = {
   // Utilisateur normal - accès basique
   user: {
+    label: 'Utilisateur',
     permissions: [],
     description: 'Utilisateur standard avec accès aux fonctionnalités de base'
   },
   
   // Modérateur - modération de contenu seulement
   moderator: {
+    label: 'Modérateur',
     permissions: ['moderateContent', 'manageReports',
                   'viewObjects', 'viewReviews', 'moderateReviews'],
     description: 'Modération de contenu et gestion des signalements',
@@ -24,6 +26,7 @@ const ROLE_PERMISSIONS = {
   
   // Admin Événements - gestion événements uniquement
   admin_events: {
+    label: 'Admin Événements',
     permissions: ['manageEvents', 'createEvents', 'moderateEvents'],
     description: 'Administration des événements et activités communautaires',
     premiumAccess: true
@@ -31,6 +34,7 @@ const ROLE_PERMISSIONS = {
   
   // Admin Utilisateurs - gestion utilisateurs uniquement  
   admin_users: {
+    label: 'Admin Utilisateurs',
     permissions: ['manageUsers', 'banUsers', 'viewUserDetails'],
     description: 'Administration des comptes utilisateurs',
     premiumAccess: true
@@ -38,6 +42,7 @@ const ROLE_PERMISSIONS = {
   
   // Admin Échanges - gestion des trades uniquement
   admin_trades: {
+    label: 'Admin Échanges',
     permissions: ['manageTrades', 'approveTrades', 'resolveDisputes'],
     description: 'Administration des échanges et résolution des litiges',
     premiumAccess: true
@@ -45,6 +50,7 @@ const ROLE_PERMISSIONS = {
   
   // Admin Contenu - modération avancée
   admin_content: {
+    label: 'Admin Contenu',
     permissions: ['moderateContent', 'deleteReports', 'manageReports', 'viewAnalytics'],
     description: 'Administration du contenu et analytics',
     premiumAccess: true
@@ -52,6 +58,7 @@ const ROLE_PERMISSIONS = {
   
   // Super Admin - accès complet
   super_admin: {
+    label: 'Super Administrateur',
     permissions: ['*',
       'manageObjects', 'viewObjects', 'moderateObjects', 'manageReviews', 'viewReviews', 'moderateReviews'], // Toutes les permissions
     description: 'Administration complète du système',
