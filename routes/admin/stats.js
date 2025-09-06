@@ -45,6 +45,59 @@ router.get('/', requireAuth, requirePermission('viewAnalytics'), async (req, res
       totalUsers, totalTrades, totalObjects, totalEvents, totalReviews
     });
 
+    // Calculer les données mensuelles pour les 6 derniers mois
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const [monthlyUsers, monthlyTrades] = await Promise.all([
+      // Utilisateurs créés par mois
+      User.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: sixMonthsAgo }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { '_id.year': 1, '_id.month': 1 }
+        }
+      ]),
+      
+      // Échanges créés par mois
+      Trade.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: sixMonthsAgo }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { '_id.year': 1, '_id.month': 1 }
+        }
+      ])
+    ]);
+
+    console.log('📊 [STATS] Données mensuelles calculées:', {
+      monthlyUsers: monthlyUsers.length,
+      monthlyTrades: monthlyTrades.length
+    });
+
     // Stats formatées pour l'interface frontend
     const stats = {
       success: true,
@@ -62,12 +115,14 @@ router.get('/', requireAuth, requirePermission('viewAnalytics'), async (req, res
             createdAt: { 
               $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) 
             }
-          })
+          }),
+          monthly: monthlyUsers
         },
         trades: {
           total: totalTrades,
           completed: completedTrades,
-          pending: await Trade.countDocuments({ status: { $in: ['pending', 'accepted'] } })
+          pending: await Trade.countDocuments({ status: { $in: ['pending', 'accepted'] } }),
+          monthly: monthlyTrades
         },
         objects: {
           total: totalObjects,

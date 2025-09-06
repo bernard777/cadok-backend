@@ -143,7 +143,7 @@ router.get('/stats', requireAuth, requirePermission('viewAnalytics'), async (req
     const reportedObjects = await ObjectModel.countDocuments({ status: 'traded' });
 
     // Statistiques par catégorie
-    const categoryStats = await ObjectModel.aggregate([
+    const categoryStatsRaw = await ObjectModel.aggregate([
       {
         $group: {
           _id: '$category',
@@ -163,6 +163,15 @@ router.get('/stats', requireAuth, requirePermission('viewAnalytics'), async (req
         $sort: { count: -1 }
       }
     ]);
+
+    // Formatage des données de catégories
+    const categoryStats = categoryStatsRaw.map(stat => ({
+      _id: stat._id,
+      count: stat.count,
+      avgValue: stat.avgValue,
+      categoryName: stat.categoryInfo.length > 0 ? stat.categoryInfo[0].name : 'Catégorie supprimée',
+      categoryIcon: stat.categoryInfo.length > 0 ? stat.categoryInfo[0].icon : '❓'
+    }));
 
     // Objets créés par mois (6 derniers mois)
     const sixMonthsAgo = new Date();
