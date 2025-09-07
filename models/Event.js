@@ -6,6 +6,13 @@
 const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
+  // ID custom pour compatibilité avec les templates
+  id: {
+    type: String,
+    unique: true,
+    sparse: true // Permet aux anciens événements sans ce champ de continuer à fonctionner
+  },
+  
   name: {
     type: String,
     required: true,

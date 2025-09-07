@@ -818,33 +818,36 @@ class GamificationService {
 
   async getActiveEvents(currentDate = new Date()) {
     try {
-      // Récupérer les événements de la base de données
+      // Récupérer UNIQUEMENT les événements de la base de données
       const dbEvents = await Event.getActiveEvents(currentDate);
-      
-      // Combiner avec les événements hardcodés existants pour compatibilité
-      const hardcodedEvents = this.getHardcodedEvents(currentDate);
+      console.log('🔍 [DEBUG] Événements DB trouvés:', dbEvents.length);
       
       // Convertir les événements DB au format attendu
-      const dbEventsFormatted = dbEvents.map(event => ({
-        id: event._id.toString(),
-        name: event.name,
-        description: event.description,
-        theme: event.theme,
-        icon: event.icon,
-        color: event.color,
-        startDate: new Date(event.startDate), // Conversion en Date
-        endDate: new Date(event.endDate),     // Conversion en Date
-        bonusMultiplier: event.bonusMultiplier,
-        specialRewards: event.specialRewards,
-        participants: Array.isArray(event.participants) ? event.participants.length : 0,
-        isActive: event.isActive
-      }));
+      const dbEventsFormatted = dbEvents.map(event => {
+        console.log('🔍 [DEBUG] Formatage événement DB:', event.name, 'ID:', event.id || event._id);
+        return {
+          id: event.id || event._id.toString(), // Utiliser le champ 'id' custom s'il existe, sinon _id
+          name: event.name,
+          description: event.description,
+          theme: event.theme,
+          icon: event.icon,
+          color: event.color,
+          startDate: new Date(event.startDate), // Conversion en Date
+          endDate: new Date(event.endDate),     // Conversion en Date
+          bonusMultiplier: event.bonusMultiplier,
+          specialRewards: event.specialRewards,
+          participants: Array.isArray(event.participants) ? event.participants.length : 0,
+          isActive: event.isActive
+        };
+      });
 
-      return [...dbEventsFormatted, ...hardcodedEvents];
+      // Retourner UNIQUEMENT les événements de la base de données
+      console.log('🔍 [DEBUG] Événements finaux - DB uniquement:', dbEventsFormatted.length);
+      return dbEventsFormatted;
     } catch (error) {
       console.error('❌ Erreur getActiveEvents:', error);
-      // Fallback sur les événements hardcodés
-      return this.getHardcodedEvents(currentDate);
+      // En cas d'erreur, retourner un tableau vide plutôt que les événements hardcodés
+      return [];
     }
   }
 
@@ -885,25 +888,7 @@ class GamificationService {
         }
       },
 
-      // 🎓 Événements communautaires
-      {
-        id: 'back_to_school_2025',
-        name: 'Rentrée Solidaire',
-        description: 'Partageons nos fournitures scolaires',
-        theme: 'education',
-        icon: '📚',
-        color: '#FF9800',
-        startDate: new Date('2025-08-20'),
-        endDate: new Date('2025-09-15'),
-        bonusMultiplier: 1.8,
-        categories: ['Livres', 'Fournitures', 'Matériel scolaire'],
-        specialRewards: {
-          badge: '📚 Mentor Éducation',
-          exclusiveItems: ['Kit scolaire complet']
-        }
-      },
-
-      // 🏆 Événements compétitifs
+      //  Événements compétitifs
       {
         id: 'mega_challenge_august_2025',
         name: 'Méga Défi Août',
@@ -1206,10 +1191,14 @@ class GamificationService {
    */
   async participateInEvent(userId, eventId) {
     try {
+      console.log('🎯 [DEBUG] participateInEvent - userId:', userId, 'eventId:', eventId);
+      
       const Event = require('../models/Event');
       
-      // Vérifier si l'événement existe
-      const event = await Event.findById(eventId);
+      // Vérifier si l'événement existe - chercher par le champ 'id' custom
+      const event = await Event.findOne({ id: eventId });
+      console.log('🔍 [DEBUG] Événement trouvé:', event ? event.name : 'Non trouvé');
+      
       if (!event) {
         return { 
           success: false, 

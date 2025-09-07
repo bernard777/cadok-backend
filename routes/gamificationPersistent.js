@@ -308,8 +308,10 @@ router.get('/events', authMiddleware, async (req, res) => {
 router.post('/events/:eventId/participate', authMiddleware, async (req, res) => {
   try {
     console.log('🎯 [DEBUG] Demande participation événement:', req.params.eventId, 'par utilisateur:', req.user.id);
+    console.log('🔍 [DEBUG] Objet user complet:', JSON.stringify(req.user, null, 2));
     
     const result = await gamificationService.participateInEvent(req.user.id, req.params.eventId);
+    console.log('📊 [DEBUG] Résultat participateInEvent:', JSON.stringify(result, null, 2));
     
     if (result.success) {
       console.log('✅ [DEBUG] Participation réussie');
@@ -328,6 +330,44 @@ router.post('/events/:eventId/participate', authMiddleware, async (req, res) => 
     }
   } catch (error) {
     console.error('❌ Erreur participation événement:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * 📋 GET /api/gamification/user-participations
+ * Récupérer les participations de l'utilisateur
+ */
+router.get('/user-participations', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('📋 [DEBUG] Récupération participations pour utilisateur:', userId);
+    
+    const Event = require('../models/Event');
+    
+    // Trouver tous les événements où l'utilisateur participe
+    const eventsWithUser = await Event.find({
+      'participants.userId': userId
+    });
+
+    // Créer un objet avec les IDs d'événements comme clés
+    const participations = {};
+    eventsWithUser.forEach(event => {
+      if (event.id) {
+        participations[event.id] = true;
+      } else {
+        participations[event._id.toString()] = true;
+      }
+    });
+
+    console.log('📊 [DEBUG] Participations trouvées:', Object.keys(participations));
+    
+    res.json({ 
+      success: true, 
+      participations 
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération participations:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
