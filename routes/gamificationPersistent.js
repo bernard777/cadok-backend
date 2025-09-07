@@ -301,4 +301,35 @@ router.get('/events', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * 🎯 POST /api/gamification/events/:eventId/participate
+ * Participer à un événement
+ */
+router.post('/events/:eventId/participate', authMiddleware, async (req, res) => {
+  try {
+    console.log('🎯 [DEBUG] Demande participation événement:', req.params.eventId, 'par utilisateur:', req.user.id);
+    
+    const result = await gamificationService.participateInEvent(req.user.id, req.params.eventId);
+    
+    if (result.success) {
+      console.log('✅ [DEBUG] Participation réussie');
+      res.json({
+        success: true,
+        message: result.message || 'Participation enregistrée avec succès',
+        data: result.data
+      });
+    } else {
+      console.log('❌ [DEBUG] Échec participation:', result.error);
+      res.status(400).json({
+        success: false,
+        error: result.error,
+        code: result.code
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erreur participation événement:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
