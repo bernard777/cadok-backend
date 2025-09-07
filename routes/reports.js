@@ -362,15 +362,21 @@ router.post('/:reportId/investigate', requireAuth, requirePermission('moderate_c
     const { reportId } = req.params;
     const { adminNotes, assignedTo } = req.body;
 
+    console.log(`🔍 [INVESTIGATE] Début investigation pour signalement ${reportId} par ${req.user.pseudo}`);
+    console.log(`🔍 [INVESTIGATE] Données reçues:`, { adminNotes, assignedTo });
+
     const report = await Report.findById(reportId);
 
     if (!report) {
-      return res.status(404).json({ message: 'Signalement introuvable' });
+      console.log(`❌ [INVESTIGATE] Signalement ${reportId} introuvable`);
+      return res.status(404).json({ success: false, message: 'Signalement introuvable' });
     }
 
     // Mettre à jour le statut et assigner
     report.status = 'investigating';
     report.assignedTo = assignedTo || req.user._id;
+    
+    console.log(`🔍 [INVESTIGATE] Assignation à: ${assignedTo || req.user._id}`);
     
     if (adminNotes) {
       if (!report.adminReview) {
@@ -379,9 +385,11 @@ router.post('/:reportId/investigate', requireAuth, requirePermission('moderate_c
       report.adminReview.notes = adminNotes;
       report.adminReview.reviewedBy = req.user._id;
       report.adminReview.reviewedAt = new Date();
+      console.log(`🔍 [INVESTIGATE] Notes admin ajoutées: ${adminNotes}`);
     }
 
     await report.save();
+    console.log(`✅ [INVESTIGATE] Signalement ${reportId} mis à jour avec succès`);
 
     res.json({ 
       success: true,
@@ -390,7 +398,7 @@ router.post('/:reportId/investigate', requireAuth, requirePermission('moderate_c
     });
 
   } catch (error) {
-    console.error('Erreur investigation signalement:', error);
+    console.error('❌ [INVESTIGATE] Erreur investigation signalement:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -631,88 +639,123 @@ async function applyModerationAction(report, resolutionType, adminId) {
  * GET /api/reports/admin-activity - Statistiques d'activité des administrateurs
  * Accessible aux super admins uniquement
  */
-router.get('/admin-activity', requireAuth, requirePermission('manage_system'), async (req, res) => {
+router.get('/admin-activity', requireAuth, requirePermission('viewAnalytics'), async (req, res) => {
   try {
+    console.log('🎯 API admin-activity appelée (version corrigée)');
+
+    // Récupérer le paramètre de période
     const { period = '30' } = req.query;
     const days = parseInt(period);
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Statistiques des actions par admin
-    const adminActivity = await Report.aggregate([
-      {
-        $match: {
-          $or: [
-            { 'adminReview.reviewedAt': { $gte: startDate } },
-            { 'resolution.resolvedAt': { $gte: startDate } }
-          ]
-        }
-      },
-      {
-        $group: {
-          _id: {
-            admin: { $ifNull: ['$resolution.resolvedBy', '$adminReview.reviewedBy'] }
-          },
-          assignedReports: {
-            $sum: {
-              $cond: [{ $ne: ['$adminReview.reviewedBy', null] }, 1, 0]
-            }
-          },
-          resolvedReports: {
-            $sum: {
-              $cond: [{ $ne: ['$resolution.resolvedBy', null] }, 1, 0]
-            }
-          },
-          resolutionTypes: {
-            $push: '$resolution.resolutionType'
-          }
-        }
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id.admin',
-          foreignField: '_id',
-          as: 'adminInfo'
-        }
-      },
-      {
-        $match: {
-          'adminInfo.0': { $exists: true }, // S'assurer que l'admin existe
-          'adminInfo.0.isActive': { $ne: false }, // Admin actif
-          'adminInfo.0.isBanned': { $ne: true }, // Admin non banni
-        }
-      },
-      {
-        $project: {
-          adminId: '$_id.admin',
-          adminName: { $arrayElemAt: ['$adminInfo.pseudo', 0] },
-          adminEmail: { $arrayElemAt: ['$adminInfo.email', 0] },
-          assignedReports: 1,
-          resolvedReports: 1,
-          totalActivity: { $add: ['$assignedReports', '$resolvedReports'] },
-          resolutionBreakdown: {
-            $reduce: {
-              input: '$resolutionTypes',
-              initialValue: {},
-              in: {
-                $mergeObjects: [
-                  '$$value',
-                  { $cond: [
-                    { $ne: ['$$this', null] },
-                    { $arrayToObject: [[ { k: '$$this', v: { $add: [{ $ifNull: [{ $getField: { field: '$$this', input: '$$value' } }, 0] }, 1] } }]] },
-                    {}
-                  ]}
-                ]
-              }
-            }
-          }
-        }
-      },
-      { $sort: { totalActivity: -1 } }
-    ]);
+    // Récupérer tous les utilisateurs avec rôles admin (plusieurs critères possible)
+    const User = require('../models/User');
+    const admins = await User.find({ 
+      $or: [
+        { isAdmin: true },
+        { role: { $in: ['admin', 'moderator', 'super_admin'] } }
+      ],
+      status: 'active' 
+    }).select('_id pseudo email role');
+    
+    console.log(`👥 ${admins.length} administrateurs trouvés`);
+    
+    const adminActivity = [];
+    
+    for (const admin of admins) {
+      console.log(`📊 Calcul stats pour ${admin.pseudo}...`);
+      
+      // Compter les signalements où cet admin a fait une action d'assignment DANS LA PÉRIODE
+      const assignedCount = await Report.countDocuments({
+        'adminReview.reviewedBy': admin._id,
+        'adminReview.reviewedAt': { $gte: startDate }
+      });
+      
+      // Compter les signalements où cet admin a fait une action de résolution DANS LA PÉRIODE
+      const resolvedCount = await Report.countDocuments({
+        'resolution.resolvedBy': admin._id,
+        'resolution.resolvedAt': { $gte: startDate }
+      });
+      
+      // IMPORTANT: Pour éviter les doublons, compter les signalements uniques DANS LA PÉRIODE
+      const reviewedOnlyCount = await Report.countDocuments({
+        'adminReview.reviewedBy': admin._id,
+        'adminReview.reviewedAt': { $gte: startDate },
+        'resolution.resolvedBy': { $ne: admin._id } // Exclu ceux qu'il a aussi résolu
+      });
+      
+      const resolvedOnlyCount = await Report.countDocuments({
+        'resolution.resolvedBy': admin._id,
+        'resolution.resolvedAt': { $gte: startDate },
+        'adminReview.reviewedBy': { $ne: admin._id } // Exclu ceux qu'il a aussi reviewé
+      });
+      
+      const bothCount = await Report.countDocuments({
+        'adminReview.reviewedBy': admin._id,
+        'adminReview.reviewedAt': { $gte: startDate },
+        'resolution.resolvedBy': admin._id,
+        'resolution.resolvedAt': { $gte: startDate } // Les deux dans la période
+      });
+      
+      // Total unique = reviewé seulement + résolu seulement + les deux (compté 1 fois)
+      const totalActivity = reviewedOnlyCount + resolvedOnlyCount + bothCount;
+      
+      // Récupérer la dernière action de cet admin
+      const lastAction = await Report.findOne({
+        $or: [
+          { 'adminReview.reviewedBy': admin._id },
+          { 'resolution.resolvedBy': admin._id }
+        ]
+      }).sort({ updatedAt: -1 }).select('adminReview.reviewedAt resolution.resolvedAt updatedAt');
+      
+      let lastActionDate = admin.updatedAt || admin.createdAt;
+      if (lastAction) {
+        lastActionDate = lastAction.resolution?.resolvedAt || 
+                        lastAction.adminReview?.reviewedAt || 
+                        lastAction.updatedAt;
+      }
+      
+      console.log(`  - ${admin.pseudo}: assignedCount=${assignedCount}, resolvedCount=${resolvedCount}, totalActivity=${totalActivity}`);
+      console.log(`    Détail: reviewedOnly=${reviewedOnlyCount}, resolvedOnly=${resolvedOnlyCount}, both=${bothCount}`);
+      
+      // N'inclure que les admins qui ont eu de l'activité dans la période sélectionnée
+      if (totalActivity > 0) {
+        adminActivity.push({
+          adminId: admin._id,
+          adminName: admin.pseudo || admin.email,
+          adminEmail: admin.email,
+          adminRole: admin.role || 'admin',
+          assignedReports: assignedCount,
+          resolvedReports: resolvedCount,
+          totalActivity: totalActivity,
+          lastAction: lastActionDate,
+          resolutionBreakdown: {}
+        });
+        
+        console.log(`  ✅ ${admin.pseudo} inclus (${totalActivity} activités dans la période)`);
+      } else {
+        console.log(`  ⏭️ ${admin.pseudo} exclu (aucune activité dans la période de ${days} jours)`);
+      }
+    }
+    
+    // Trier par date de dernière activité (plus récent au plus ancien)
+    adminActivity.sort((a, b) => {
+      // Gérer les cas où lastAction est undefined ou null
+      const dateA = a.lastAction ? new Date(a.lastAction) : new Date(0); // Date très ancienne si pas d'activité
+      const dateB = b.lastAction ? new Date(b.lastAction) : new Date(0);
+      return dateB.getTime() - dateA.getTime(); // Plus récent en premier
+    });
 
-    // Statistiques générales d'activité
+    console.log('📊 Tri par date de dernière activité (plus récent au plus ancien):');
+    adminActivity.forEach((admin, index) => {
+      const formattedDate = admin.lastAction 
+        ? new Date(admin.lastAction).toLocaleDateString('fr-FR') + ' ' + new Date(admin.lastAction).toLocaleTimeString('fr-FR')
+        : 'Aucune activité';
+      console.log(`  ${index + 1}. ${admin.adminName}: ${formattedDate}`);
+    });
+
+    // Statistiques générales d'activité pour la période sélectionnée
     const periodStats = await Report.aggregate([
       {
         $match: {
@@ -741,18 +784,18 @@ router.get('/admin-activity', requireAuth, requirePermission('manage_system'), a
       }
     ]);
 
-    res.json({
+    const result = {
       success: true,
-      period: `${days} derniers jours`,
-      adminActivity: adminActivity,
-      periodStats: periodStats[0] || {
-        totalReportsReceived: 0,
-        totalProcessed: 0,
-        avgResponseTime: 0
-      },
-      processedReportsPercent: periodStats[0] ? 
-        ((periodStats[0].totalProcessed / periodStats[0].totalReportsReceived) * 100).toFixed(1) : 0
-    });
+      admins: adminActivity, // Utiliser le nom attendu par le frontend
+      totalReports: periodStats[0]?.totalReportsReceived || 0,
+      processedReports: periodStats[0]?.totalProcessed || 0,
+      avgResponseTime: periodStats[0]?.avgResponseTime || 0,
+      processedPercentage: periodStats[0] ? 
+        ((periodStats[0].totalProcessed / periodStats[0].totalReportsReceived) * 100) : 0
+    };
+
+    console.log('📊 Réponse finale:', JSON.stringify(result, null, 2));
+    res.json(result);
 
   } catch (error) {
     console.error('Erreur statistiques activité admin:', error);
