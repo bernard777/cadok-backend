@@ -9,6 +9,10 @@ const authMiddleware = require('../middlewares/auth');
 const GamificationPersistenceService = require('../services/gamificationPersistence');
 const GamificationMiddleware = require('../middleware/gamificationMiddleware');
 const { calculateGamificationFromRealData, formatForGamificationScreen, formatForHomeScreen } = require('../utils/gamificationCalculator');
+const GamificationService = require('../services/gamificationService');
+
+// Instance du service de gamification pour les événements
+const gamificationService = new GamificationService();
 
 /**
  * 📊 GET /api/gamification - Données complètes de gamification
@@ -270,6 +274,30 @@ router.get('/stats', authMiddleware, async (req, res) => {
       success: false,
       error: 'Erreur lors de la récupération des statistiques'
     });
+  }
+});
+
+/**
+ * 🎪 GET /api/gamification/events
+ * Liste des événements actifs
+ */
+router.get('/events', authMiddleware, async (req, res) => {
+  try {
+    console.log('🎪 [DEBUG] Récupération événements pour utilisateur normal...');
+    const currentDate = new Date();
+    console.log('📅 [DEBUG] Date actuelle:', currentDate);
+    
+    const activeEvents = await gamificationService.getActiveEvents(currentDate);
+    console.log('📋 [DEBUG] Événements actifs trouvés:', activeEvents.length);
+    
+    activeEvents.forEach(event => {
+      console.log(`🔍 [DEBUG] Événement: ${event.name} - Active: ${event.isActive} - Dates: ${event.startDate} à ${event.endDate}`);
+    });
+    
+    res.json({ success: true, events: activeEvents });
+  } catch (error) {
+    console.error('❌ Erreur événements:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
 
