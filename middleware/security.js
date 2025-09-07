@@ -48,7 +48,7 @@ class SecurityMiddleware {
   static createGlobalRateLimit() {
     return rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // 100 requêtes par IP (Solution MedicalGo)
+      max: process.env.NODE_ENV === 'development' ? 1000 : 100, // 1000 requêtes en dev, 100 en prod
       message: {
         status: 'error',
         message: 'Trop de requêtes, réessayez plus tard'
